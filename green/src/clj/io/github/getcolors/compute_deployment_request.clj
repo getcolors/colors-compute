@@ -40,11 +40,15 @@
             (fail "invalid compute role settings"))))
       (when-not (safe? (:profile opts)) (fail ":profile must be a safe identifier"))
       (let [override (get opts (keyword (str provider "-name"))) name (if (missing? override) (:profile opts) override)
-            network (get requirements :network {})]
+            network (get requirements :network {})
+            reference (:network_reference recipe) option (some-> (:option reference) keyword)
+            network (if (and (map? network) option (contains? opts option))
+                      (do (when (and (contains? network :id) (not= (:id network) (get opts option))) (fail "conflicting compute network reference"))
+                          (merge {:mode (:mode reference)} network {:id (get opts option)})) network)]
         (when-not (safe? name) (fail "invalid compute name"))
         (when-not (map? network) (fail "invalid compute network request"))
         (let [base (cond-> (merge (select-keys requirements [:backups :ipv6]) {:key (select-keys key [:mode :public_key :ids :reference])
-                    :network (merge {:mode (if (and single (false? (get requirements :private false)) (some #{"none"} (:network_modes recipe))) "none" (:network_mode recipe))} network) :security (:security requirements)}) (contains? requirements :endpoint) (assoc :endpoint (:endpoint requirements)))
+                    :network (merge {:mode (if (and (contains? network :id) reference) (:mode reference) (if (and single (false? (get requirements :private false)) (some #{"none"} (:network_modes recipe))) "none" (:network_mode recipe)))} network) :security (:security requirements)}) (contains? requirements :endpoint) (assoc :endpoint (:endpoint requirements)))
               requests (mapv (fn [node]
                                (let [node-name (if single name (str name "-" (:node_id node)))]
                                  (when-not (safe? node-name) (fail "invalid derived compute name"))

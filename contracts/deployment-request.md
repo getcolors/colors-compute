@@ -59,3 +59,17 @@ compute option. Provider references:
 [DigitalOcean firewall source addresses](https://registry.terraform.io/providers/digitalocean/digitalocean/latest/docs/resources/firewall),
 [Hetzner firewall source IPs](https://registry.terraform.io/providers/hetznercloud/hcloud/latest/docs/resources/firewall).
 The public-only schema fixtures include `::/0` alongside IPv4 sources.
+
+For DigitalOcean discovered networking, `network.id` selects an existing VPC
+by UUID. The recipe also maps a present legacy `digitalocean-vpc-uuid` setting
+into this field without mutating the caller's maps. Omitted mode selects
+`discovered` when an ID is present. Conflicting IDs, malformed UUIDs and an ID
+combined with `created` or `none` are refused. The shared stage reads the VPC
+and verifies its region; it owns no VPC resource and cannot destroy that VPC.
+Shared metadata carries the observed VPC ID and CIDR for downstream steps.
+Without an ID, regional discovery asserts that the returned VPC is the default.
+Build plans preserve an explicit UUID on the node but use documentation-only
+private addresses; live steps consume the observed network instead.
+
+`scripts/network_reference.py` checks the common fixtures and optionally runs
+OpenTofu init and validate in temporary directories without provider credentials.

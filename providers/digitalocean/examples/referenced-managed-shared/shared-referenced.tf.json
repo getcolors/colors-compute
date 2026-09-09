@@ -1,0 +1,142 @@
+{
+  "data": {
+    "digitalocean_vpc": {
+      "network": {
+        "id": "01234567-89ab-cdef-0123-456789abcdef",
+        "lifecycle": {
+          "postcondition": [
+            {
+              "condition": "${self.region == local.selected_region}",
+              "error_message": "Referenced VPC must belong to the selected region."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "locals": {
+    "private_ingress": {},
+    "public_ingress": {
+      "ssh:192.0.2.1/32": {
+        "protocol": "tcp",
+        "port_range": "22",
+        "source_addresses": [
+          "192.0.2.1/32"
+        ]
+      },
+      "ssh:::/0": {
+        "protocol": "tcp",
+        "port_range": "22",
+        "source_addresses": [
+          "::/0"
+        ]
+      }
+    },
+    "selected_region": "nyc3"
+  },
+  "output": {
+    "params": {
+      "value": {
+        "deployment_tag": "${digitalocean_tag.deployment.name}",
+        "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+        "firewall_id": "${digitalocean_firewall.network.id}",
+        "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+        "provider": "digitalocean",
+        "vpc_id": "${data.digitalocean_vpc.network.id}",
+        "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "resource": {
+    "digitalocean_firewall": {
+      "network": {
+        "dynamic": {
+          "inbound_rule": [
+            {
+              "content": {
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "protocol": "${inbound_rule.value.protocol}",
+                "source_addresses": "${inbound_rule.value.source_addresses}"
+              },
+              "for_each": "${local.public_ingress}"
+            },
+            {
+              "content": {
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "protocol": "${inbound_rule.value.protocol}",
+                "source_addresses": [
+                  "${data.digitalocean_vpc.network.ip_range}"
+                ]
+              },
+              "for_each": "${local.private_ingress}"
+            }
+          ]
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        },
+        "name": "example-firewall",
+        "outbound_rule": [
+          {
+            "protocol": "tcp",
+            "port_range": "1-65535",
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ]
+          },
+          {
+            "protocol": "udp",
+            "port_range": "1-65535",
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ]
+          },
+          {
+            "protocol": "icmp",
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ]
+          }
+        ],
+        "tags": [
+          "${digitalocean_tag.deployment.name}"
+        ]
+      }
+    },
+    "digitalocean_reserved_ip": {
+      "endpoint": {
+        "count": 0,
+        "lifecycle": {
+          "ignore_changes": [
+            "droplet_id"
+          ],
+          "prevent_destroy": true
+        },
+        "region": "nyc3"
+      }
+    },
+    "digitalocean_tag": {
+      "deployment": {
+        "lifecycle": {
+          "prevent_destroy": true
+        },
+        "name": "colors-compute-example"
+      }
+    }
+  },
+  "terraform": {
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    },
+    "required_version": ">= 1.8.0"
+  }
+}

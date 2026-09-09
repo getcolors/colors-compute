@@ -16,6 +16,7 @@
         selected (cond-> selected (= "managed" (:mode selected)) (assoc :public_key ssh/placeholder-public))
         key (key/key-request opts selected {}) assembly (deployment/deployment-requests opts topology requirements key)
         provider (:provider-compute opts) recipe (get deployment/recipes (keyword provider)) shared (planning-shared opts recipe requirements)
+        shared (cond-> shared (get-in assembly [:shared :network :id]) (assoc-in [:params :vpc_id] (get-in assembly [:shared :network :id])))
         shared-plan (request/provider-request opts "shared" (:shared assembly)) declarations (compute/expand topology)
         _ (when (> (count declarations) 245) (throw (ex-info "build exceeds documentation address capacity" {})))
         entry (get-in compute/registry [:compute (keyword provider)])

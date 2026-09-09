@@ -23,6 +23,8 @@ def validate_deployment(opts, topology, requirements):
     recipe = json.loads(files('colors_compute').joinpath('provider-recipes.json').read_text())[provider]
     provider_request(planning_opts, 'shared', assembly['shared'])
     shared = deepcopy(recipe['planning_shared'])
+    if 'id' in assembly['shared']['network']:
+        shared['params']['vpc_id'] = assembly['shared']['network']['id']
     if 'roles' in requirements:
         shared['params']['role_firewall_ids'] = {role: 'build-firewall-' + role for role in requirements['roles']}
         if recipe.get('role_tag_param'):
@@ -43,6 +45,8 @@ def plan_deployment(opts, topology, requirements):
     provider = opts['provider-compute']
     recipe = json.loads(files('colors_compute').joinpath('provider-recipes.json').read_text())[provider]
     shared = deepcopy(recipe['planning_shared'])
+    if 'id' in assembly['shared']['network']:
+        shared['params']['vpc_id'] = assembly['shared']['network']['id']
     if 'roles' in requirements:
         shared['params']['role_firewall_ids'] = {role: 'build-firewall-' + role for role in requirements['roles']}
         if recipe.get('role_tag_param'):

@@ -14,12 +14,12 @@
   "data": {
     "digitalocean_vpc": {
       "network": {
-        "region": "{{region}}",
+        "id": "{{network_id}}",
         "lifecycle": {
           "postcondition": [
             {
-              "condition": "${self.default}",
-              "error_message": "Regional discovery must return the default VPC."
+              "condition": "${self.region == local.selected_region}",
+              "error_message": "Referenced VPC must belong to the selected region."
             }
           ]
         }
@@ -32,28 +32,26 @@
         "provider": "digitalocean",
         "vpc_id": "${data.digitalocean_vpc.network.id}",
         "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}",
+        "firewall_id": "${digitalocean_firewall.network.id}",
         "deployment_tag": "${digitalocean_tag.deployment.name}",
         "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
-        "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
-        "role_firewall_ids": "${ {for role, firewall in digitalocean_firewall.network : role => firewall.id} }",
-        "role_tags": "${ {for role, tag in digitalocean_tag.role : role => tag.name} }"
+        "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}"
       }
     }
   },
   "locals": {
     "public_ingress": "{{public_ingress}}",
     "private_ingress": "{{private_ingress}}",
-    "role_public_ingress": "{{role_public_ingress}}",
-    "role_private_ingress": "{{role_private_ingress}}"
+    "selected_region": "{{region}}"
   },
   "resource": {
     "digitalocean_firewall": {
       "network": {
-        "name": "${each.value}",
+        "name": "{{firewall_name}}",
         "dynamic": {
           "inbound_rule": [
             {
-              "for_each": "${local.role_public_ingress[each.key]}",
+              "for_each": "${local.public_ingress}",
               "content": {
                 "protocol": "${inbound_rule.value.protocol}",
                 "port_range": "${try(inbound_rule.value.port_range, null)}",
@@ -61,7 +59,7 @@
               }
             },
             {
-              "for_each": "${local.role_private_ingress[each.key]}",
+              "for_each": "${local.private_ingress}",
               "content": {
                 "protocol": "${inbound_rule.value.protocol}",
                 "port_range": "${try(inbound_rule.value.port_range, null)}",
@@ -77,21 +75,13 @@
           "prevent_destroy": "{{prevent_destroy}}"
         },
         "tags": [
-          "${digitalocean_tag.role[each.key].name}"
-        ],
-        "for_each": "{{firewall_groups}}"
+          "${digitalocean_tag.deployment.name}"
+        ]
       }
     },
     "digitalocean_tag": {
       "deployment": {
         "name": "{{deployment_tag}}",
-        "lifecycle": {
-          "prevent_destroy": "{{prevent_destroy}}"
-        }
-      },
-      "role": {
-        "for_each": "{{role_tags}}",
-        "name": "${each.value}",
         "lifecycle": {
           "prevent_destroy": "{{prevent_destroy}}"
         }

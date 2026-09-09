@@ -42,5 +42,19 @@
   ],
   "node-none": [
     "node-none.tf.json"
+  ],
+  "shared-referenced": [
+    "shared-referenced.tf.json"
+  ],
+  "shared-referenced-keygen": [
+    "shared-referenced.tf.json",
+    "shared-keygen.tf.json"
+  ],
+  "shared-referenced-roles": [
+    "shared-referenced-roles.tf.json"
+  ],
+  "shared-referenced-roles-keygen": [
+    "shared-referenced-roles.tf.json",
+    "shared-keygen.tf.json"
   ]
 }

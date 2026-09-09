@@ -11,6 +11,7 @@ export function plan_deployment(input:Map,topology:Map[],requirements:Map) {
  if(selected.mode==='managed')selected.public_key='ssh-ed25519 PLACEHOLDER managed-by-colors';
  const key=key_request(opts,selected,{}),assembly=deployment_requests(opts,topology,requirements,key),provider=opts['provider-compute'];
  const recipe=(recipes as Map)[provider],shared=planningShared(recipe,opts,requirements),sharedPlan=provider_request(opts,'shared',assembly.shared);
+ if(Object.hasOwn(assembly.shared.network,'id'))shared.params.vpc_id=assembly.shared.network.id;
  const declarations=expand(topology);if(declarations.length>245)throw Error('build exceeds documentation address capacity');
  const entry=(registry.compute as Map)[provider],documents:Map={shared:sharedPlan.documents,nodes:{}},results:Map[]=[];
  const noNetwork=assembly.shared.network.mode==='none';

@@ -908,7 +908,15 @@
           "data": {
             "digitalocean_vpc": {
               "network": {
-                "region": "nyc3"
+                "region": "nyc3",
+                "lifecycle": {
+                  "postcondition": [
+                    {
+                      "condition": "${self.default}",
+                      "error_message": "Regional discovery must return the default VPC."
+                    }
+                  ]
+                }
               }
             }
           },

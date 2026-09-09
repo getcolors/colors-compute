@@ -43,6 +43,7 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: red
       - run: python3 scripts/registry.py
+      - run: python3 scripts/network_reference.py --tofu "$(command -v tofu)"
       - run: python3 scripts/network_none.py
       - run: python3 scripts/provider_resources.py
       - run: python3 scripts/provider_recipes.py

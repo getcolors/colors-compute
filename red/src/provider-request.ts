@@ -124,8 +124,10 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   if(!safe(name))fail('invalid compute name');
   const {key,network,security}=request;
   if(!fields(key,['mode'],['public_key','ids','reference'])||!['managed','external'].includes(key.mode))fail('invalid compute key request');
-  if(!fields(network,['mode'],['cidr','subnet_cidr','zone','private_ip']))fail('invalid compute network request');
+  if(!fields(network,['mode'],['cidr','subnet_cidr','zone','private_ip','id']))fail('invalid compute network request');
   if(!(recipe.network_modes??[recipe.network_mode]).includes(network.mode))fail('unsupported compute network mode');
+  const reference=recipe.network_reference;
+  if(Object.hasOwn(network,'id')&&(!reference||network.mode!==reference.mode||typeof network.id!=='string'||!(new RegExp('^(?:'+reference.pattern+')$')).test(network.id)))fail('invalid compute network reference');
   if(!fields(security,['ingress','egress','private_filter'])||security.egress!=='all'||typeof security.private_filter!=='boolean')fail('unsupported compute security policy');
   if(network.mode==='none'&&(Object.keys(network).length!==1||security.private_filter||roles!==undefined&&roles!==null||Array.isArray(security.ingress)&&security.ingress.some((rule:any)=>rule&&typeof rule==='object'&&('peer_roles' in rule||Array.isArray(rule.sources)&&rule.sources.includes('private')))))fail('network none requires public-only security');
   if(security.private_filter&&!recipe.private_filter)fail('unsupported compute private filtering');
@@ -176,6 +178,7 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   derived.google_image=image??null;
   let selectedStage=stage==='shared'&&registrationOwned&&entry.registration?'shared-keygen':stage;
   selectedStage=recipe.network_stages?.[network.mode]?.[selectedStage]??selectedStage;
+  if(Object.hasOwn(network,'id'))selectedStage=reference.stages?.[selectedStage]??selectedStage;
   if(stage==='node'&&recipe.discovery_stage&&missing(opts[recipe.image_option]))selectedStage=recipe.discovery_stage;
   if(stage==='shared'&&roles!=null){
    const roleIngress:Map={},rolePublic:Map={},rolePrivate:Map={};

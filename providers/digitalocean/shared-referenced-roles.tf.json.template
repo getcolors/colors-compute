@@ -14,12 +14,12 @@
   "data": {
     "digitalocean_vpc": {
       "network": {
-        "region": "{{region}}",
+        "id": "{{network_id}}",
         "lifecycle": {
           "postcondition": [
             {
-              "condition": "${self.default}",
-              "error_message": "Regional discovery must return the default VPC."
+              "condition": "${self.region == local.selected_region}",
+              "error_message": "Referenced VPC must belong to the selected region."
             }
           ]
         }
@@ -44,7 +44,8 @@
     "public_ingress": "{{public_ingress}}",
     "private_ingress": "{{private_ingress}}",
     "role_public_ingress": "{{role_public_ingress}}",
-    "role_private_ingress": "{{role_private_ingress}}"
+    "role_private_ingress": "{{role_private_ingress}}",
+    "selected_region": "{{region}}"
   },
   "resource": {
     "digitalocean_firewall": {

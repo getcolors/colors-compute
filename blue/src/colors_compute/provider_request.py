@@ -190,10 +190,13 @@ def provider_request(opts, stage, request, shared=None):
     key, network, security = request['key'], request['network'], request['security']
     if not _fields(key, ('mode',), ('public_key', 'ids', 'reference')) or key['mode'] not in ('managed', 'external'):
         _fail('invalid compute key request')
-    if not _fields(network, ('mode',), ('cidr', 'subnet_cidr', 'zone', 'private_ip')):
+    if not _fields(network, ('mode',), ('cidr', 'subnet_cidr', 'zone', 'private_ip', 'id')):
         _fail('invalid compute network request')
     if network['mode'] not in recipe.get('network_modes', [recipe['network_mode']]):
         _fail('unsupported compute network mode')
+    reference = recipe.get('network_reference', {})
+    if 'id' in network and (network['mode'] != reference.get('mode') or not isinstance(network['id'], str) or re.fullmatch(reference.get('pattern', r'(?!)'), network['id']) is None):
+        _fail('invalid compute network reference')
     if not _fields(security, ('ingress', 'egress', 'private_filter')) or security['egress'] != 'all' or type(security['private_filter']) is not bool:
         _fail('unsupported compute security policy')
     if network['mode'] == 'none' and (set(network) != {'mode'} or security['private_filter'] or roles is not None or any('peer_roles' in rule or 'private' in rule.get('sources', []) for rule in security.get('ingress', []) if isinstance(rule, dict))):
@@ -289,6 +292,8 @@ def provider_request(opts, stage, request, shared=None):
     derived['google_image'] = image
     selected_stage = 'shared-keygen' if stage == 'shared' and registration_owned and entry['registration'] else stage
     selected_stage = recipe.get('network_stages', {}).get(network['mode'], {}).get(selected_stage, selected_stage)
+    if 'id' in network:
+        selected_stage = reference.get('stages', {}).get(selected_stage, selected_stage)
     if stage == 'node' and recipe.get('discovery_stage') and _missing(opts.get(recipe['image_option'])):
         selected_stage = recipe['discovery_stage']
     if stage == 'shared' and roles is not None:

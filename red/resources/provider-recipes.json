@@ -403,6 +403,9 @@
       },
       "vpc_id": {
         "path": "shared.params.vpc_id"
+      },
+      "network_id": {
+        "path": "request.network.id"
       }
     },
     "endpoint_credentials": [
@@ -464,12 +467,23 @@
       "shared": "shared-roles",
       "shared-created": "shared-created-roles",
       "shared-created-keygen": "shared-created-roles-keygen",
-      "shared-keygen": "shared-roles-keygen"
+      "shared-keygen": "shared-roles-keygen",
+      "shared-referenced": "shared-referenced-roles",
+      "shared-referenced-keygen": "shared-referenced-roles-keygen"
     },
     "role_tag_param": "deployment_tag",
     "static_private_ip": false,
     "subnet_cidr_options": [],
-    "ipv6_ingress": true
+    "ipv6_ingress": true,
+    "network_reference": {
+      "option": "digitalocean-vpc-uuid",
+      "mode": "discovered",
+      "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+      "stages": {
+        "shared": "shared-referenced",
+        "shared-keygen": "shared-referenced-keygen"
+      }
+    }
   },
   "google": {
     "application_reserved_ip": false,

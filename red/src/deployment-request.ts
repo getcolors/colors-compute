@@ -29,6 +29,9 @@ export function deployment_requests(opts:Map,topology:Map[],requirements:Map,key
  const name=missing(opts[provider+'-name'])?profile:opts[provider+'-name'];if(!safe(name))throw Error('invalid compute name');
  const network=structuredClone(Object.hasOwn(requirements,'network')?requirements.network:{});
  if(!object(network))throw Error('invalid compute network request');
+ const reference=(recipes as Map)[provider].network_reference;
+ if(reference&&Object.hasOwn(opts,reference.option)){if(Object.hasOwn(network,'id')&&network.id!==opts[reference.option])throw Error('conflicting compute network reference');network.id=structuredClone(opts[reference.option]);if(!Object.hasOwn(network,'mode'))network.mode=reference.mode;}
+ if(reference&&Object.hasOwn(network,'id')&&!Object.hasOwn(network,'mode'))network.mode=reference.mode;
  if(!Object.hasOwn(network,'mode'))network.mode=single===true&&(!Object.hasOwn(requirements,'private')||requirements.private===false)&&(recipes as Map)[provider].network_modes?.includes('none')?'none':(recipes as Map)[provider].network_mode;
  if(network.mode==='none'&&(single!==true||(Object.hasOwn(requirements,'private')&&requirements.private!==false)))throw Error('network none requires public-only single host');
  const publicKey:Map={};for(const field of ['mode','public_key','ids','reference'])if(Object.hasOwn(key,field))publicKey[field]=structuredClone(key[field]);

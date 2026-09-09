@@ -78,6 +78,14 @@ def deployment_requests(opts, topology, requirements, key):
     if not isinstance(network, dict):
         raise ValueError('invalid compute network request')
     default_mode = 'none' if single and requirements.get('private', False) is False and 'none' in recipes[provider].get('network_modes', []) else recipes[provider]['network_mode']
+    reference = recipes[provider].get('network_reference', {})
+    if reference.get('option') in opts:
+        if 'id' in network and network['id'] != opts[reference['option']]:
+            raise ValueError('conflicting compute network reference')
+        network['id'] = deepcopy(opts[reference['option']])
+        default_mode = reference['mode']
+    if 'id' in network and reference:
+        default_mode = reference['mode']
     network.setdefault('mode', default_mode)
     if network['mode'] == 'none' and (single is not True or requirements.get('private', False) is not False):
         raise ValueError('network none requires public-only single host')

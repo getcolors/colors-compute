@@ -1,0 +1,1254 @@
+[
+  {
+    "name": "reference VPC managed",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": "01234567-89ab-cdef-0123-456789abcdef"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "status": "planned",
+      "documents": {
+        "shared": {
+          "shared-keygen.tf.json": {
+            "output": {
+              "registration": {
+                "value": {
+                  "id": "${digitalocean_ssh_key.machine.id}",
+                  "provider": "digitalocean",
+                  "scope": "account"
+                }
+              },
+              "ssh_key_id": {
+                "value": "${digitalocean_ssh_key.machine.id}"
+              }
+            },
+            "resource": {
+              "digitalocean_ssh_key": {
+                "machine": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example",
+                  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+                }
+              }
+            }
+          },
+          "shared-referenced.tf.json": {
+            "data": {
+              "digitalocean_vpc": {
+                "network": {
+                  "id": "01234567-89ab-cdef-0123-456789abcdef",
+                  "lifecycle": {
+                    "postcondition": [
+                      {
+                        "condition": "${self.region == local.selected_region}",
+                        "error_message": "Referenced VPC must belong to the selected region."
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "locals": {
+              "private_ingress": {},
+              "public_ingress": {
+                "ssh:192.0.2.1/32": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "192.0.2.1/32"
+                  ]
+                },
+                "ssh:::/0": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "::/0"
+                  ]
+                }
+              },
+              "selected_region": "nyc3"
+            },
+            "output": {
+              "params": {
+                "value": {
+                  "deployment_tag": "${digitalocean_tag.deployment.name}",
+                  "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+                  "firewall_id": "${digitalocean_firewall.network.id}",
+                  "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+                  "provider": "digitalocean",
+                  "vpc_id": "${data.digitalocean_vpc.network.id}",
+                  "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+                }
+              }
+            },
+            "provider": {
+              "digitalocean": {}
+            },
+            "resource": {
+              "digitalocean_firewall": {
+                "network": {
+                  "dynamic": {
+                    "inbound_rule": [
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": "${inbound_rule.value.source_addresses}"
+                        },
+                        "for_each": "${local.public_ingress}"
+                      },
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": [
+                            "${data.digitalocean_vpc.network.ip_range}"
+                          ]
+                        },
+                        "for_each": "${local.private_ingress}"
+                      }
+                    ]
+                  },
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example-firewall",
+                  "outbound_rule": [
+                    {
+                      "protocol": "tcp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "udp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "icmp",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    }
+                  ],
+                  "tags": [
+                    "${digitalocean_tag.deployment.name}"
+                  ]
+                }
+              },
+              "digitalocean_reserved_ip": {
+                "endpoint": {
+                  "count": 0,
+                  "lifecycle": {
+                    "ignore_changes": [
+                      "droplet_id"
+                    ],
+                    "prevent_destroy": true
+                  },
+                  "region": "nyc3"
+                }
+              },
+              "digitalocean_tag": {
+                "deployment": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "colors-compute-example"
+                }
+              }
+            },
+            "terraform": {
+              "required_providers": {
+                "digitalocean": {
+                  "source": "digitalocean/digitalocean",
+                  "version": "2.51.0"
+                }
+              },
+              "required_version": ">= 1.8.0"
+            }
+          }
+        },
+        "nodes": {
+          "0": {
+            "node.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "droplet_id": "${digitalocean_droplet.node.id}",
+                    "ip": "${digitalocean_droplet.node.ipv4_address}",
+                    "name": "${digitalocean_droplet.node.name}",
+                    "node_id": "0",
+                    "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                    "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+                  }
+                }
+              },
+              "provider": {
+                "digitalocean": {}
+              },
+              "resource": {
+                "digitalocean_droplet": {
+                  "node": {
+                    "image": "ubuntu-24-04-x64",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "name": "example",
+                    "region": "nyc3",
+                    "size": "s-2vcpu-4gb",
+                    "ssh_keys": [
+                      12345
+                    ],
+                    "tags": [
+                      "colors-compute-example"
+                    ],
+                    "vpc_uuid": "01234567-89ab-cdef-0123-456789abcdef"
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "digitalocean": {
+                    "source": "digitalocean/digitalocean",
+                    "version": "2.51.0"
+                  }
+                },
+                "required_version": ">= 1.8.0"
+              }
+            }
+          }
+        }
+      },
+      "shared": {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "01234567-89ab-cdef-0123-456789abcdef",
+          "network_cidr": "10.0.0.0/24"
+        },
+        "ssh_key_id": 12345
+      },
+      "state_keys": {
+        "shared": "example/compute/shared.tfstate",
+        "nodes": {
+          "0": "example/compute/nodes/0.tfstate"
+        }
+      },
+      "cluster": {
+        "provider": "digitalocean",
+        "entry_node_id": "0",
+        "nodes": [
+          {
+            "provider_id": "1000000",
+            "node_id": "0",
+            "provider": "digitalocean",
+            "name": "example",
+            "ip": "192.0.2.10",
+            "vpc_ip": "10.0.0.10",
+            "user": "root",
+            "sudoer": "root",
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "role": null,
+            "index": 0
+          }
+        ]
+      },
+      "key": {
+        "mode": "managed",
+        "private_key_path": "$HOME/.ssh/example"
+      }
+    }
+  },
+  {
+    "name": "reference VPC external",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": "01234567-89ab-cdef-0123-456789abcdef",
+        "digitalocean-ssh-keys": [
+          "12345"
+        ]
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "status": "planned",
+      "documents": {
+        "shared": {
+          "shared-referenced.tf.json": {
+            "data": {
+              "digitalocean_vpc": {
+                "network": {
+                  "id": "01234567-89ab-cdef-0123-456789abcdef",
+                  "lifecycle": {
+                    "postcondition": [
+                      {
+                        "condition": "${self.region == local.selected_region}",
+                        "error_message": "Referenced VPC must belong to the selected region."
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "locals": {
+              "private_ingress": {},
+              "public_ingress": {
+                "ssh:192.0.2.1/32": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "192.0.2.1/32"
+                  ]
+                },
+                "ssh:::/0": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "::/0"
+                  ]
+                }
+              },
+              "selected_region": "nyc3"
+            },
+            "output": {
+              "params": {
+                "value": {
+                  "deployment_tag": "${digitalocean_tag.deployment.name}",
+                  "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+                  "firewall_id": "${digitalocean_firewall.network.id}",
+                  "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+                  "provider": "digitalocean",
+                  "vpc_id": "${data.digitalocean_vpc.network.id}",
+                  "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+                }
+              }
+            },
+            "provider": {
+              "digitalocean": {}
+            },
+            "resource": {
+              "digitalocean_firewall": {
+                "network": {
+                  "dynamic": {
+                    "inbound_rule": [
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": "${inbound_rule.value.source_addresses}"
+                        },
+                        "for_each": "${local.public_ingress}"
+                      },
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": [
+                            "${data.digitalocean_vpc.network.ip_range}"
+                          ]
+                        },
+                        "for_each": "${local.private_ingress}"
+                      }
+                    ]
+                  },
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example-firewall",
+                  "outbound_rule": [
+                    {
+                      "protocol": "tcp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "udp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "icmp",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    }
+                  ],
+                  "tags": [
+                    "${digitalocean_tag.deployment.name}"
+                  ]
+                }
+              },
+              "digitalocean_reserved_ip": {
+                "endpoint": {
+                  "count": 0,
+                  "lifecycle": {
+                    "ignore_changes": [
+                      "droplet_id"
+                    ],
+                    "prevent_destroy": true
+                  },
+                  "region": "nyc3"
+                }
+              },
+              "digitalocean_tag": {
+                "deployment": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "colors-compute-example"
+                }
+              }
+            },
+            "terraform": {
+              "required_providers": {
+                "digitalocean": {
+                  "source": "digitalocean/digitalocean",
+                  "version": "2.51.0"
+                }
+              },
+              "required_version": ">= 1.8.0"
+            }
+          }
+        },
+        "nodes": {
+          "0": {
+            "node.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "droplet_id": "${digitalocean_droplet.node.id}",
+                    "ip": "${digitalocean_droplet.node.ipv4_address}",
+                    "name": "${digitalocean_droplet.node.name}",
+                    "node_id": "0",
+                    "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
+                    "ssh_key_id": "12345",
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                    "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+                  }
+                }
+              },
+              "provider": {
+                "digitalocean": {}
+              },
+              "resource": {
+                "digitalocean_droplet": {
+                  "node": {
+                    "image": "ubuntu-24-04-x64",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "name": "example",
+                    "region": "nyc3",
+                    "size": "s-2vcpu-4gb",
+                    "ssh_keys": [
+                      "12345"
+                    ],
+                    "tags": [
+                      "colors-compute-example"
+                    ],
+                    "vpc_uuid": "01234567-89ab-cdef-0123-456789abcdef"
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "digitalocean": {
+                    "source": "digitalocean/digitalocean",
+                    "version": "2.51.0"
+                  }
+                },
+                "required_version": ">= 1.8.0"
+              }
+            }
+          }
+        }
+      },
+      "shared": {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "01234567-89ab-cdef-0123-456789abcdef",
+          "network_cidr": "10.0.0.0/24"
+        },
+        "ssh_key_id": 12345
+      },
+      "state_keys": {
+        "shared": "example/compute/shared.tfstate",
+        "nodes": {
+          "0": "example/compute/nodes/0.tfstate"
+        }
+      },
+      "cluster": {
+        "provider": "digitalocean",
+        "entry_node_id": "0",
+        "nodes": [
+          {
+            "provider_id": "1000000",
+            "node_id": "0",
+            "provider": "digitalocean",
+            "name": "example",
+            "ip": "192.0.2.10",
+            "vpc_ip": "10.0.0.10",
+            "user": "root",
+            "sudoer": "root",
+            "role": null,
+            "index": 0
+          }
+        ]
+      },
+      "key": {
+        "mode": "external"
+      }
+    }
+  },
+  {
+    "name": "invalid VPC reference None",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": null
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid compute network reference"
+    }
+  },
+  {
+    "name": "invalid VPC reference False",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": false
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid compute network reference"
+    }
+  },
+  {
+    "name": "invalid VPC reference ",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": ""
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid compute network reference"
+    }
+  },
+  {
+    "name": "invalid VPC reference REPLACE_ME",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": "REPLACE_ME"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid compute network reference"
+    }
+  },
+  {
+    "name": "invalid VPC reference not-a-uuid",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": "not-a-uuid"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid compute network reference"
+    }
+  },
+  {
+    "name": "invalid VPC reference 01234567-89ab-cdef-0123-456789abcdef\n",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": "01234567-89ab-cdef-0123-456789abcdef\n"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "discovered"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid compute network reference"
+    }
+  },
+  {
+    "name": "reference VPC refuses created ownership",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-vpc-uuid": "01234567-89ab-cdef-0123-456789abcdef"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "created",
+          "cidr": "10.3.0.0/24"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid compute network reference"
+    }
+  },
+  {
+    "name": "neutral VPC reference selects discovered mode",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "id": "01234567-89ab-cdef-0123-456789abcdef"
+        }
+      }
+    ],
+    "expected": {
+      "status": "planned",
+      "documents": {
+        "shared": {
+          "shared-keygen.tf.json": {
+            "output": {
+              "registration": {
+                "value": {
+                  "id": "${digitalocean_ssh_key.machine.id}",
+                  "provider": "digitalocean",
+                  "scope": "account"
+                }
+              },
+              "ssh_key_id": {
+                "value": "${digitalocean_ssh_key.machine.id}"
+              }
+            },
+            "resource": {
+              "digitalocean_ssh_key": {
+                "machine": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example",
+                  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+                }
+              }
+            }
+          },
+          "shared-referenced.tf.json": {
+            "data": {
+              "digitalocean_vpc": {
+                "network": {
+                  "id": "01234567-89ab-cdef-0123-456789abcdef",
+                  "lifecycle": {
+                    "postcondition": [
+                      {
+                        "condition": "${self.region == local.selected_region}",
+                        "error_message": "Referenced VPC must belong to the selected region."
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "locals": {
+              "private_ingress": {},
+              "public_ingress": {
+                "ssh:192.0.2.1/32": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "192.0.2.1/32"
+                  ]
+                },
+                "ssh:::/0": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "::/0"
+                  ]
+                }
+              },
+              "selected_region": "nyc3"
+            },
+            "output": {
+              "params": {
+                "value": {
+                  "deployment_tag": "${digitalocean_tag.deployment.name}",
+                  "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+                  "firewall_id": "${digitalocean_firewall.network.id}",
+                  "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+                  "provider": "digitalocean",
+                  "vpc_id": "${data.digitalocean_vpc.network.id}",
+                  "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+                }
+              }
+            },
+            "provider": {
+              "digitalocean": {}
+            },
+            "resource": {
+              "digitalocean_firewall": {
+                "network": {
+                  "dynamic": {
+                    "inbound_rule": [
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": "${inbound_rule.value.source_addresses}"
+                        },
+                        "for_each": "${local.public_ingress}"
+                      },
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": [
+                            "${data.digitalocean_vpc.network.ip_range}"
+                          ]
+                        },
+                        "for_each": "${local.private_ingress}"
+                      }
+                    ]
+                  },
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example-firewall",
+                  "outbound_rule": [
+                    {
+                      "protocol": "tcp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "udp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "icmp",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    }
+                  ],
+                  "tags": [
+                    "${digitalocean_tag.deployment.name}"
+                  ]
+                }
+              },
+              "digitalocean_reserved_ip": {
+                "endpoint": {
+                  "count": 0,
+                  "lifecycle": {
+                    "ignore_changes": [
+                      "droplet_id"
+                    ],
+                    "prevent_destroy": true
+                  },
+                  "region": "nyc3"
+                }
+              },
+              "digitalocean_tag": {
+                "deployment": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "colors-compute-example"
+                }
+              }
+            },
+            "terraform": {
+              "required_providers": {
+                "digitalocean": {
+                  "source": "digitalocean/digitalocean",
+                  "version": "2.51.0"
+                }
+              },
+              "required_version": ">= 1.8.0"
+            }
+          }
+        },
+        "nodes": {
+          "0": {
+            "node.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "droplet_id": "${digitalocean_droplet.node.id}",
+                    "ip": "${digitalocean_droplet.node.ipv4_address}",
+                    "name": "${digitalocean_droplet.node.name}",
+                    "node_id": "0",
+                    "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                    "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+                  }
+                }
+              },
+              "provider": {
+                "digitalocean": {}
+              },
+              "resource": {
+                "digitalocean_droplet": {
+                  "node": {
+                    "image": "ubuntu-24-04-x64",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "name": "example",
+                    "region": "nyc3",
+                    "size": "s-2vcpu-4gb",
+                    "ssh_keys": [
+                      12345
+                    ],
+                    "tags": [
+                      "colors-compute-example"
+                    ],
+                    "vpc_uuid": "01234567-89ab-cdef-0123-456789abcdef"
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "digitalocean": {
+                    "source": "digitalocean/digitalocean",
+                    "version": "2.51.0"
+                  }
+                },
+                "required_version": ">= 1.8.0"
+              }
+            }
+          }
+        }
+      },
+      "shared": {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "01234567-89ab-cdef-0123-456789abcdef",
+          "network_cidr": "10.0.0.0/24"
+        },
+        "ssh_key_id": 12345
+      },
+      "state_keys": {
+        "shared": "example/compute/shared.tfstate",
+        "nodes": {
+          "0": "example/compute/nodes/0.tfstate"
+        }
+      },
+      "cluster": {
+        "provider": "digitalocean",
+        "entry_node_id": "0",
+        "nodes": [
+          {
+            "provider_id": "1000000",
+            "node_id": "0",
+            "provider": "digitalocean",
+            "name": "example",
+            "ip": "192.0.2.10",
+            "vpc_ip": "10.0.0.10",
+            "user": "root",
+            "sudoer": "root",
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "role": null,
+            "index": 0
+          }
+        ]
+      },
+      "key": {
+        "mode": "managed",
+        "private_key_path": "$HOME/.ssh/example"
+      }
+    }
+  }
+]
