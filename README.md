@@ -4,12 +4,11 @@ Shared compute code for Green, Red, and Blue package skills. The target is one
 single-node operation used directly by single-host packages and through Colors
 fan-out by cluster packages.
 
-This repository is under implementation. It currently provides executable
-contracts, SDK cluster workflow composition, pure template/backend planning,
-provider template prototypes, protected read-only backend sessions, and a
-read-only AutoMQ migration planner. It
-does not yet provide a production create/delete lifecycle. No package or live
-deployment has migrated to it.
+The library implements shared and per-node create/delete operations, conditional
+deployment ownership, SSH lifecycle, remote state access, and credential-free
+planning in all three colors. Cluster operations use native Colors fan-out and
+join. Package migrations are underway, starting with AutoMQ. Existing deployments
+still require explicit state migration; the address planner cannot transfer them.
 
 All eight provider template sets have passed OpenTofu 1.12.5 schema validation.
 The packaged `provider_plan` API loads those templates in each language.
@@ -29,11 +28,20 @@ isolation, backend locking, or safe migration of an existing deployment.
   plans for ownership and node attempts, with strict schemas and immutable results.
 - [Conditional journal transport](contracts/object-transport.md): private AWS CLI
   sessions for confirmed missing keys and conditional S3/R2 writes.
-- [Coordination design](contracts/coordination-design.md): remaining deployment
-  ownership and crash recovery requirements before any provider mutation.
+- [Runtime coordinator](contracts/coordinator-runtime.md): serialized conditional
+  writes and confirmation of ambiguous responses.
+- [Lifecycle journal](contracts/lifecycle-journal.md): shared resources, nodes,
+  key ownership, scale-down, deletion, and recreation.
+- [Application requests](contracts/deployment-request.md): naming, external public
+  key references, and deterministic builds.
+- [Provider request resolution](contracts/provider-request.md): library-owned
+  configuration bindings and firewall capabilities.
+- [Deployment orchestration](contracts/orchestration.md): guarded operations,
+  failed sibling settlement, and complete inventories.
+- [OpenTofu execution](contracts/tofu-runtime.md): private saved plans, replacement
+  refusal, and post-apply state checks.
 - [Migration review](migration/README.md): an AutoMQ state-address inventory
   that emits no resource attributes and cannot execute a state transfer.
-- [Handoff](HANDOFF.md): current evidence and unfinished work.
 
 The registry declares eight target compute providers: Azure, AWS, Google,
 DigitalOcean, hcloud, Vultr, Yandex, and OCI. A registry entry is not evidence
@@ -59,9 +67,16 @@ validates and orders every result under `colors-compute/cluster`. A failed
 branch prevents downstream execution. One-node workflows call the same step.
 In Green these keys are keywords; engine error keys use the matching color.
 
-This constructor composes node operations. It does not authorize a caller to
-skip deployment locking, SSH preparation, shared-resource ownership, or remote
-state initialization. Those production lifecycle operations remain unfinished.
+Package lifecycle steps call `orchestrate`, which owns locking, SSH preparation,
+shared resources, state access, node fan-out and the join. `plan_deployment`
+provides build artifacts and documentation addresses without credentials or
+local SSH access. `read_deployment` supplies recorded inventory for application
+cleanup and inspection, refusing held journals and incomplete results.
+
+Blue exports these names from `colors_compute`. Red exports snake-case planning
+helpers and `orchestrate` from its main entry. Green exposes the operations in
+`compute-orchestration`, `compute-planning`, and `compute-inspection` namespaces.
+See the contracts for native argument names and injected test dependencies.
 
 ## Development checks
 
@@ -71,6 +86,7 @@ provider schema checks, which use temporary directories and no credentials.
 ```sh
 python3 scripts/registry.py
 python3 scripts/provider_resources.py
+python3 scripts/provider_recipes.py
 python3 scripts/parity.py
 uv run --directory blue pytest -q
 cd green && bb test

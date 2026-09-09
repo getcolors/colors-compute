@@ -3,7 +3,7 @@ import {collect, state_keys} from './index.ts';
 
 /** Build a Colors fork/join around an injected single-node operation.
  * nodeStep receives colors-compute/request and returns colors-compute/params.
- * It must throw or return red/exit > 0 on failure. No provisioning is supplied
+ * It must throw or return a nonzero red/exit on failure. No provisioning is supplied
  * by this adapter; the caller supplies the common single-node lifecycle step.
  */
 export function clusterWorkflow(
@@ -35,7 +35,15 @@ export function clusterWorkflow(
             return clean;
           }, 'colors-compute/node'];
         case 'colors-compute/node':
-          return [nodeStep, 'colors-compute/join'];
+          return [async opts => {
+            const result = await nodeStep(opts);
+            // The SDK recognizes only positive exits. Normalize negative
+            // process exits so its fork-collapse logic observes the failure.
+            const exit = result?.['red/exit'] ?? 0;
+            return exit !== 0 && !(typeof exit === 'number' && exit > 0)
+              ? {...result, 'red/exit': 1}
+              : result;
+          }, 'colors-compute/join'];
         case 'colors-compute/join':
           return [opts => {
             // A one-node route has no fork, so the SDK supplies its result
@@ -50,7 +58,7 @@ export function clusterWorkflow(
       }
     },
     nextFn: (step, next, opts) => {
-      if ((opts['red/exit'] ?? 0) > 0) return [];
+      if ((opts['red/exit'] ?? 0) !== 0) return [];
       if (step === 'colors-compute/fan-out') {
         return declared.map(request => ['colors-compute/node', {
           ...opts, 'colors-compute/request': structuredClone(request),

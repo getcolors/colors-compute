@@ -33,6 +33,10 @@ export function validate(opts: Map): string[] {
   else if (!safe(opts.profile)) errors.push(':profile must be a safe identifier');
   const required = new Set<string>(selected(opts).flatMap(e => e.required));
   for (const key of [...required].sort()) if (missing(opts[key])) errors.push(`:${key} is required`);
+  for (const entry of selected(opts)) for (const alternatives of entry['required-one-of'] ?? []) {
+    if (!alternatives.some((group: string[]) => group.every(key => !missing(opts[key]))))
+      errors.push('one of ' + alternatives.map((group: string[]) => group.map(key => ':' + key).join(' and ')).join(' or ') + ' is required');
+  }
   return errors;
 }
 export function credential_requirements(opts: Map): string[] {
@@ -118,3 +122,16 @@ export {provider_plan} from './providers.ts';
 export {readState, type BackendRunner, type StateRead} from './backend.ts';
 export {coordination} from './coordination.ts';
 export {journalGet,journalPut,type JournalGetResult,type JournalPutResult} from './journal.ts';
+export {Coordinator,type CoordinatorOptions} from './coordinator.ts';
+export {provider_request} from './provider-request.ts';
+export {prepareKeypair,cleanupKeypair,SSHError} from './ssh.ts';
+export {statePresence,convergeState} from './execution.ts';
+export {deployment_requests} from './deployment-request.ts';
+export {key_request} from './key-request.ts';
+export {orchestrate} from './orchestration.ts';
+export {source_cidrs} from './deployment-request.ts';
+export {plan_deployment} from './planning.ts';
+export {read_deployment} from './inspection.ts';
+export {registrationPreflight} from './registration.ts';
+export {mode as keyMode} from './ssh.ts';
+export {validate_deployment} from './planning.ts';

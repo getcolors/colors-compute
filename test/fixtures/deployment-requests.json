@@ -1,0 +1,263 @@
+[
+  {
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "security": {},
+        "single_host": false
+      },
+      {
+        "mode": "managed",
+        "private_key_path": "must-not-render",
+        "public_key": "public"
+      }
+    ],
+    "expected": {
+      "nodes": [
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo-0",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "0",
+          "security": {}
+        }
+      ],
+      "shared": {
+        "key": {
+          "mode": "managed",
+          "public_key": "public"
+        },
+        "name": "demo",
+        "network": {
+          "mode": "created"
+        },
+        "node_id": "shared",
+        "security": {}
+      }
+    },
+    "name": "request names 0",
+    "op": "deployment_requests"
+  },
+  {
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr"
+      },
+      [
+        {
+          "count": 3
+        }
+      ],
+      {
+        "security": {},
+        "single_host": false
+      },
+      {
+        "mode": "managed",
+        "private_key_path": "must-not-render",
+        "public_key": "public"
+      }
+    ],
+    "expected": {
+      "nodes": [
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo-0",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "0",
+          "security": {}
+        },
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo-1",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "1",
+          "security": {}
+        },
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo-2",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "2",
+          "security": {}
+        }
+      ],
+      "shared": {
+        "key": {
+          "mode": "managed",
+          "public_key": "public"
+        },
+        "name": "demo",
+        "network": {
+          "mode": "created"
+        },
+        "node_id": "shared",
+        "security": {}
+      }
+    },
+    "name": "request names 1",
+    "op": "deployment_requests"
+  },
+  {
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "security": {},
+        "single_host": true
+      },
+      {
+        "mode": "managed",
+        "private_key_path": "must-not-render",
+        "public_key": "public"
+      }
+    ],
+    "expected": {
+      "nodes": [
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "0",
+          "security": {}
+        }
+      ],
+      "shared": {
+        "key": {
+          "mode": "managed",
+          "public_key": "public"
+        },
+        "name": "demo",
+        "network": {
+          "mode": "created"
+        },
+        "node_id": "shared",
+        "security": {}
+      }
+    },
+    "name": "request names 2",
+    "op": "deployment_requests"
+  },
+  {
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr"
+      },
+      [
+        {
+          "count": 1,
+          "role": "server"
+        },
+        {
+          "count": 2,
+          "role": "worker"
+        }
+      ],
+      {
+        "security": {},
+        "single_host": false
+      },
+      {
+        "mode": "managed",
+        "private_key_path": "must-not-render",
+        "public_key": "public"
+      }
+    ],
+    "expected": {
+      "nodes": [
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo-server-0",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "server-0",
+          "security": {}
+        },
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo-worker-0",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "worker-0",
+          "security": {}
+        },
+        {
+          "key": {
+            "mode": "managed",
+            "public_key": "public"
+          },
+          "name": "demo-worker-1",
+          "network": {
+            "mode": "created"
+          },
+          "node_id": "worker-1",
+          "security": {}
+        }
+      ],
+      "shared": {
+        "key": {
+          "mode": "managed",
+          "public_key": "public"
+        },
+        "name": "demo",
+        "network": {
+          "mode": "created"
+        },
+        "node_id": "shared",
+        "security": {}
+      }
+    },
+    "name": "request names 3",
+    "op": "deployment_requests"
+  }
+]

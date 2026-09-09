@@ -85,7 +85,7 @@
         (stop-process! @active @descendants)
         {:exit -1 :out "" :err ""}))))
 
-(defn- valid-state? [state]
+(defn valid-state? [state]
   (and (map? state)
        (number? (:version state)) (== 4 (:version state))
        (number? (:serial state)) (<= 0 (:serial state) 9007199254740991)
@@ -105,13 +105,22 @@
                   (str/includes? encoded (subs escaped 1 (dec (count escaped)))))))
           (vals credentials))))
 
+(defn flatten-outputs [state]
+  (when-not (valid-state? state) (throw (ex-info "invalid state" {})))
+  (into {} (map (fn [[key output]]
+                  (when-not (and (map? output) (contains? output :value)
+                                 (or (not (contains? output :sensitive)) (false? (:sensitive output))))
+                    (throw (ex-info "invalid state outputs" {})))
+                  [key (:value output)]) (:outputs state))))
+
 (defn read-state
   "Read existing remote state through a private OpenTofu backend session.
   Runner receives [argv directory exact-environment timeout-ms]. Params may
   contain sensitive state outputs: callers must not log the returned value."
   ([opts state-key] (read-state opts state-key (into {} (System/getenv)) run-command))
   ([opts state-key environment] (read-state opts state-key environment run-command))
-  ([opts state-key environment runner]
+  ([opts state-key environment runner] (read-state opts state-key environment runner false))
+  ([opts state-key environment runner include-outputs]
    (try
      (let [plan (compute/backend-plan opts state-key)
            credentials (into {} (map (fn [[variable option]]
@@ -139,11 +148,12 @@
                  (let [documents (vec (json/parsed-seq (java.io.StringReader. (:out pulled)) true))
                        state (when (= 1 (count documents)) (first documents))
                        output (get-in state [:outputs :params])
+                       outputs (when include-outputs (flatten-outputs state))
                        params (if (contains? (:outputs state) :params)
                                 (when (map? output) (:value output)) {})]
                    (if (and (valid-state? state) (map? params)
-                            (not (bound-secret-in? params credentials)))
-                     {:status "present" :params params}
+                            (not (bound-secret-in? (if include-outputs outputs params) credentials)))
+                     (cond-> {:status "present" :params params} include-outputs (assoc :outputs outputs :state_empty (and (empty? (:resources state)) (empty? (:outputs state)))))
                      {:status "error"}))))))
          (finally (remove-tree! directory))))
      (catch InterruptedException error (throw error))

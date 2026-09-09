@@ -22,7 +22,7 @@ function configuration(opts:Map) {
   if(opts['provider-backend']==='r2'&&!nonblank(settings.endpoints.s3)) throw new Error('invalid settings');
   return {key,bucket:settings.bucket,region:settings.region,endpoint:settings.endpoints?.s3};
 }
-function identity(opts:Map):Map {
+export function identity(opts:Map):Map {
   const kind=opts['provider-backend'];
   return {profile:opts.profile,provider:opts['provider-compute'],backend:{kind,bucket:opts[`${kind}-bucket`],region:kind==='r2'?'auto':opts['s3-region'],...(kind==='r2'?{endpoint:opts['r2-endpoint']}:{})}};
 }
@@ -34,10 +34,10 @@ function secrets(opts:Map,environment:Env):string[] {
     return value;
   });
 }
-function containsSecret(text:string,values:string[]):boolean {
+export function containsSecret(text:string,values:string[]):boolean {
   return values.some(value=>text.includes(value)||text.includes(JSON.stringify(value).slice(1,-1)));
 }
-function writePrivate(path:string,content:string) {writeFileSync(path,content,{mode:0o600,flag:'wx'});}
+export function writePrivate(path:string,content:string) {writeFileSync(path,content,{mode:0o600,flag:'wx'});}
 function childEnvironment(environment:Env,directory:string,values:string[]):Record<string,string> {
   const env:Record<string,string>={};
   for(const [key,value] of Object.entries(environment)) {
@@ -54,15 +54,15 @@ function childEnvironment(environment:Env,directory:string,values:string[]):Reco
   Object.assign(env,{AWS_PAGER:'',AWS_CLI_AUTO_PROMPT:'off',AWS_MAX_ATTEMPTS:'1'});
   return env;
 }
-function serviceCode(stderr:string,operation:string):string|undefined {
+export function serviceCode(stderr:string,operation:string):string|undefined {
   const match=/^\s*(?:aws: \[ERROR\]: )?An error occurred \(([A-Za-z0-9]+)\) when calling the ([A-Za-z0-9]+) operation(?: \(reached max retries: [0-9]+\))?:/.exec(stderr);
   return match?.[2]===operation?match[1]:undefined;
 }
-function etag(stdout:string):string|undefined {
+export function etag(stdout:string):string|undefined {
   const value:unknown=JSON.parse(stdout);
   return object(value)&&nonblank(value.ETag)?value.ETag:undefined;
 }
-async function session<T>(opts:Map,environment:Env,action:(directory:string,env:Record<string,string>,values:string[],config:ReturnType<typeof configuration>)=>Promise<T>):Promise<T|{status:'error'}> {
+export async function session<T>(opts:Map,environment:Env,action:(directory:string,env:Record<string,string>,values:string[],config:ReturnType<typeof configuration>)=>Promise<T>):Promise<T|{status:'error'}> {
   let directory:string|undefined;
   try {
     const config=configuration(opts);const values=secrets(opts,environment);
@@ -77,7 +77,7 @@ async function session<T>(opts:Map,environment:Env,action:(directory:string,env:
     if(directory)try{rmSync(directory,{recursive:true,force:true});}catch{return {status:'error'};}
   }
 }
-function commonArgs(config:ReturnType<typeof configuration>) {
+export function commonArgs(config:ReturnType<typeof configuration>) {
   return ['--region',config.region,'--output','json','--no-cli-pager',...(config.endpoint?['--endpoint-url',config.endpoint]:[])];
 }
 

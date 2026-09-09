@@ -45,6 +45,12 @@ def validate(opts: dict) -> list[str]:
         entry = providers[slot].get(selected, {}) if isinstance(selected, str) else {}
         required.update(entry.get("required", []))
     errors.extend(f":{key} is required" for key in sorted(required) if _missing(opts.get(key)))
+    for slot in ('compute', 'backend'):
+        selected = opts.get('provider-' + slot)
+        entry = providers[slot].get(selected, {}) if isinstance(selected, str) else {}
+        for alternatives in entry.get('required-one-of', []):
+            if not any(all(not _missing(opts.get(key)) for key in group) for group in alternatives):
+                errors.append('one of ' + ' or '.join(' and '.join(':' + key for key in group) for group in alternatives) + ' is required')
     return errors
 
 

@@ -51,7 +51,8 @@
         "provider": "vultr",
         "vpc_id": "${vultr_vpc.network.id}",
         "vpc_ip_range": "{{network_cidr}}",
-        "firewall_group_id": "${vultr_firewall_group.network.id}"
+        "firewall_group_id": "${vultr_firewall_group.network.id}",
+        "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}"
       }
     }
   }

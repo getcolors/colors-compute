@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [io.github.getcolors.compute :as compute]
             [io.github.getcolors.compute-coordination :as coordination]
+            [io.github.getcolors.compute-lifecycle :as lifecycle]
             [io.github.getcolors.compute-runtime :as runtime])
   (:import [java.nio.file Files Path]
            [java.nio.file.attribute PosixFilePermissions FileAttribute]
@@ -14,17 +15,17 @@
 (def ^:private limit-bytes (* 2 1024 1024))
 (defn- nonblank? [value] (and (string? value) (not (str/blank? value))))
 (defn- exact? [value fields] (and (map? value) (= (set (keys value)) fields)))
-(defn- attrs [mode] (into-array FileAttribute [(PosixFilePermissions/asFileAttribute (PosixFilePermissions/fromString mode))]))
-(defn- private-file! [directory name content]
+(defn ^:no-doc attrs [mode] (into-array FileAttribute [(PosixFilePermissions/asFileAttribute (PosixFilePermissions/fromString mode))]))
+(defn ^:no-doc private-file! [directory name content]
   (let [path (.resolve ^Path directory name)]
     (Files/createFile path (attrs "rw-------"))
     (spit (.toFile path) content)
     (str path)))
-(defn- cleanup! [directory]
+(defn ^:no-doc cleanup! [directory]
   (with-open [paths (Files/walk ^Path directory (make-array java.nio.file.FileVisitOption 0))]
     (doseq [path (reverse (sort-by #(.getNameCount ^Path %) (iterator-seq (.iterator paths))))]
       (Files/deleteIfExists ^Path path))))
-(defn- parse-one [text]
+(defn ^:no-doc parse-one [text]
   (let [documents (vec (json/parsed-seq (java.io.StringReader. text) true))]
     (when-not (= 1 (count documents)) (throw (ex-info "invalid JSON" {})))
     (first documents)))
@@ -63,11 +64,11 @@
               "AWS_CONFIG_FILE" (private-file! directory "config" "")
               "AWS_REQUEST_CHECKSUM_CALCULATION" "when_required"
               "AWS_RESPONSE_CHECKSUM_VALIDATION" "when_required"}))))
-(defn- service-code [result operation]
+(defn ^:no-doc service-code [result operation]
   (when (and (number? (:exit result)) (not (zero? (:exit result))) (string? (:err result)))
     (second (re-find (re-pattern (str "^\\s*(?:aws: \\[ERROR\\]: )?An error occurred \\(([A-Za-z0-9]+)\\) when calling the " operation " operation(?: \\(reached max retries: [0-9]+\\))?:"))
                      (:err result)))))
-(defn- bound-secret? [value credentials]
+(defn ^:no-doc bound-secret? [value credentials]
   (let [text (json/generate-string value)]
     (boolean
      (some (fn [secret]
@@ -93,7 +94,7 @@
                             :backend (cond-> (select-keys settings [:kind :bucket :region])
                                        (= "r2" (:kind settings)) (assoc :endpoint (:endpoint settings)))}]
               (when-not (and (exact? intent #{:condition :document})
-                             (coordination/valid-document? (:document intent))
+                             (or (coordination/valid-document? (:document intent)) (lifecycle/valid-document? (:document intent)))
                              (= expected (get-in intent [:document :identity]))
                              (or (and (exact? condition #{:if_none_match}) (= "*" (:if_none_match condition)))
                                  (and (exact? condition #{:if_match}) (nonblank? (:if_match condition)))))
@@ -148,3 +149,9 @@
      (call-session opts environment runner intent)
      (catch InterruptedException error (throw error))
      (catch Exception _ {:status "error"}))))
+
+(defn ^:no-doc backend-session [opts environment callback]
+  (let [settings (settings opts) credentials (credentials settings environment)
+        directory (Files/createTempDirectory "colors-object-" (attrs "rwx------"))]
+    (try (callback directory (child-environment! settings credentials directory environment) credentials settings)
+         (finally (cleanup! directory)))))

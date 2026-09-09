@@ -1,0 +1,105 @@
+{
+  "terraform": {
+    "required_providers": {
+      "yandex": {
+        "source": "yandex-cloud/yandex",
+        "version": "0.120.0"
+      }
+    }
+  },
+  "provider": {
+    "yandex": {
+      "cloud_id": "{{cloud_id}}",
+      "folder_id": "{{folder_id}}",
+      "zone": "{{zone}}"
+    }
+  },
+  "locals": {
+    "public_key": "{{public_key}}"
+  },
+  "resource": {
+    "yandex_vpc_address": {
+      "node": {
+        "name": "{{name}}",
+        "external_ipv4_address": [
+          {
+            "zone_id": "{{zone}}"
+          }
+        ],
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "yandex_compute_instance": {
+      "node": {
+        "name": "{{name}}",
+        "zone": "{{zone}}",
+        "platform_id": "{{platform_id}}",
+        "allow_stopping_for_update": "{{allow_stopping_for_update}}",
+        "resources": [
+          {
+            "cores": "{{cores}}",
+            "memory": "{{memory}}",
+            "core_fraction": "{{core_fraction}}"
+          }
+        ],
+        "boot_disk": [
+          {
+            "initialize_params": [
+              {
+                "image_id": "${data.yandex_compute_image.ubuntu.id}",
+                "size": "{{disk_size}}"
+              }
+            ]
+          }
+        ],
+        "network_interface": [
+          {
+            "subnet_id": "{{subnet_id}}",
+            "security_group_ids": "{{security_group_ids}}",
+            "nat": true,
+            "nat_ip_address": "${yandex_vpc_address.node.external_ipv4_address[0].address}"
+          }
+        ],
+        "metadata": {
+          "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+        },
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}",
+          "ignore_changes": [
+            "boot_disk[0].initialize_params[0].image_id"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "yandex",
+        "node_id": "{{node_id}}",
+        "name": "${yandex_compute_instance.node.name}",
+        "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+        "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}",
+        "user": "ubuntu",
+        "sudoer": "ubuntu",
+        "metadata": {
+          "instance_id": "${yandex_compute_instance.node.id}",
+          "fqdn": "${yandex_compute_instance.node.fqdn}",
+          "address_id": "${yandex_vpc_address.node.id}",
+          "subnet_id": "{{subnet_id}}",
+          "security_group_ids": "{{security_group_ids}}",
+          "zone": "{{zone}}"
+        }
+      }
+    }
+  },
+  "data": {
+    "yandex_compute_image": {
+      "ubuntu": {
+        "family": "{{image_family}}"
+      }
+    }
+  }
+}

@@ -1,0 +1,4710 @@
+[
+  {
+    "name": "lifecycle acquire fresh generation",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_none_match": "*"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 1,
+        "write_id": "write-1",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": false,
+        "key": {
+          "mode": null,
+          "phase": "absent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "lifecycle held cannot attach",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/acquire",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle lock held"
+    }
+  },
+  {
+    "name": "lifecycle declare complete topology",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 2
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": null,
+          "phase": "absent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle key intent precedes filesystem mutation",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/key-intent",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "mode": "managed"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "intent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle key intent refuses release",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "intent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle prepared key records fingerprint",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "intent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/key-prepared",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle invalid fingerprint",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "intent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/key-prepared",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "fingerprint": "SHA256:short"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle event"
+    }
+  },
+  {
+    "name": "lifecycle node cannot precede shared resources",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-node-0"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle shared start requires confirmed intent",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "op-shared"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "running",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle shared start refuses undeclared topology",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "op-shared"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle shared failure retains operation",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-fail",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "op-shared"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "failed",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle shared retry needs readable state",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "failed",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-retry",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "evidence": "readable-state"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle shared retry refuses absence evidence",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "failed",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-retry",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "evidence": "absent"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle event"
+    }
+  },
+  {
+    "name": "lifecycle shared complete records ready",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-complete",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "op-shared"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle node start after shared ready",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-node-0"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "op-node-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle shared mutation refuses active child",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "running",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "op-shared-new"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle release refuses running node",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "running",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle failed node remains recorded",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "running",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/fail",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-node-0"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "failed",
+            "operation": "create",
+            "operation_id": "op-node-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle failed node cannot blind start",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "failed",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-retry"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle retry requires readable owned state",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "failed",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retry",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "evidence": "readable-state"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle scale-down retains retired node intent",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-node-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-node-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle scale-down destroys only undesired node",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/destroy",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-1",
+        "operation_id": "destroy-node-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-node-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroying",
+            "operation": "destroy",
+            "operation_id": "destroy-node-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle desired node refuses destruction",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/destroy",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "destroy-node-0"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle destroy completion retains history",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroying",
+              "operation": "destroy",
+              "operation_id": "destroy-node-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/complete",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-1",
+        "operation_id": "destroy-node-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-node-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-node-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle scale-up resets previously destroyed node",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-node-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 2
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": true,
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-node-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle begin delete enumerates recorded nodes",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/begin-delete",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "deleting",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "op-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-node-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-node-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle shared deletion waits for all nodes",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "ready",
+              "operation": "create",
+              "operation_id": "op-node-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-destroy",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "destroy-shared"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle shared destroy follows nodes",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "op-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-destroy",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "destroy-shared"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "deleting",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "destroying",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle shared destroyed outcome",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "destroying",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/shared-complete",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "operation_id": "destroy-shared"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "deleting",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "prepared",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle uncertain key intent cannot authorize cleanup",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "intent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/key-cleanup",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle key cleanup after resources",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "prepared",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/key-cleanup",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "deleting",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "cleanup",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle key cleanup refuses release",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "cleanup",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "lifecycle key removed records completion",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "cleanup",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/key-removed",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "deleting",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "removed",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle retire preserves tombstone",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "removed",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "retired",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "removed",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle release retains retired history",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "retired",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "removed",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "idle",
+          "run_id": null
+        },
+        "generation": 1,
+        "status": "retired",
+        "topology_declared": true,
+        "key": {
+          "mode": "managed",
+          "phase": "removed",
+          "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        },
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle recreate starts next generation preserving node history",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "retired",
+          "topology_declared": true,
+          "key": {
+            "mode": "managed",
+            "phase": "removed",
+            "fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/recreate",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 2,
+        "status": "active",
+        "topology_declared": false,
+        "key": {
+          "mode": null,
+          "phase": "absent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle new topology may differ from historical roles",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 2,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-0"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": false,
+              "phase": "destroyed",
+              "operation": "destroy",
+              "operation_id": "destroy-1"
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 2,
+        "status": "active",
+        "topology_declared": true,
+        "key": {
+          "mode": null,
+          "phase": "absent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-0"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "desired": false,
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-1"
+          },
+          "0": {
+            "state_key": "demo/compute/nodes/0.tfstate",
+            "role": null,
+            "index": 0,
+            "desired": true,
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "lifecycle unsupported extension rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "secret": "do-not-echo"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle event"
+    }
+  },
+  {
+    "name": "lifecycle stale etag refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "other"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle stale observation"
+    }
+  },
+  {
+    "name": "lifecycle same write id refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle write_id reused"
+    }
+  },
+  {
+    "name": "lifecycle secret journal extension refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null,
+            "private_key": "do-not-echo"
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle document"
+    }
+  },
+  {
+    "name": "lifecycle owner mismatch refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "other",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle owner mismatch"
+    }
+  },
+  {
+    "name": "lifecycle forged retired tombstone refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "retired",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle document"
+    }
+  },
+  {
+    "name": "lifecycle deleting cannot retain desired nodes",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 2,
+          "write_id": "write-2",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": true,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "desired": true,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle document"
+    }
+  },
+  {
+    "name": "lifecycle premature cleanup document refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "active",
+          "topology_declared": false,
+          "key": {
+            "mode": "external",
+            "phase": "cleanup",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle document"
+    }
+  },
+  {
+    "name": "lifecycle removed key cannot precede resource destruction",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": "external",
+            "phase": "removed",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid lifecycle document"
+    }
+  }
+]

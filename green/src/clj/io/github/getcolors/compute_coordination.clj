@@ -13,7 +13,7 @@
 (defn- role? [value]
   (or (nil? value) (and (string? value) (boolean (re-matches #"[a-z][a-z0-9]*(-[a-z0-9]+)*" value)))))
 
-(defn- identity? [identity]
+(defn identity? [identity]
   (and (exact? identity #{:profile :provider :backend})
        (safe? (:profile identity))
        (string? (:provider identity))
@@ -29,7 +29,7 @@
                        (string? (:endpoint backend))
                        (boolean (re-matches #"https://[a-zA-Z0-9.-]+(:[0-9]{1,5})?/?" (:endpoint backend)))))))))
 
-(defn- topology [declarations]
+(defn topology [declarations]
   (try
     (when (and (vector? declarations) (seq declarations)
                (every? #(and (map? %) (every? #{:role :count} (keys %))
@@ -123,7 +123,7 @@
                 (when-not (= (:operation_id event) (:operation_id record)) (fail "coordination operation mismatch"))
                 (assoc-in document [:nodes key :phase] (if (= "complete" type) "ready" "failed"))))))))))
 
-(defn coordination
+(defn schema-one-coordination
   "Plan one conditional journal write. Only a confirmed CAS may precede dispatch."
   [observation identity event]
   (when-not (identity? identity) (fail "invalid coordination identity"))
@@ -149,3 +149,8 @@
   "Validate an untrusted complete journal without exposing field contents."
   [document]
   (try (boolean (document? document)) (catch Exception _ false)))
+
+(defn coordination [observation identity event]
+  (if (and (string? (:type event)) (str/starts-with? (:type event) "lifecycle/"))
+    ((requiring-resolve 'io.github.getcolors.compute-lifecycle/lifecycle) observation identity event)
+    (schema-one-coordination observation identity event)))

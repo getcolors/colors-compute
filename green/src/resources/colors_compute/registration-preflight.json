@@ -1,0 +1,5 @@
+{
+  "digitalocean": {"endpoint":"https://api.digitalocean.com/v2/account/keys","token":"COLORS_PAR_DO_TOKEN","public":"public_key","pagination":"url","per_page":200,"scope":"account"},
+  "hcloud": {"endpoint":"https://api.hetzner.cloud/v1/ssh_keys","token":"COLORS_PAR_HCLOUD_TOKEN","public":"public_key","pagination":"page","per_page":50,"scope":"project"},
+  "vultr": {"endpoint":"https://api.vultr.com/v2/ssh-keys","token":"COLORS_PAR_VULTR_API_KEY","public":"ssh_key","pagination":"cursor","per_page":100,"scope":"account"}
+}

@@ -85,3 +85,10 @@ test.skipIf(process.platform === 'win32')('timeout kills descendants holding inh
   await expect(executeBackendCommand(['/bin/sh','-c','/bin/sleep 30 & exit 0'],{cwd:tmpdir(),env:{},timeoutMs:100})).rejects.toThrow('backend command timed out');
   expect(Date.now()-started).toBeLessThan(3000);
 });
+test('optional flattened shared outputs reject sensitive values and backend secret echoes',async()=>{
+  const output={...valid,outputs:{...valid.outputs,ssh_key_id:{value:'shared-key',sensitive:false}}};
+  expect(await readState(opts,'demo/state',env,async()=>reply(output),true)).toEqual({status:'present',params:valid.outputs.params.value,outputs:{params:valid.outputs.params.value,ssh_key_id:'shared-key'},state_empty:false});
+  for(const entry of [{value:'key',sensitive:true},{value:'synthetic-secret'},{value:'key',sensitive:null},{}]){
+    expect(await readState(opts,'demo/state',env,async()=>reply({...output,outputs:{...output.outputs,ssh_key_id:entry}}),true)).toEqual({status:'error'});
+  }
+});

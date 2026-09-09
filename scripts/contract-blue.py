@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "blue/src"))
-from colors_compute import coordination, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate
+from colors_compute import deployment_requests, plan_deployment, provider_request, coordination, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate
 
 from colors_compute.backend import read_state, ProcessResult
 from colors_compute.journal import journal_get, journal_put
@@ -28,7 +28,7 @@ def journal_case(opts, environment, response, body, intent=None):
                        else journal_put(opts, intent, environment, runner))
 
 operations = {f.__name__: f for f in (
-    journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
+    deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
 )}
 for line in sys.stdin:
     try:

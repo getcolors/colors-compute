@@ -13,6 +13,13 @@
   "output": {
     "ssh_key_id": {
       "value": "${hcloud_ssh_key.machine.id}"
+    },
+    "registration": {
+      "value": {
+        "provider": "hcloud",
+        "scope": "project",
+        "id": "${hcloud_ssh_key.machine.id}"
+      }
     }
   }
 }

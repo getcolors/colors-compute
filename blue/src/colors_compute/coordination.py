@@ -1,5 +1,5 @@
 """Pure conditional journal-write intentions; no transport or mutation authority."""
-from copy import deepcopy
+from ._copy import deepcopy
 import math
 import re
 
@@ -88,7 +88,7 @@ def _observation(value):
     return status == 'present' and _shape(value, ('status', 'etag', 'document')) and _nonblank(value['etag'])
 
 
-def _document(value):
+def _document_v1(value):
     if not _shape(value, ('schema_version', 'identity', 'revision', 'write_id', 'lock', 'topology_declared', 'nodes')):
         return False
     if not _integer(value['schema_version'], 1, 1) or not _identity(value['identity']) or not _integer(value['revision'], 1, MAX_INTEGER) or not _safe(value['write_id']):
@@ -127,8 +127,18 @@ def _document(value):
     return all(sorted(indices) == list(range(len(indices))) for indices in roles.values())
 
 
+def _document(value):
+    if isinstance(value, dict) and value.get('schema_version') == 2:
+        from .lifecycle import lifecycle_document_valid
+        return lifecycle_document_valid(value)
+    return _document_v1(value)
+
+
 def coordination(observation, identity, event):
     """Return a new conditional-write intent; all inputs remain unchanged."""
+    if isinstance(event, dict) and isinstance(event.get('type'), str) and event['type'].startswith('lifecycle/'):
+        from .lifecycle import lifecycle
+        return lifecycle(observation, identity, event)
     def fail(message):
         raise ValueError(message)
     if not _identity(identity):
@@ -142,7 +152,7 @@ def coordination(observation, identity, event):
     present = observation['status'] == 'present'
     document = observation.get('document')
     if present:
-        if not _document(document):
+        if not _document_v1(document):
             fail('invalid coordination document')
         if document['identity'] != identity:
             fail('coordination identity mismatch')

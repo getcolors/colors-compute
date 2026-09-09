@@ -91,3 +91,14 @@ async def test_stale_parent_results_cannot_satisfy_a_new_node_operation():
     assert result["blue/exit"] > 0
     assert result["blue/err"] == "missing node: 0"
     assert "colors-compute/cluster" not in result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('code', [-1, 'failed', False])
+async def test_nonpositive_or_invalid_failure_never_reaches_downstream(code):
+    called = []
+    def node_step(opts):
+        return {**opts, 'blue/exit': code, 'colors-compute/params': params(opts['colors-compute/request'])}
+    result = await run(cluster_workflow(expand([{}]), '0', node_step, lambda opts: called.append(opts)), {})
+    assert result['blue/exit'] == 1
+    assert not called

@@ -127,7 +127,8 @@
         "vpc_id": "${azurerm_virtual_network.network.id}",
         "vpc_ip_range": "10.42.0.0/16",
         "subnet_id": "${azurerm_subnet.network.id}",
-        "firewall_id": "${azurerm_network_security_group.network.id}"
+        "firewall_id": "${azurerm_network_security_group.network.id}",
+        "network_cidr": "${one(azurerm_virtual_network.network.address_space)}"
       }
     }
   }

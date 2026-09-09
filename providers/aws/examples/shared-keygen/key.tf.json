@@ -13,6 +13,13 @@
     },
     "key_name": {
       "value": "${aws_key_pair.machine.key_name}"
+    },
+    "registration": {
+      "value": {
+        "provider": "aws",
+        "scope": "region",
+        "id": "${aws_key_pair.machine.id}"
+      }
     }
   }
 }

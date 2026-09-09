@@ -79,7 +79,7 @@
         "network_id": "${yandex_vpc_network.network.id}",
         "subnet_id": "${yandex_vpc_subnet.network.id}",
         "security_group_id": "${yandex_vpc_security_group.network.id}",
-        "network_cidr": "{{network_cidr}}",
+        "network_cidr": "${yandex_vpc_subnet.network.v4_cidr_blocks[0]}",
         "zone": "{{zone}}"
       }
     }

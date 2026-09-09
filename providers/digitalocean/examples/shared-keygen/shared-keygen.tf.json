@@ -13,6 +13,13 @@
   "output": {
     "ssh_key_id": {
       "value": "${digitalocean_ssh_key.machine.id}"
+    },
+    "registration": {
+      "value": {
+        "provider": "digitalocean",
+        "scope": "account",
+        "id": "${digitalocean_ssh_key.machine.id}"
+      }
     }
   }
 }

@@ -44,6 +44,7 @@ jobs:
         working-directory: red
       - run: python3 scripts/registry.py
       - run: python3 scripts/provider_resources.py
+      - run: python3 scripts/provider_recipes.py
       - run: python3 scripts/parity.py
       - name: Check native backend readers against local synthetic state
         run: |

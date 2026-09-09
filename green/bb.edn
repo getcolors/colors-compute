@@ -2,9 +2,17 @@
  :deps {io.github.getcolors/colors-compute {:local/root "."}}
  :tasks {test {:requires ([clojure.test :as t]
                          [io.github.getcolors.compute-test]
+                         [io.github.getcolors.compute-request-test]
+                         [io.github.getcolors.compute-lifecycle-test]
+                         [io.github.getcolors.compute-execution-test]
+                         [io.github.getcolors.compute-planning-test]
+                         [io.github.getcolors.compute-registration-test]
+                         [io.github.getcolors.compute-orchestration-test]
                          [io.github.getcolors.compute-workflow-test]
                          [io.github.getcolors.compute-runtime-test]
                          [io.github.getcolors.compute-coordination-test]
-                         [io.github.getcolors.compute-journal-test])
-               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-workflow-test 'io.github.getcolors.compute-runtime-test 'io.github.getcolors.compute-coordination-test 'io.github.getcolors.compute-journal-test)]
+                         [io.github.getcolors.compute-journal-test]
+                         [io.github.getcolors.compute-coordinator-test]
+                         [io.github.getcolors.compute-ssh-test])
+               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-request-test 'io.github.getcolors.compute-lifecycle-test 'io.github.getcolors.compute-execution-test 'io.github.getcolors.compute-planning-test 'io.github.getcolors.compute-registration-test 'io.github.getcolors.compute-orchestration-test 'io.github.getcolors.compute-workflow-test 'io.github.getcolors.compute-runtime-test 'io.github.getcolors.compute-coordination-test 'io.github.getcolors.compute-journal-test 'io.github.getcolors.compute-coordinator-test 'io.github.getcolors.compute-ssh-test)]
                        (System/exit (if (pos? (+ fail error)) 1 0)))}}}

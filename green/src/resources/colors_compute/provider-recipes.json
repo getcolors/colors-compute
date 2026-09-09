@@ -1,0 +1,1037 @@
+{
+  "aws": {
+    "bindings": {
+      "availability_zone": {
+        "path": "opts.aws-availability-zone"
+      },
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "egress": {
+        "path": "derived.egress"
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "image_id": {
+        "path": "opts.aws-image-id"
+      },
+      "ingress": {
+        "path": "derived.ingress"
+      },
+      "instance_type": {
+        "path": "opts.aws-instance-type"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "region": {
+        "path": "opts.aws-region"
+      },
+      "root_volume_size_gb": {
+        "path": "opts.aws-root-volume-size-gb"
+      },
+      "security_group_ids": {
+        "list": [
+          {
+            "path": "shared.params.security_group_id"
+          }
+        ]
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_id": {
+        "path": "shared.params.subnet_id"
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "user": {
+        "path": "derived.user"
+      },
+      "vpc_cidr": {
+        "path": "derived.network_cidr"
+      }
+    },
+    "external_key_kind": "public_file",
+    "firewall_format": "aws",
+    "network_cidr_options": [
+      "aws-vpc-cidr"
+    ],
+    "network_mode": "created",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "firewall-fixture",
+        "firewall_id": 12345,
+        "nsg_ids": [
+          "nsg-fixture"
+        ],
+        "provider": "aws",
+        "security_group_id": "sg-0123456789abcdef0",
+        "subnet_id": "subnet-0123456789abcdef0",
+        "subnetwork_id": "subnetwork-fixture",
+        "vpc_id": "network-fixture"
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": true,
+    "registration_external": true,
+    "static_private_ip": false,
+    "subnet_cidr_options": [
+      "aws-subnet-cidr"
+    ]
+  },
+  "azure": {
+    "bindings": {
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "disk_size_gb": {
+        "path": "opts.azure-boot-disk-size-gb"
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "image_reference": {
+        "object": {
+          "offer": {
+            "path": "opts.azure-image-offer"
+          },
+          "publisher": {
+            "path": "opts.azure-image-publisher"
+          },
+          "sku": {
+            "path": "opts.azure-image-sku"
+          },
+          "version": {
+            "path": "opts.azure-image-version"
+          }
+        }
+      },
+      "ingress": {
+        "path": "derived.ingress"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "location": {
+        "path": "opts.azure-location"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "resource_group_name": {
+        "path": "opts.azure-resource-group"
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_id": {
+        "path": "shared.params.subnet_id"
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "subscription_id": {
+        "path": "opts.azure-subscription-id"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "user": {
+        "path": "derived.user"
+      },
+      "vm_size": {
+        "path": "opts.azure-vm-size"
+      }
+    },
+    "external_key_kind": "public_file",
+    "firewall_format": "azure",
+    "network_cidr_options": [
+      "azure-vnet-cidr"
+    ],
+    "network_mode": "created",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "firewall-fixture",
+        "firewall_id": 12345,
+        "nsg_ids": [
+          "nsg-fixture"
+        ],
+        "provider": "azure",
+        "security_group_id": "security-fixture",
+        "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
+        "subnetwork_id": "subnetwork-fixture",
+        "vpc_id": "network-fixture"
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": true,
+    "registration_external": false,
+    "static_private_ip": false,
+    "subnet_cidr_options": [
+      "azure-subnet-cidr"
+    ]
+  },
+  "digitalocean": {
+    "bindings": {
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "image": {
+        "path": "opts.digitalocean-image"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "outbound_rules": {
+        "path": "derived.outbound_rules"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "private_ingress": {
+        "path": "derived.private_ingress"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "public_ingress": {
+        "path": "derived.public_ingress"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "region": {
+        "path": "opts.digitalocean-region"
+      },
+      "size": {
+        "path": "opts.digitalocean-size"
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "tags": {
+        "list": [
+          {
+            "path": "derived.deployment_tag"
+          }
+        ]
+      },
+      "user": {
+        "path": "derived.user"
+      },
+      "vpc_id": {
+        "path": "shared.params.vpc_id"
+      }
+    },
+    "external_key_kind": "ids",
+    "firewall_format": "digitalocean",
+    "network_cidr_options": [],
+    "network_mode": "discovered",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "firewall-fixture",
+        "firewall_id": 12345,
+        "nsg_ids": [
+          "nsg-fixture"
+        ],
+        "provider": "digitalocean",
+        "security_group_id": "security-fixture",
+        "subnet_id": "subnet-fixture",
+        "subnetwork_id": "subnetwork-fixture",
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": true,
+    "registration_external": false,
+    "static_private_ip": false,
+    "subnet_cidr_options": []
+  },
+  "google": {
+    "bindings": {
+      "boot_disk_size": {
+        "path": "opts.google-boot-disk-size-gb"
+      },
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "image": {
+        "path": "derived.google_image"
+      },
+      "ingress": {
+        "path": "derived.ingress"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "machine_type": {
+        "path": "opts.google-machine-type"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "project": {
+        "path": "opts.google-project"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "region": {
+        "path": "opts.google-region"
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "subnetwork_id": {
+        "path": "shared.params.subnetwork_id"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "user": {
+        "path": "derived.user"
+      },
+      "zone": {
+        "path": "opts.google-zone"
+      }
+    },
+    "external_key_kind": "public_file",
+    "firewall_format": "google",
+    "network_cidr_options": [
+      "google-subnet-cidr"
+    ],
+    "network_mode": "created",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "firewall-fixture",
+        "firewall_id": 12345,
+        "nsg_ids": [
+          "nsg-fixture"
+        ],
+        "provider": "google",
+        "security_group_id": "security-fixture",
+        "subnet_id": "subnet-fixture",
+        "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+        "vpc_id": "network-fixture"
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": true,
+    "registration_external": false,
+    "static_private_ip": false,
+    "subnet_cidr_options": []
+  },
+  "hcloud": {
+    "bindings": {
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "firewall_ids": {
+        "list": [
+          {
+            "path": "shared.params.firewall_id"
+          }
+        ]
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "image": {
+        "path": "opts.hcloud-image"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "labels": {
+        "object": {
+          "colors-profile": {
+            "path": "derived.profile"
+          }
+        }
+      },
+      "location": {
+        "path": "opts.hcloud-location"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_id": {
+        "path": "shared.params.vpc_id"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "network_zone": {
+        "first": [
+          {
+            "path": "request.network.zone"
+          },
+          {
+            "path": "opts.hcloud-network-zone"
+          }
+        ]
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "private_ip": {
+        "default": null,
+        "path": "request.network.private_ip"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "public_rules": {
+        "path": "derived.public_rules"
+      },
+      "server_type": {
+        "path": "opts.hcloud-server-type"
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "user": {
+        "path": "derived.user"
+      }
+    },
+    "external_key_kind": "ids",
+    "firewall_format": "hcloud",
+    "network_cidr_options": [
+      "hcloud-network-cidr"
+    ],
+    "network_mode": "created",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "firewall-fixture",
+        "firewall_id": 23456,
+        "nsg_ids": [
+          "nsg-fixture"
+        ],
+        "provider": "hcloud",
+        "security_group_id": "security-fixture",
+        "subnet_id": "subnet-fixture",
+        "subnetwork_id": "subnetwork-fixture",
+        "vpc_id": 34567
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": false,
+    "registration_external": false,
+    "static_private_ip": true,
+    "subnet_cidr_options": [
+      "hcloud-subnet-cidr"
+    ]
+  },
+  "oci": {
+    "bindings": {
+      "availability_domain": {
+        "path": "opts.oci-availability-domain"
+      },
+      "boot_volume_size_in_gbs": {
+        "path": "opts.oci-boot-volume-size-in-gbs"
+      },
+      "boot_volume_vpus_per_gb": {
+        "path": "opts.oci-boot-volume-vpus-per-gb"
+      },
+      "compartment_id": {
+        "path": "opts.oci-compartment-id"
+      },
+      "config_file_profile": {
+        "path": "opts.oci-config-file-profile"
+      },
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "image_id": {
+        "path": "opts.oci-image-id"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "memory_in_gbs": {
+        "path": "opts.oci-memory-in-gbs"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "nsg_ids": {
+        "path": "shared.params.nsg_ids"
+      },
+      "ocpus": {
+        "path": "opts.oci-ocpus"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "rules": {
+        "path": "derived.rules"
+      },
+      "shape": {
+        "path": "opts.oci-shape"
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_id": {
+        "first": [
+          {
+            "path": "shared.params.subnet_id"
+          },
+          {
+            "path": "opts.oci-subnet-id"
+          }
+        ]
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "uid": {
+        "default": "1001",
+        "path": "opts.oci-uid"
+      },
+      "user": {
+        "path": "derived.user"
+      }
+    },
+    "discovery_stage": "node-discovery",
+    "external_key_kind": "public_file",
+    "firewall_format": "oci",
+    "image_option": "oci-image-id",
+    "network_cidr_options": [],
+    "network_mode": "discovered",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "firewall-fixture",
+        "firewall_id": 12345,
+        "nsg_ids": [
+          "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+        ],
+        "provider": "oci",
+        "security_group_id": "security-fixture",
+        "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "subnetwork_id": "subnetwork-fixture",
+        "vpc_id": "network-fixture"
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": false,
+    "registration_external": false,
+    "static_private_ip": false,
+    "subnet_cidr_options": []
+  },
+  "vultr": {
+    "bindings": {
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "firewall_group_id": {
+        "path": "shared.params.firewall_group_id"
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "ingress": {
+        "path": "derived.ingress"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "os_id": {
+        "path": "opts.vultr-os-id"
+      },
+      "plan": {
+        "path": "opts.vultr-plan"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "region": {
+        "path": "opts.vultr-region"
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "user": {
+        "path": "derived.user"
+      },
+      "vpc_ids": {
+        "list": [
+          {
+            "path": "shared.params.vpc_id"
+          }
+        ]
+      }
+    },
+    "external_key_kind": "ids",
+    "firewall_format": "vultr",
+    "network_cidr_options": [
+      "vultr-vpc-subnet"
+    ],
+    "network_mode": "created",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+        "firewall_id": 12345,
+        "nsg_ids": [
+          "nsg-fixture"
+        ],
+        "provider": "vultr",
+        "security_group_id": "security-fixture",
+        "subnet_id": "subnet-fixture",
+        "subnetwork_id": "subnetwork-fixture",
+        "vpc_id": "network-fixture"
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": true,
+    "registration_external": false,
+    "static_private_ip": false,
+    "subnet_cidr_options": []
+  },
+  "yandex": {
+    "bindings": {
+      "allow_stopping_for_update": {
+        "default": false,
+        "path": "opts.yandex-allow-stopping-for-update"
+      },
+      "cloud_id": {
+        "path": "opts.yandex-cloud-id"
+      },
+      "core_fraction": {
+        "path": "opts.yandex-core-fraction"
+      },
+      "cores": {
+        "path": "opts.yandex-cores"
+      },
+      "deployment_tag": {
+        "path": "derived.deployment_tag"
+      },
+      "disk_size": {
+        "path": "opts.yandex-disk-size-gb"
+      },
+      "egress": {
+        "path": "derived.egress"
+      },
+      "firewall_name": {
+        "path": "derived.firewall_name"
+      },
+      "folder_id": {
+        "path": "opts.yandex-folder-id"
+      },
+      "image_family": {
+        "path": "opts.yandex-image-family"
+      },
+      "image_id": {
+        "path": "opts.yandex-image-id"
+      },
+      "ingress": {
+        "path": "derived.ingress"
+      },
+      "key_name": {
+        "path": "derived.key_name"
+      },
+      "memory": {
+        "path": "opts.yandex-memory-gb"
+      },
+      "name": {
+        "path": "derived.name"
+      },
+      "network_address": {
+        "path": "derived.network_address"
+      },
+      "network_cidr": {
+        "path": "derived.network_cidr"
+      },
+      "network_name": {
+        "path": "derived.network_name"
+      },
+      "network_prefix": {
+        "path": "derived.network_prefix"
+      },
+      "network_tag": {
+        "path": "derived.network_tag"
+      },
+      "nic_name": {
+        "path": "derived.nic_name"
+      },
+      "node_id": {
+        "path": "derived.node_id"
+      },
+      "platform_id": {
+        "path": "opts.yandex-platform-id"
+      },
+      "prevent_destroy": {
+        "path": "derived.prevent_destroy"
+      },
+      "profile": {
+        "path": "derived.profile"
+      },
+      "public_ip_name": {
+        "path": "derived.public_ip_name"
+      },
+      "public_key": {
+        "path": "derived.public_key"
+      },
+      "security_group_ids": {
+        "list": [
+          {
+            "path": "shared.params.security_group_id"
+          }
+        ]
+      },
+      "ssh_key_id": {
+        "path": "derived.ssh_key_id"
+      },
+      "ssh_key_ids": {
+        "path": "derived.ssh_key_ids"
+      },
+      "subnet_cidr": {
+        "path": "derived.subnet_cidr"
+      },
+      "subnet_id": {
+        "path": "shared.params.subnet_id"
+      },
+      "subnet_name": {
+        "path": "derived.subnet_name"
+      },
+      "sudoer": {
+        "path": "derived.sudoer"
+      },
+      "user": {
+        "path": "derived.user"
+      },
+      "zone": {
+        "path": "opts.yandex-zone"
+      }
+    },
+    "discovery_stage": "node-discovery",
+    "external_key_kind": "content",
+    "firewall_format": "yandex",
+    "image_option": "yandex-image-id",
+    "network_cidr_options": [
+      "yandex-subnet-cidr"
+    ],
+    "network_mode": "created",
+    "planning_shared": {
+      "key_name": "example",
+      "params": {
+        "firewall_group_id": "firewall-fixture",
+        "firewall_id": 12345,
+        "nsg_ids": [
+          "nsg-fixture"
+        ],
+        "provider": "yandex",
+        "security_group_id": "enp00000000000000000",
+        "subnet_id": "e9b00000000000000000",
+        "subnetwork_id": "subnetwork-fixture",
+        "vpc_id": "network-fixture"
+      },
+      "ssh_key_id": 12345
+    },
+    "private_filter": true,
+    "registration_external": false,
+    "static_private_ip": false,
+    "subnet_cidr_options": []
+  }
+}

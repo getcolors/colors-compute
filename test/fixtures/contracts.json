@@ -1162,16 +1162,14 @@
     ],
     "expected": [
       ":google-boot-disk-size-gb is required",
-      ":google-image-family is required",
-      ":google-image-id is required",
-      ":google-image-project is required",
       ":google-machine-type is required",
       ":google-project is required",
       ":google-region is required",
       ":google-subnet-cidr is required",
       ":google-zone is required",
       ":r2-bucket is required",
-      ":r2-endpoint is required"
+      ":r2-endpoint is required",
+      "one of :google-image-id or :google-image-project and :google-image-family is required"
     ]
   },
   {
@@ -1224,16 +1222,14 @@
     ],
     "expected": [
       ":google-boot-disk-size-gb is required",
-      ":google-image-family is required",
-      ":google-image-id is required",
-      ":google-image-project is required",
       ":google-machine-type is required",
       ":google-project is required",
       ":google-region is required",
       ":google-subnet-cidr is required",
       ":google-zone is required",
       ":s3-bucket is required",
-      ":s3-region is required"
+      ":s3-region is required",
+      "one of :google-image-id or :google-image-project and :google-image-family is required"
     ]
   },
   {
@@ -1610,11 +1606,11 @@
       ":yandex-cores is required",
       ":yandex-disk-size-gb is required",
       ":yandex-folder-id is required",
-      ":yandex-image-family is required",
       ":yandex-memory-gb is required",
       ":yandex-platform-id is required",
       ":yandex-subnet-cidr is required",
-      ":yandex-zone is required"
+      ":yandex-zone is required",
+      "one of :yandex-image-id or :yandex-image-family is required"
     ]
   },
   {
@@ -1675,11 +1671,11 @@
       ":yandex-cores is required",
       ":yandex-disk-size-gb is required",
       ":yandex-folder-id is required",
-      ":yandex-image-family is required",
       ":yandex-memory-gb is required",
       ":yandex-platform-id is required",
       ":yandex-subnet-cidr is required",
-      ":yandex-zone is required"
+      ":yandex-zone is required",
+      "one of :yandex-image-id or :yandex-image-family is required"
     ]
   },
   {
@@ -3279,5 +3275,50 @@
     "expected": {
       "error": "invalid state key"
     }
+  },
+  {
+    "args": [
+      {
+        "google-boot-disk-size-gb": "configured",
+        "google-image-id": "pinned-image",
+        "google-machine-type": "configured",
+        "google-project": "configured",
+        "google-region": "configured",
+        "google-subnet-cidr": "configured",
+        "google-zone": "configured",
+        "profile": "images",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "states",
+        "s3-region": "region"
+      }
+    ],
+    "expected": [],
+    "name": "google explicit image needs no family",
+    "op": "validate"
+  },
+  {
+    "args": [
+      {
+        "profile": "images",
+        "provider-backend": "s3",
+        "provider-compute": "yandex",
+        "s3-bucket": "states",
+        "s3-region": "region",
+        "yandex-cloud-id": "configured",
+        "yandex-core-fraction": "configured",
+        "yandex-cores": "configured",
+        "yandex-disk-size-gb": "configured",
+        "yandex-folder-id": "configured",
+        "yandex-image-id": "pinned-image",
+        "yandex-memory-gb": "configured",
+        "yandex-platform-id": "configured",
+        "yandex-subnet-cidr": "configured",
+        "yandex-zone": "configured"
+      }
+    ],
+    "expected": [],
+    "name": "yandex explicit image needs no family",
+    "op": "validate"
   }
 ]

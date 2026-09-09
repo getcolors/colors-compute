@@ -6,8 +6,9 @@ keys, acquire remote deployment ownership, or execute OpenTofu.
 
 from __future__ import annotations
 
-from copy import deepcopy
+from ._copy import deepcopy
 from typing import Callable
+import inspect
 
 from blue.workflow import Workflow, workflow
 
@@ -41,16 +42,25 @@ def cluster_workflow(requests: list[dict], entry_node_id: str,
                                     if branch.get("colors-compute/params") is not None], entry_node_id)
         return {**opts, "colors-compute/cluster": result}
 
+    async def guarded_node(opts):
+        result = node_step(opts)
+        if inspect.isawaitable(result):
+            result = await result
+        code = result.get("blue/exit")
+        if code is not None and not (type(code) in (int, float) and code >= 0):
+            return {**result, "blue/exit": 1}
+        return result
+
     def wire_fn(step, _run_opts):
         return {
             "colors-compute/dispatch": (dispatch, "colors-compute/node"),
-            "colors-compute/node": (node_step, "colors-compute/join"),
+            "colors-compute/node": (guarded_node, "colors-compute/join"),
             "colors-compute/join": ((join, "colors-compute/downstream") if downstream else (join,)),
             "colors-compute/downstream": (downstream,),
         }.get(step)
 
     def next_fn(step, successors, opts):
-        if (opts.get("blue/exit") or 0) > 0:
+        if (opts.get("blue/exit") or 0) != 0:
             return []
         if step == "colors-compute/dispatch":
             return [("colors-compute/node", {**opts, "colors-compute/request": deepcopy(request)})

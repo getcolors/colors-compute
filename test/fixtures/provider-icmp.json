@@ -1,0 +1,2242 @@
+[
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "key_name": {
+              "value": "${aws_key_pair.machine.key_name}"
+            },
+            "registration": {
+              "value": {
+                "id": "${aws_key_pair.machine.id}",
+                "provider": "aws",
+                "scope": "region"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${aws_key_pair.machine.id}"
+            }
+          },
+          "resource": {
+            "aws_key_pair": {
+              "machine": {
+                "key_name": "example",
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${aws_vpc.network.cidr_block}",
+                "provider": "aws",
+                "security_group_id": "${aws_security_group.network.id}",
+                "subnet_id": "${aws_subnet.public.id}",
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            }
+          },
+          "provider": {
+            "aws": {
+              "region": "eu-west-1"
+            }
+          },
+          "resource": {
+            "aws_internet_gateway": {
+              "gateway": {
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_route": {
+              "internet": {
+                "destination_cidr_block": "0.0.0.0/0",
+                "gateway_id": "${aws_internet_gateway.gateway.id}",
+                "route_table_id": "${aws_route_table.public.id}"
+              }
+            },
+            "aws_route_table": {
+              "public": {
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_route_table_association": {
+              "public": {
+                "route_table_id": "${aws_route_table.public.id}",
+                "subnet_id": "${aws_subnet.public.id}"
+              }
+            },
+            "aws_security_group": {
+              "network": {
+                "description": "Deployment node access",
+                "name": "example-firewall",
+                "tags": {
+                  "Name": "example-firewall"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_subnet": {
+              "public": {
+                "availability_zone": "eu-west-1a",
+                "cidr_block": "10.42.1.0/24",
+                "map_public_ip_on_launch": true,
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_vpc": {
+              "network": {
+                "cidr_block": "10.42.0.0/16",
+                "enable_dns_hostnames": true,
+                "enable_dns_support": true,
+                "tags": {
+                  "Name": "example-0"
+                }
+              }
+            },
+            "aws_vpc_security_group_egress_rule": {
+              "egress": {
+                "cidr_ipv4": "${each.value.cidr}",
+                "for_each": {
+                  "all-ipv4": {
+                    "cidr": "0.0.0.0/0",
+                    "from_port": null,
+                    "protocol": "-1",
+                    "to_port": null
+                  }
+                },
+                "from_port": "${each.value.from_port}",
+                "ip_protocol": "${each.value.protocol}",
+                "security_group_id": "${aws_security_group.network.id}",
+                "to_port": "${each.value.to_port}"
+              }
+            },
+            "aws_vpc_security_group_ingress_rule": {
+              "ingress": {
+                "cidr_ipv4": "${each.value.cidr}",
+                "for_each": {
+                  "peer:private": {
+                    "cidr": "10.42.0.0/16",
+                    "from_port": 9093,
+                    "protocol": "tcp",
+                    "to_port": 9094
+                  },
+                  "ping:192.0.2.0/24": {
+                    "cidr": "192.0.2.0/24",
+                    "from_port": -1,
+                    "protocol": "icmp",
+                    "to_port": -1
+                  },
+                  "ping:private": {
+                    "cidr": "10.42.0.0/16",
+                    "from_port": -1,
+                    "protocol": "icmp",
+                    "to_port": -1
+                  },
+                  "ssh:192.0.2.1/32": {
+                    "cidr": "192.0.2.1/32",
+                    "from_port": 22,
+                    "protocol": "tcp",
+                    "to_port": 22
+                  }
+                },
+                "from_port": "${each.value.from_port}",
+                "ip_protocol": "${each.value.protocol}",
+                "security_group_id": "${aws_security_group.network.id}",
+                "to_port": "${each.value.to_port}"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "aws": {
+                "source": "hashicorp/aws",
+                "version": "6.31.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "availability_zone": "eu-west-1a",
+        "egress": {
+          "all-ipv4": {
+            "cidr": "0.0.0.0/0",
+            "from_port": null,
+            "protocol": "-1",
+            "to_port": null
+          }
+        },
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "peer:private": {
+            "cidr": "10.42.0.0/16",
+            "from_port": 9093,
+            "protocol": "tcp",
+            "to_port": 9094
+          },
+          "ping:192.0.2.0/24": {
+            "cidr": "192.0.2.0/24",
+            "from_port": -1,
+            "protocol": "icmp",
+            "to_port": -1
+          },
+          "ping:private": {
+            "cidr": "10.42.0.0/16",
+            "from_port": -1,
+            "protocol": "icmp",
+            "to_port": -1
+          },
+          "ssh:192.0.2.1/32": {
+            "cidr": "192.0.2.1/32",
+            "from_port": 22,
+            "protocol": "tcp",
+            "to_port": 22
+          }
+        },
+        "name": "example-0",
+        "profile": "example",
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only",
+        "region": "eu-west-1",
+        "subnet_cidr": "10.42.1.0/24",
+        "vpc_cidr": "10.42.0.0/16"
+      },
+      "provider": "aws",
+      "stage": "shared-keygen"
+    },
+    "name": "aws-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "azure-boot-disk-size-gb": 32,
+        "azure-image-offer": "ubuntu-24_04-lts",
+        "azure-image-publisher": "Canonical",
+        "azure-image-sku": "server",
+        "azure-image-version": "latest",
+        "azure-location": "westeurope",
+        "azure-resource-group": "example-compute",
+        "azure-subscription-id": "00000000-0000-0000-0000-000000000001",
+        "azure-vm-size": "Standard_B2s",
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "azure"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer-private": {
+                "port": "9093-9094",
+                "priority": 100,
+                "protocol": "Tcp",
+                "sources": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ping-192-0-2-0-24": {
+                "port": "*",
+                "priority": 101,
+                "protocol": "Icmp",
+                "sources": [
+                  "192.0.2.0/24"
+                ]
+              },
+              "ping-private": {
+                "port": "*",
+                "priority": 102,
+                "protocol": "Icmp",
+                "sources": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ssh-192-0-2-1-32": {
+                "port": "22",
+                "priority": 103,
+                "protocol": "Tcp",
+                "sources": [
+                  "192.0.2.1/32"
+                ]
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "firewall_id": "${azurerm_network_security_group.network.id}",
+                "location": "${azurerm_resource_group.deployment.location}",
+                "network_cidr": "${one(azurerm_virtual_network.network.address_space)}",
+                "provider": "azure",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "subnet_id": "${azurerm_subnet.network.id}",
+                "vpc_id": "${azurerm_virtual_network.network.id}",
+                "vpc_ip_range": "10.42.0.0/16"
+              }
+            }
+          },
+          "provider": {
+            "azurerm": {
+              "features": {},
+              "subscription_id": "00000000-0000-0000-0000-000000000001"
+            }
+          },
+          "resource": {
+            "azurerm_network_security_group": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "${azurerm_resource_group.deployment.location}",
+                "name": "example-firewall",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}"
+              }
+            },
+            "azurerm_network_security_rule": {
+              "deny_inbound": {
+                "access": "Deny",
+                "destination_address_prefix": "*",
+                "destination_port_range": "*",
+                "direction": "Inbound",
+                "name": "colors-deny-inbound",
+                "network_security_group_name": "${azurerm_network_security_group.network.name}",
+                "priority": 4096,
+                "protocol": "*",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "source_address_prefix": "*",
+                "source_port_range": "*"
+              },
+              "ingress": {
+                "access": "Allow",
+                "destination_address_prefix": "*",
+                "destination_port_range": "${each.value.port}",
+                "direction": "Inbound",
+                "for_each": "${local.ingress}",
+                "name": "${each.key}",
+                "network_security_group_name": "${azurerm_network_security_group.network.name}",
+                "priority": "${each.value.priority}",
+                "protocol": "${each.value.protocol}",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "source_address_prefixes": "${each.value.sources}",
+                "source_port_range": "*"
+              }
+            },
+            "azurerm_resource_group": {
+              "deployment": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "westeurope",
+                "name": "example-compute"
+              }
+            },
+            "azurerm_subnet": {
+              "network": {
+                "address_prefixes": [
+                  "10.42.1.0/24"
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-subnet",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "virtual_network_name": "${azurerm_virtual_network.network.name}"
+              }
+            },
+            "azurerm_subnet_network_security_group_association": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "network_security_group_id": "${azurerm_network_security_group.network.id}",
+                "subnet_id": "${azurerm_subnet.network.id}"
+              }
+            },
+            "azurerm_virtual_network": {
+              "network": {
+                "address_space": [
+                  "10.42.0.0/16"
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "${azurerm_resource_group.deployment.location}",
+                "name": "example-network",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "azurerm": {
+                "source": "hashicorp/azurerm",
+                "version": "4.30.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "peer-private": {
+            "port": "9093-9094",
+            "priority": 100,
+            "protocol": "Tcp",
+            "sources": [
+              "10.42.0.0/16"
+            ]
+          },
+          "ping-192-0-2-0-24": {
+            "port": "*",
+            "priority": 101,
+            "protocol": "Icmp",
+            "sources": [
+              "192.0.2.0/24"
+            ]
+          },
+          "ping-private": {
+            "port": "*",
+            "priority": 102,
+            "protocol": "Icmp",
+            "sources": [
+              "10.42.0.0/16"
+            ]
+          },
+          "ssh-192-0-2-1-32": {
+            "port": "22",
+            "priority": 103,
+            "protocol": "Tcp",
+            "sources": [
+              "192.0.2.1/32"
+            ]
+          }
+        },
+        "location": "westeurope",
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "prevent_destroy": true,
+        "resource_group_name": "example-compute",
+        "subnet_cidr": "10.42.1.0/24",
+        "subnet_name": "example-subnet",
+        "subscription_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "azure",
+      "stage": "shared"
+    },
+    "name": "azure-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${digitalocean_ssh_key.machine.id}",
+                "provider": "digitalocean",
+                "scope": "account"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${digitalocean_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "digitalocean_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "data": {
+            "digitalocean_vpc": {
+              "network": {
+                "region": "nyc3"
+              }
+            }
+          },
+          "locals": {
+            "private_ingress": {
+              "peer:private": {
+                "port_range": "9093-9094",
+                "protocol": "tcp"
+              },
+              "ping:private": {
+                "protocol": "icmp"
+              }
+            },
+            "public_ingress": {
+              "ping:192.0.2.0/24": {
+                "protocol": "icmp",
+                "source_addresses": [
+                  "192.0.2.0/24"
+                ]
+              },
+              "ssh:192.0.2.1/32": {
+                "port_range": "22",
+                "protocol": "tcp",
+                "source_addresses": [
+                  "192.0.2.1/32"
+                ]
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "deployment_tag": "${digitalocean_tag.deployment.name}",
+                "firewall_id": "${digitalocean_firewall.network.id}",
+                "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+                "provider": "digitalocean",
+                "vpc_id": "${data.digitalocean_vpc.network.id}",
+                "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_firewall": {
+              "network": {
+                "dynamic": {
+                  "inbound_rule": [
+                    {
+                      "content": {
+                        "port_range": "${try(inbound_rule.value.port_range, null)}",
+                        "protocol": "${inbound_rule.value.protocol}",
+                        "source_addresses": "${inbound_rule.value.source_addresses}"
+                      },
+                      "for_each": "${local.public_ingress}"
+                    },
+                    {
+                      "content": {
+                        "port_range": "${try(inbound_rule.value.port_range, null)}",
+                        "protocol": "${inbound_rule.value.protocol}",
+                        "source_addresses": [
+                          "${data.digitalocean_vpc.network.ip_range}"
+                        ]
+                      },
+                      "for_each": "${local.private_ingress}"
+                    }
+                  ]
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-firewall",
+                "outbound_rule": [
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "port_range": "1-65535",
+                    "protocol": "tcp"
+                  },
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "port_range": "1-65535",
+                    "protocol": "udp"
+                  },
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "protocol": "icmp"
+                  }
+                ],
+                "tags": [
+                  "${digitalocean_tag.deployment.name}"
+                ]
+              }
+            },
+            "digitalocean_tag": {
+              "deployment": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "colors-compute-example"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "deployment_tag": "colors-compute-example",
+        "firewall_name": "example-firewall",
+        "outbound_rules": [
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "port_range": "1-65535",
+            "protocol": "tcp"
+          },
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "port_range": "1-65535",
+            "protocol": "udp"
+          },
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "protocol": "icmp"
+          }
+        ],
+        "prevent_destroy": true,
+        "private_ingress": {
+          "peer:private": {
+            "port_range": "9093-9094",
+            "protocol": "tcp"
+          },
+          "ping:private": {
+            "protocol": "icmp"
+          }
+        },
+        "profile": "example",
+        "public_ingress": {
+          "ping:192.0.2.0/24": {
+            "protocol": "icmp",
+            "source_addresses": [
+              "192.0.2.0/24"
+            ]
+          },
+          "ssh:192.0.2.1/32": {
+            "port_range": "22",
+            "protocol": "tcp",
+            "source_addresses": [
+              "192.0.2.1/32"
+            ]
+          }
+        },
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "nyc3"
+      },
+      "provider": "digitalocean",
+      "stage": "shared-keygen"
+    },
+    "name": "digitalocean-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "e2-medium",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "example",
+        "provider-compute": "google"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer:private": {
+                "name": "example-1fe634a6041b",
+                "ports": [
+                  "9093-9094"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ping:192.0.2.0/24": {
+                "name": "example-319bcab01583",
+                "ports": [],
+                "protocol": "icmp",
+                "source_ranges": [
+                  "192.0.2.0/24"
+                ]
+              },
+              "ping:private": {
+                "name": "example-18f6d374fb25",
+                "ports": [],
+                "protocol": "icmp",
+                "source_ranges": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ssh:192.0.2.1/32": {
+                "name": "example-54ac72a076a8",
+                "ports": [
+                  "22"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "192.0.2.1/32"
+                ]
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "firewall_ids": "${ {for key, rule in google_compute_firewall.ingress : key => rule.id} }",
+                "network_cidr": "${google_compute_subnetwork.network.ip_cidr_range}",
+                "network_id": "${google_compute_network.network.id}",
+                "network_tag": "example-network",
+                "provider": "google",
+                "subnetwork_id": "${google_compute_subnetwork.network.id}"
+              }
+            }
+          },
+          "provider": {
+            "google": {
+              "project": "colors-example-project",
+              "region": "europe-west1",
+              "zone": "europe-west1-b"
+            }
+          },
+          "resource": {
+            "google_compute_firewall": {
+              "ingress": {
+                "allow": [
+                  {
+                    "ports": "${each.value.ports}",
+                    "protocol": "${each.value.protocol}"
+                  }
+                ],
+                "direction": "INGRESS",
+                "for_each": "${local.ingress}",
+                "name": "${each.value.name}",
+                "network": "${google_compute_network.network.id}",
+                "source_ranges": "${each.value.source_ranges}",
+                "target_tags": [
+                  "example-network"
+                ]
+              }
+            },
+            "google_compute_network": {
+              "network": {
+                "auto_create_subnetworks": false,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network"
+              }
+            },
+            "google_compute_subnetwork": {
+              "network": {
+                "ip_cidr_range": "10.42.0.0/16",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network",
+                "network": "${google_compute_network.network.id}",
+                "region": "europe-west1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "google": {
+                "source": "hashicorp/google",
+                "version": "6.0.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "ingress": {
+          "peer:private": {
+            "name": "example-1fe634a6041b",
+            "ports": [
+              "9093-9094"
+            ],
+            "protocol": "tcp",
+            "source_ranges": [
+              "10.42.0.0/16"
+            ]
+          },
+          "ping:192.0.2.0/24": {
+            "name": "example-319bcab01583",
+            "ports": [],
+            "protocol": "icmp",
+            "source_ranges": [
+              "192.0.2.0/24"
+            ]
+          },
+          "ping:private": {
+            "name": "example-18f6d374fb25",
+            "ports": [],
+            "protocol": "icmp",
+            "source_ranges": [
+              "10.42.0.0/16"
+            ]
+          },
+          "ssh:192.0.2.1/32": {
+            "name": "example-54ac72a076a8",
+            "ports": [
+              "22"
+            ],
+            "protocol": "tcp",
+            "source_ranges": [
+              "192.0.2.1/32"
+            ]
+          }
+        },
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "network_tag": "example-network",
+        "prevent_destroy": true,
+        "project": "colors-example-project",
+        "region": "europe-west1",
+        "zone": "europe-west1-b"
+      },
+      "provider": "google",
+      "stage": "shared"
+    },
+    "name": "google-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${hcloud_ssh_key.machine.id}",
+                "provider": "hcloud",
+                "scope": "project"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${hcloud_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "hcloud_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "firewall_id": "${hcloud_firewall.network.id}",
+                "network_cidr": "${hcloud_network.network.ip_range}",
+                "provider": "hcloud",
+                "subnet_cidr": "${hcloud_network_subnet.network.ip_range}",
+                "subnet_id": "${hcloud_network_subnet.network.id}",
+                "vpc_id": "${hcloud_network.network.id}",
+                "vpc_ip_range": "${hcloud_network.network.ip_range}"
+              }
+            }
+          },
+          "provider": {
+            "hcloud": {}
+          },
+          "resource": {
+            "hcloud_firewall": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-firewall",
+                "rule": [
+                  {
+                    "direction": "in",
+                    "protocol": "icmp",
+                    "source_ips": [
+                      "192.0.2.0/24"
+                    ]
+                  },
+                  {
+                    "direction": "in",
+                    "port": "22",
+                    "protocol": "tcp",
+                    "source_ips": [
+                      "192.0.2.1/32"
+                    ]
+                  }
+                ]
+              }
+            },
+            "hcloud_network": {
+              "network": {
+                "ip_range": "10.42.0.0/16",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network"
+              }
+            },
+            "hcloud_network_subnet": {
+              "network": {
+                "ip_range": "10.42.1.0/24",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "network_id": "${hcloud_network.network.id}",
+                "network_zone": "eu-central",
+                "type": "cloud"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "hcloud": {
+                "source": "hetznercloud/hcloud",
+                "version": "1.54.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_name": "example-firewall",
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "network_zone": "eu-central",
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "public_rules": [
+          {
+            "direction": "in",
+            "protocol": "icmp",
+            "source_ips": [
+              "192.0.2.0/24"
+            ]
+          },
+          {
+            "direction": "in",
+            "port": "22",
+            "protocol": "tcp",
+            "source_ips": [
+              "192.0.2.1/32"
+            ]
+          }
+        ],
+        "subnet_cidr": "10.42.1.0/24"
+      },
+      "provider": "hcloud",
+      "stage": "shared-keygen"
+    },
+    "name": "hcloud-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "oci-availability-domain": "example:EU-FRANKFURT-1-AD-1",
+        "oci-boot-volume-size-in-gbs": 50,
+        "oci-boot-volume-vpus-per-gb": 10,
+        "oci-compartment-id": "ocid1.compartment.oc1..example",
+        "oci-config-file-profile": "DEFAULT",
+        "oci-image-id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "oci-memory-in-gbs": 6,
+        "oci-ocpus": 1,
+        "oci-shape": "VM.Standard.A1.Flex",
+        "oci-subnet-id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "oci-uid": "1001",
+        "profile": "example",
+        "provider-compute": "oci"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "data": {
+            "oci_core_subnet": {
+              "existing": {
+                "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example"
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${data.oci_core_subnet.existing.cidr_block}",
+                "nsg_ids": [
+                  "${oci_core_network_security_group.network.id}"
+                ],
+                "provider": "oci",
+                "subnet_id": "${data.oci_core_subnet.existing.id}",
+                "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+              }
+            }
+          },
+          "provider": {
+            "oci": {
+              "config_file_profile": "DEFAULT"
+            }
+          },
+          "resource": {
+            "oci_core_network_security_group": {
+              "network": {
+                "compartment_id": "ocid1.compartment.oc1..example",
+                "display_name": "example-firewall",
+                "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+              }
+            },
+            "oci_core_network_security_group_security_rule": {
+              "rules": {
+                "destination": "${each.value.direction == \"EGRESS\" ? each.value.cidr : null}",
+                "destination_type": "${each.value.direction == \"EGRESS\" ? \"CIDR_BLOCK\" : null}",
+                "direction": "${each.value.direction}",
+                "dynamic": {
+                  "tcp_options": {
+                    "content": {
+                      "destination_port_range": {
+                        "max": "${tcp_options.value.to_port}",
+                        "min": "${tcp_options.value.from_port}"
+                      }
+                    },
+                    "for_each": "${each.value.protocol == \"6\" ? [each.value] : []}"
+                  },
+                  "udp_options": {
+                    "content": {
+                      "destination_port_range": {
+                        "max": "${udp_options.value.to_port}",
+                        "min": "${udp_options.value.from_port}"
+                      }
+                    },
+                    "for_each": "${each.value.protocol == \"17\" ? [each.value] : []}"
+                  }
+                },
+                "for_each": {
+                  "outbound-all": {
+                    "cidr": "0.0.0.0/0",
+                    "direction": "EGRESS",
+                    "from_port": null,
+                    "protocol": "all",
+                    "to_port": null
+                  },
+                  "peer:private": {
+                    "cidr": "10.42.0.0/16",
+                    "direction": "INGRESS",
+                    "from_port": 9093,
+                    "protocol": "6",
+                    "to_port": 9094
+                  },
+                  "ping:192.0.2.0/24": {
+                    "cidr": "192.0.2.0/24",
+                    "direction": "INGRESS",
+                    "from_port": null,
+                    "protocol": "1",
+                    "to_port": null
+                  },
+                  "ping:private": {
+                    "cidr": "10.42.0.0/16",
+                    "direction": "INGRESS",
+                    "from_port": null,
+                    "protocol": "1",
+                    "to_port": null
+                  },
+                  "ssh:192.0.2.1/32": {
+                    "cidr": "192.0.2.1/32",
+                    "direction": "INGRESS",
+                    "from_port": 22,
+                    "protocol": "6",
+                    "to_port": 22
+                  }
+                },
+                "network_security_group_id": "${oci_core_network_security_group.network.id}",
+                "protocol": "${each.value.protocol}",
+                "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+                "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
+                "stateless": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "oci": {
+                "source": "oracle/oci",
+                "version": "8.4.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "compartment_id": "ocid1.compartment.oc1..example",
+        "config_file_profile": "DEFAULT",
+        "firewall_name": "example-firewall",
+        "rules": {
+          "outbound-all": {
+            "cidr": "0.0.0.0/0",
+            "direction": "EGRESS",
+            "from_port": null,
+            "protocol": "all",
+            "to_port": null
+          },
+          "peer:private": {
+            "cidr": "10.42.0.0/16",
+            "direction": "INGRESS",
+            "from_port": 9093,
+            "protocol": "6",
+            "to_port": 9094
+          },
+          "ping:192.0.2.0/24": {
+            "cidr": "192.0.2.0/24",
+            "direction": "INGRESS",
+            "from_port": null,
+            "protocol": "1",
+            "to_port": null
+          },
+          "ping:private": {
+            "cidr": "10.42.0.0/16",
+            "direction": "INGRESS",
+            "from_port": null,
+            "protocol": "1",
+            "to_port": null
+          },
+          "ssh:192.0.2.1/32": {
+            "cidr": "192.0.2.1/32",
+            "direction": "INGRESS",
+            "from_port": 22,
+            "protocol": "6",
+            "to_port": 22
+          }
+        },
+        "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example"
+      },
+      "provider": "oci",
+      "stage": "shared"
+    },
+    "name": "oci-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${vultr_ssh_key.machine.id}",
+                "provider": "vultr",
+                "scope": "account"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${vultr_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "vultr_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer:private": {
+                "ip_type": "v4",
+                "port": "9093-9094",
+                "protocol": "tcp",
+                "subnet": "10.42.0.0",
+                "subnet_size": 16
+              },
+              "ping:192.0.2.0/24": {
+                "ip_type": "v4",
+                "port": null,
+                "protocol": "icmp",
+                "subnet": "192.0.2.0",
+                "subnet_size": 24
+              },
+              "ping:private": {
+                "ip_type": "v4",
+                "port": null,
+                "protocol": "icmp",
+                "subnet": "10.42.0.0",
+                "subnet_size": 16
+              },
+              "ssh:192.0.2.1/32": {
+                "ip_type": "v4",
+                "port": "22",
+                "protocol": "tcp",
+                "subnet": "192.0.2.1",
+                "subnet_size": 32
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "firewall_group_id": "${vultr_firewall_group.network.id}",
+                "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
+                "provider": "vultr",
+                "vpc_id": "${vultr_vpc.network.id}",
+                "vpc_ip_range": "10.42.0.0/16"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_firewall_group": {
+              "network": {
+                "description": "example-firewall",
+                "lifecycle": {
+                  "prevent_destroy": true
+                }
+              }
+            },
+            "vultr_firewall_rule": {
+              "ingress": {
+                "firewall_group_id": "${vultr_firewall_group.network.id}",
+                "for_each": "${local.ingress}",
+                "ip_type": "${each.value.ip_type}",
+                "port": "${each.value.port}",
+                "protocol": "${each.value.protocol}",
+                "subnet": "${each.value.subnet}",
+                "subnet_size": "${each.value.subnet_size}"
+              }
+            },
+            "vultr_vpc": {
+              "network": {
+                "description": "example-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "region": "ewr",
+                "v4_subnet": "10.42.0.0",
+                "v4_subnet_mask": 16
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "peer:private": {
+            "ip_type": "v4",
+            "port": "9093-9094",
+            "protocol": "tcp",
+            "subnet": "10.42.0.0",
+            "subnet_size": 16
+          },
+          "ping:192.0.2.0/24": {
+            "ip_type": "v4",
+            "port": null,
+            "protocol": "icmp",
+            "subnet": "192.0.2.0",
+            "subnet_size": 24
+          },
+          "ping:private": {
+            "ip_type": "v4",
+            "port": null,
+            "protocol": "icmp",
+            "subnet": "10.42.0.0",
+            "subnet_size": 16
+          },
+          "ssh:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          }
+        },
+        "name": "example-0",
+        "network_address": "10.42.0.0",
+        "network_cidr": "10.42.0.0/16",
+        "network_prefix": 16,
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "ewr"
+      },
+      "provider": "vultr",
+      "stage": "shared-keygen"
+    },
+    "name": "vultr-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "locals": {
+            "egress": {
+              "all-ipv4": {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "from_port": 0,
+                "protocol": "ANY",
+                "to_port": 65535
+              }
+            },
+            "ingress": {
+              "peer:private": {
+                "cidr_blocks": [
+                  "10.42.0.0/16"
+                ],
+                "from_port": 9093,
+                "protocol": "TCP",
+                "to_port": 9094
+              },
+              "ping:192.0.2.0/24": {
+                "cidr_blocks": [
+                  "192.0.2.0/24"
+                ],
+                "from_port": null,
+                "protocol": "ICMP",
+                "to_port": null
+              },
+              "ping:private": {
+                "cidr_blocks": [
+                  "10.42.0.0/16"
+                ],
+                "from_port": null,
+                "protocol": "ICMP",
+                "to_port": null
+              },
+              "ssh:192.0.2.1/32": {
+                "cidr_blocks": [
+                  "192.0.2.1/32"
+                ],
+                "from_port": 22,
+                "protocol": "TCP",
+                "to_port": 22
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${yandex_vpc_subnet.network.v4_cidr_blocks[0]}",
+                "network_id": "${yandex_vpc_network.network.id}",
+                "provider": "yandex",
+                "security_group_id": "${yandex_vpc_security_group.network.id}",
+                "subnet_id": "${yandex_vpc_subnet.network.id}",
+                "zone": "ru-central1-a"
+              }
+            }
+          },
+          "provider": {
+            "yandex": {
+              "cloud_id": "b1g00000000000000000",
+              "folder_id": "b1g00000000000000001",
+              "zone": "ru-central1-a"
+            }
+          },
+          "resource": {
+            "yandex_vpc_network": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network"
+              }
+            },
+            "yandex_vpc_security_group": {
+              "network": {
+                "dynamic": {
+                  "egress": {
+                    "content": {
+                      "description": "${egress.key}",
+                      "from_port": "${egress.value.from_port}",
+                      "protocol": "${egress.value.protocol}",
+                      "to_port": "${egress.value.to_port}",
+                      "v4_cidr_blocks": "${egress.value.cidr_blocks}"
+                    },
+                    "for_each": "${local.egress}"
+                  },
+                  "ingress": {
+                    "content": {
+                      "description": "${ingress.key}",
+                      "from_port": "${ingress.value.from_port}",
+                      "protocol": "${ingress.value.protocol}",
+                      "to_port": "${ingress.value.to_port}",
+                      "v4_cidr_blocks": "${ingress.value.cidr_blocks}"
+                    },
+                    "for_each": "${local.ingress}"
+                  }
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network",
+                "network_id": "${yandex_vpc_network.network.id}"
+              }
+            },
+            "yandex_vpc_subnet": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network",
+                "network_id": "${yandex_vpc_network.network.id}",
+                "v4_cidr_blocks": [
+                  "10.42.0.0/16"
+                ],
+                "zone": "ru-central1-a"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "yandex": {
+                "source": "yandex-cloud/yandex",
+                "version": "0.120.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "cloud_id": "b1g00000000000000000",
+        "egress": {
+          "all-ipv4": {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "from_port": 0,
+            "protocol": "ANY",
+            "to_port": 65535
+          }
+        },
+        "folder_id": "b1g00000000000000001",
+        "ingress": {
+          "peer:private": {
+            "cidr_blocks": [
+              "10.42.0.0/16"
+            ],
+            "from_port": 9093,
+            "protocol": "TCP",
+            "to_port": 9094
+          },
+          "ping:192.0.2.0/24": {
+            "cidr_blocks": [
+              "192.0.2.0/24"
+            ],
+            "from_port": null,
+            "protocol": "ICMP",
+            "to_port": null
+          },
+          "ping:private": {
+            "cidr_blocks": [
+              "10.42.0.0/16"
+            ],
+            "from_port": null,
+            "protocol": "ICMP",
+            "to_port": null
+          },
+          "ssh:192.0.2.1/32": {
+            "cidr_blocks": [
+              "192.0.2.1/32"
+            ],
+            "from_port": 22,
+            "protocol": "TCP",
+            "to_port": 22
+          }
+        },
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "prevent_destroy": true,
+        "zone": "ru-central1-a"
+      },
+      "provider": "yandex",
+      "stage": "shared"
+    },
+    "name": "yandex-icmp",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": 1,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": null
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute ingress"
+    },
+    "name": "icmp-invalid-(1, None)",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": null,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": 0
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute ingress"
+    },
+    "name": "icmp-invalid-(None, 0)",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": -1,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": -1
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute ingress"
+    },
+    "name": "icmp-invalid-(-1, -1)",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            },
+            {
+              "from_port": 0,
+              "id": "ping",
+              "protocol": "icmp",
+              "sources": [
+                "192.0.2.0/24",
+                "private"
+              ],
+              "to_port": 0
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute ingress"
+    },
+    "name": "icmp-invalid-(0, 0)",
+    "op": "provider_request"
+  }
+]

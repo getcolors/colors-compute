@@ -62,6 +62,7 @@
         "output": {
           "params": {
             "value": {
+              "network_cidr": "${aws_vpc.network.cidr_block}",
               "provider": "aws",
               "security_group_id": "${aws_security_group.network.id}",
               "subnet_id": "${aws_subnet.public.id}",
@@ -173,6 +174,13 @@
           "key_name": {
             "value": "${aws_key_pair.machine.key_name}"
           },
+          "registration": {
+            "value": {
+              "id": "${aws_key_pair.machine.id}",
+              "provider": "aws",
+              "scope": "region"
+            }
+          },
           "ssh_key_id": {
             "value": "${aws_key_pair.machine.id}"
           }
@@ -190,6 +198,7 @@
         "output": {
           "params": {
             "value": {
+              "network_cidr": "${aws_vpc.network.cidr_block}",
               "provider": "aws",
               "security_group_id": "${aws_security_group.network.id}",
               "subnet_id": "${aws_subnet.public.id}",
@@ -398,6 +407,7 @@
             "value": {
               "firewall_id": "${azurerm_network_security_group.network.id}",
               "location": "${azurerm_resource_group.deployment.location}",
+              "network_cidr": "${one(azurerm_virtual_network.network.address_space)}",
               "provider": "azure",
               "resource_group_name": "${azurerm_resource_group.deployment.name}",
               "subnet_id": "${azurerm_subnet.network.id}",
@@ -517,6 +527,7 @@
             "value": {
               "firewall_id": "${azurerm_network_security_group.network.id}",
               "location": "${azurerm_resource_group.deployment.location}",
+              "network_cidr": "${one(azurerm_virtual_network.network.address_space)}",
               "provider": "azure",
               "resource_group_name": "${azurerm_resource_group.deployment.name}",
               "subnet_id": "${azurerm_subnet.network.id}",
@@ -694,6 +705,7 @@
             "value": {
               "deployment_tag": "${digitalocean_tag.deployment.name}",
               "firewall_id": "${digitalocean_firewall.network.id}",
+              "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
               "provider": "digitalocean",
               "vpc_id": "${data.digitalocean_vpc.network.id}",
               "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
@@ -761,6 +773,13 @@
     "shared-keygen": {
       "shared-keygen.tf.json": {
         "output": {
+          "registration": {
+            "value": {
+              "id": "${digitalocean_ssh_key.machine.id}",
+              "provider": "digitalocean",
+              "scope": "account"
+            }
+          },
           "ssh_key_id": {
             "value": "${digitalocean_ssh_key.machine.id}"
           }
@@ -794,6 +813,7 @@
             "value": {
               "deployment_tag": "${digitalocean_tag.deployment.name}",
               "firewall_id": "${digitalocean_firewall.network.id}",
+              "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
               "provider": "digitalocean",
               "vpc_id": "${data.digitalocean_vpc.network.id}",
               "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
@@ -961,7 +981,7 @@
           "params": {
             "value": {
               "firewall_ids": "${ {for key, rule in google_compute_firewall.ingress : key => rule.id} }",
-              "network_cidr": "{{network_cidr}}",
+              "network_cidr": "${google_compute_subnetwork.network.ip_cidr_range}",
               "network_id": "${google_compute_network.network.id}",
               "network_tag": "{{network_tag}}",
               "provider": "google",
@@ -1035,7 +1055,7 @@
           "params": {
             "value": {
               "firewall_ids": "${ {for key, rule in google_compute_firewall.ingress : key => rule.id} }",
-              "network_cidr": "{{network_cidr}}",
+              "network_cidr": "${google_compute_subnetwork.network.ip_cidr_range}",
               "network_id": "${google_compute_network.network.id}",
               "network_tag": "{{network_tag}}",
               "provider": "google",
@@ -1170,6 +1190,7 @@
           "params": {
             "value": {
               "firewall_id": "${hcloud_firewall.network.id}",
+              "network_cidr": "${hcloud_network.network.ip_range}",
               "provider": "hcloud",
               "subnet_cidr": "${hcloud_network_subnet.network.ip_range}",
               "subnet_id": "${hcloud_network_subnet.network.id}",
@@ -1225,6 +1246,13 @@
     "shared-keygen": {
       "shared-keygen.tf.json": {
         "output": {
+          "registration": {
+            "value": {
+              "id": "${hcloud_ssh_key.machine.id}",
+              "provider": "hcloud",
+              "scope": "project"
+            }
+          },
           "ssh_key_id": {
             "value": "${hcloud_ssh_key.machine.id}"
           }
@@ -1246,6 +1274,7 @@
           "params": {
             "value": {
               "firewall_id": "${hcloud_firewall.network.id}",
+              "network_cidr": "${hcloud_network.network.ip_range}",
               "provider": "hcloud",
               "subnet_cidr": "${hcloud_network_subnet.network.ip_range}",
               "subnet_id": "${hcloud_network_subnet.network.id}",
@@ -1470,6 +1499,7 @@
         "output": {
           "params": {
             "value": {
+              "network_cidr": "${data.oci_core_subnet.existing.cidr_block}",
               "nsg_ids": [
                 "${oci_core_network_security_group.network.id}"
               ],
@@ -1549,6 +1579,7 @@
         "output": {
           "params": {
             "value": {
+              "network_cidr": "${data.oci_core_subnet.existing.cidr_block}",
               "nsg_ids": [
                 "${oci_core_network_security_group.network.id}"
               ],
@@ -1672,6 +1703,7 @@
           "params": {
             "value": {
               "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
               "provider": "vultr",
               "vpc_id": "${vultr_vpc.network.id}",
               "vpc_ip_range": "{{network_cidr}}"
@@ -1726,6 +1758,13 @@
     "shared-keygen": {
       "shared-keygen.tf.json": {
         "output": {
+          "registration": {
+            "value": {
+              "id": "${vultr_ssh_key.machine.id}",
+              "provider": "vultr",
+              "scope": "account"
+            }
+          },
           "ssh_key_id": {
             "value": "${vultr_ssh_key.machine.id}"
           }
@@ -1750,6 +1789,7 @@
           "params": {
             "value": {
               "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
               "provider": "vultr",
               "vpc_id": "${vultr_vpc.network.id}",
               "vpc_ip_range": "{{network_cidr}}"
@@ -1900,6 +1940,113 @@
         }
       }
     },
+    "node-discovery": {
+      "node-discovery.tf.json": {
+        "data": {
+          "yandex_compute_image": {
+            "ubuntu": {
+              "family": "{{image_family}}"
+            }
+          }
+        },
+        "locals": {
+          "public_key": "{{public_key}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+              "metadata": {
+                "address_id": "${yandex_vpc_address.node.id}",
+                "fqdn": "${yandex_compute_instance.node.fqdn}",
+                "instance_id": "${yandex_compute_instance.node.id}",
+                "security_group_ids": "{{security_group_ids}}",
+                "subnet_id": "{{subnet_id}}",
+                "zone": "{{zone}}"
+              },
+              "name": "${yandex_compute_instance.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "yandex",
+              "sudoer": "ubuntu",
+              "user": "ubuntu",
+              "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+            }
+          }
+        },
+        "provider": {
+          "yandex": {
+            "cloud_id": "{{cloud_id}}",
+            "folder_id": "{{folder_id}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "yandex_compute_instance": {
+            "node": {
+              "allow_stopping_for_update": "{{allow_stopping_for_update}}",
+              "boot_disk": [
+                {
+                  "initialize_params": [
+                    {
+                      "image_id": "${data.yandex_compute_image.ubuntu.id}",
+                      "size": "{{disk_size}}"
+                    }
+                  ]
+                }
+              ],
+              "lifecycle": {
+                "ignore_changes": [
+                  "boot_disk[0].initialize_params[0].image_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "metadata": {
+                "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+              },
+              "name": "{{name}}",
+              "network_interface": [
+                {
+                  "nat": true,
+                  "nat_ip_address": "${yandex_vpc_address.node.external_ipv4_address[0].address}",
+                  "security_group_ids": "{{security_group_ids}}",
+                  "subnet_id": "{{subnet_id}}"
+                }
+              ],
+              "platform_id": "{{platform_id}}",
+              "resources": [
+                {
+                  "core_fraction": "{{core_fraction}}",
+                  "cores": "{{cores}}",
+                  "memory": "{{memory}}"
+                }
+              ],
+              "zone": "{{zone}}"
+            }
+          },
+          "yandex_vpc_address": {
+            "node": {
+              "external_ipv4_address": [
+                {
+                  "zone_id": "{{zone}}"
+                }
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{name}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "yandex": {
+              "source": "yandex-cloud/yandex",
+              "version": "0.120.0"
+            }
+          }
+        }
+      }
+    },
     "shared": {
       "shared.tf.json": {
         "locals": {
@@ -1909,7 +2056,7 @@
         "output": {
           "params": {
             "value": {
-              "network_cidr": "{{network_cidr}}",
+              "network_cidr": "${yandex_vpc_subnet.network.v4_cidr_blocks[0]}",
               "network_id": "${yandex_vpc_network.network.id}",
               "provider": "yandex",
               "security_group_id": "${yandex_vpc_security_group.network.id}",
@@ -1998,7 +2145,7 @@
         "output": {
           "params": {
             "value": {
-              "network_cidr": "{{network_cidr}}",
+              "network_cidr": "${yandex_vpc_subnet.network.v4_cidr_blocks[0]}",
               "network_id": "${yandex_vpc_network.network.id}",
               "provider": "yandex",
               "security_group_id": "${yandex_vpc_security_group.network.id}",

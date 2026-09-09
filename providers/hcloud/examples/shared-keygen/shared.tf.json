@@ -73,7 +73,8 @@
         "vpc_ip_range": "${hcloud_network.network.ip_range}",
         "subnet_id": "${hcloud_network_subnet.network.id}",
         "subnet_cidr": "${hcloud_network_subnet.network.ip_range}",
-        "firewall_id": "${hcloud_firewall.network.id}"
+        "firewall_id": "${hcloud_firewall.network.id}",
+        "network_cidr": "${hcloud_network.network.ip_range}"
       }
     }
   }

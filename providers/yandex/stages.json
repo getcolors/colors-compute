@@ -1,0 +1,14 @@
+{
+  "shared": [
+    "shared.tf.json"
+  ],
+  "shared-keygen": [
+    "shared.tf.json"
+  ],
+  "node": [
+    "node.tf.json"
+  ],
+  "node-discovery": [
+    "node-discovery.tf.json"
+  ]
+}

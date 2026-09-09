@@ -86,7 +86,7 @@
         "network_id": "${google_compute_network.network.id}",
         "subnetwork_id": "${google_compute_subnetwork.network.id}",
         "network_tag": "example-network",
-        "network_cidr": "10.42.0.0/24",
+        "network_cidr": "${google_compute_subnetwork.network.ip_cidr_range}",
         "firewall_ids": "${ {for key, rule in google_compute_firewall.ingress : key => rule.id} }"
       }
     }

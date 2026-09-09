@@ -4,7 +4,7 @@ import {join} from 'node:path';
 import {backend_plan} from './rendering.ts';
 export interface BackendCommandResult {exit: number; out: string; err: string}
 export type BackendRunner = (args: string[], options: {cwd: string; env: Record<string, string>; timeoutMs: number}) => Promise<BackendCommandResult>;
-export type StateRead = {status: 'present'; params: Record<string, unknown>} | {status: 'error'};
+export type StateRead = {status: 'present'; params: Record<string, unknown>; outputs?:Record<string,unknown>; state_empty?:boolean} | {status: 'error'};
 const object = (value: unknown): value is Record<string, any> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const missing = (value: unknown) => typeof value !== 'string' || !value.trim() || value.trim().toUpperCase() === 'REPLACE_ME';
 export const executeBackendCommand: BackendRunner = async (args, options) => {
@@ -26,6 +26,21 @@ export const executeBackendCommand: BackendRunner = async (args, options) => {
   } finally {clearTimeout(timer);}
 };
 
+export function parseStateEnvelope(output:string):{document:Record<string,any>;params:Record<string,any>} {
+  const document:unknown=JSON.parse(output);
+  if(!object(document)||document.version!==4||!Number.isSafeInteger(document.serial)||document.serial<0||typeof document.lineage!=='string'||!document.lineage.trim()||!object(document.outputs)||!Array.isArray(document.resources))throw new Error('invalid state');
+  if(!Object.hasOwn(document.outputs,'params'))return {document,params:{}};
+  const params=document.outputs.params;if(!object(params)||!object(params.value))throw new Error('invalid params');
+  return {document,params:params.value};
+}
+export function stateOutputs(output:string):Record<string,unknown> {
+  const {document}=parseStateEnvelope(output);
+  return Object.fromEntries(Object.entries(document.outputs).map(([name,entry])=>{
+    if(!object(entry)||!Object.hasOwn(entry,'value')||(Object.hasOwn(entry,'sensitive')&&entry.sensitive!==false))throw new Error('invalid outputs');
+    return [name,entry.value];
+  }));
+}
+
 /** Read an existing remote state using an isolated, protected backend context.
  * This operation never interprets failure as absence and never mutates compute.
  */
@@ -34,6 +49,7 @@ export async function readState(
   stateKey: string,
   environment: Record<string, string | undefined> = process.env,
   runner: BackendRunner = executeBackendCommand,
+  includeOutputs = false,
 ): Promise<StateRead> {
   let directory: string | undefined;
   try {
@@ -63,16 +79,13 @@ export async function readState(
     if (init.exit !== 0) return {status:'error'};
     const state = await runner(['tofu','state','pull'],options);
     if (state.exit !== 0 || !state.out.trim()) return {status:'error'};
-    const data: unknown = JSON.parse(state.out);
-    if (!object(data) || data.version !== 4 || !Number.isSafeInteger(data.serial) || data.serial < 0 ||
-      typeof data.lineage !== 'string' || !data.lineage.trim() || !object(data.outputs) || !Array.isArray(data.resources)) return {status:'error'};
-    if (!Object.hasOwn(data.outputs,'params')) return {status:'present',params:{}};
-    const output = data.outputs.params;
-    if (!object(output) || !object(output.value)) return {status:'error'};
-    const serialized = JSON.stringify(output.value);
+    const {params}=parseStateEnvelope(state.out);
+    const outputs=includeOutputs?stateOutputs(state.out):undefined;
+    const serialized = JSON.stringify(includeOutputs?outputs:params);
     if (Object.values(settings).some(value => serialized.includes(value) || serialized.includes(JSON.stringify(value).slice(1,-1)))) return {status:'error'};
-    return {status:'present',params:output.value};
-  } catch {
+    return {status:'present',params,...(includeOutputs?{outputs,state_empty:parseStateEnvelope(state.out).document.resources.length===0&&Object.keys(outputs!).length===0}:{})};
+  } catch(error) {
+    if(error instanceof Error&&error.name==='AbortError')throw error;
     return {status:'error'};
   } finally {
     if (directory) {

@@ -1,0 +1,3631 @@
+[
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "key_name": {
+              "value": "${aws_key_pair.machine.key_name}"
+            },
+            "registration": {
+              "value": {
+                "id": "${aws_key_pair.machine.id}",
+                "provider": "aws",
+                "scope": "region"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${aws_key_pair.machine.id}"
+            }
+          },
+          "resource": {
+            "aws_key_pair": {
+              "machine": {
+                "key_name": "example",
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${aws_vpc.network.cidr_block}",
+                "provider": "aws",
+                "security_group_id": "${aws_security_group.network.id}",
+                "subnet_id": "${aws_subnet.public.id}",
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            }
+          },
+          "provider": {
+            "aws": {
+              "region": "eu-west-1"
+            }
+          },
+          "resource": {
+            "aws_internet_gateway": {
+              "gateway": {
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_route": {
+              "internet": {
+                "destination_cidr_block": "0.0.0.0/0",
+                "gateway_id": "${aws_internet_gateway.gateway.id}",
+                "route_table_id": "${aws_route_table.public.id}"
+              }
+            },
+            "aws_route_table": {
+              "public": {
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_route_table_association": {
+              "public": {
+                "route_table_id": "${aws_route_table.public.id}",
+                "subnet_id": "${aws_subnet.public.id}"
+              }
+            },
+            "aws_security_group": {
+              "network": {
+                "description": "Deployment node access",
+                "name": "example-firewall",
+                "tags": {
+                  "Name": "example-firewall"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_subnet": {
+              "public": {
+                "availability_zone": "eu-west-1a",
+                "cidr_block": "10.42.1.0/24",
+                "map_public_ip_on_launch": true,
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_vpc": {
+              "network": {
+                "cidr_block": "10.42.0.0/16",
+                "enable_dns_hostnames": true,
+                "enable_dns_support": true,
+                "tags": {
+                  "Name": "example-0"
+                }
+              }
+            },
+            "aws_vpc_security_group_egress_rule": {
+              "egress": {
+                "cidr_ipv4": "${each.value.cidr}",
+                "for_each": {
+                  "all-ipv4": {
+                    "cidr": "0.0.0.0/0",
+                    "from_port": null,
+                    "protocol": "-1",
+                    "to_port": null
+                  }
+                },
+                "from_port": "${each.value.from_port}",
+                "ip_protocol": "${each.value.protocol}",
+                "security_group_id": "${aws_security_group.network.id}",
+                "to_port": "${each.value.to_port}"
+              }
+            },
+            "aws_vpc_security_group_ingress_rule": {
+              "ingress": {
+                "cidr_ipv4": "${each.value.cidr}",
+                "for_each": {
+                  "peer:private": {
+                    "cidr": "10.42.0.0/16",
+                    "from_port": 9093,
+                    "protocol": "tcp",
+                    "to_port": 9094
+                  },
+                  "ssh:192.0.2.1/32": {
+                    "cidr": "192.0.2.1/32",
+                    "from_port": 22,
+                    "protocol": "tcp",
+                    "to_port": 22
+                  }
+                },
+                "from_port": "${each.value.from_port}",
+                "ip_protocol": "${each.value.protocol}",
+                "security_group_id": "${aws_security_group.network.id}",
+                "to_port": "${each.value.to_port}"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "aws": {
+                "source": "hashicorp/aws",
+                "version": "6.31.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "availability_zone": "eu-west-1a",
+        "egress": {
+          "all-ipv4": {
+            "cidr": "0.0.0.0/0",
+            "from_port": null,
+            "protocol": "-1",
+            "to_port": null
+          }
+        },
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "peer:private": {
+            "cidr": "10.42.0.0/16",
+            "from_port": 9093,
+            "protocol": "tcp",
+            "to_port": 9094
+          },
+          "ssh:192.0.2.1/32": {
+            "cidr": "192.0.2.1/32",
+            "from_port": 22,
+            "protocol": "tcp",
+            "to_port": 22
+          }
+        },
+        "name": "example-0",
+        "profile": "example",
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only",
+        "region": "eu-west-1",
+        "subnet_cidr": "10.42.1.0/24",
+        "vpc_cidr": "10.42.0.0/16"
+      },
+      "provider": "aws",
+      "stage": "shared-keygen"
+    },
+    "name": "aws-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "aws",
+          "security_group_id": "sg-0123456789abcdef0",
+          "subnet_id": "subnet-0123456789abcdef0",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "instance_id": "${aws_instance.node.id}",
+                "ip": "${aws_instance.node.public_ip}",
+                "name": "${aws_instance.node.tags[\"Name\"]}",
+                "node_id": "0",
+                "provider": "aws",
+                "ssh_key_id": 12345,
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${aws_instance.node.private_ip}"
+              }
+            }
+          },
+          "provider": {
+            "aws": {
+              "region": "eu-west-1"
+            }
+          },
+          "resource": {
+            "aws_instance": {
+              "node": {
+                "ami": "ami-0123456789abcdef0",
+                "associate_public_ip_address": true,
+                "availability_zone": "eu-west-1a",
+                "instance_type": "t3.small",
+                "key_name": "example",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "root_block_device": {
+                  "encrypted": true,
+                  "volume_size": 20,
+                  "volume_type": "gp3"
+                },
+                "subnet_id": "subnet-0123456789abcdef0",
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_security_group_ids": [
+                  "sg-0123456789abcdef0"
+                ]
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "aws": {
+                "source": "hashicorp/aws",
+                "version": "6.31.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "availability_zone": "eu-west-1a",
+        "image_id": "ami-0123456789abcdef0",
+        "instance_type": "t3.small",
+        "key_name": "example",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "eu-west-1",
+        "root_volume_size_gb": 20,
+        "security_group_ids": [
+          "sg-0123456789abcdef0"
+        ],
+        "ssh_key_id": 12345,
+        "subnet_id": "subnet-0123456789abcdef0",
+        "sudoer": "ubuntu",
+        "user": "ubuntu"
+      },
+      "provider": "aws",
+      "stage": "node"
+    },
+    "name": "aws-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "azure-boot-disk-size-gb": 32,
+        "azure-image-offer": "ubuntu-24_04-lts",
+        "azure-image-publisher": "Canonical",
+        "azure-image-sku": "server",
+        "azure-image-version": "latest",
+        "azure-location": "westeurope",
+        "azure-resource-group": "example-compute",
+        "azure-subscription-id": "00000000-0000-0000-0000-000000000001",
+        "azure-vm-size": "Standard_B2s",
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "azure"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer-private": {
+                "port": "9093-9094",
+                "priority": 100,
+                "protocol": "Tcp",
+                "sources": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ssh-192-0-2-1-32": {
+                "port": "22",
+                "priority": 101,
+                "protocol": "Tcp",
+                "sources": [
+                  "192.0.2.1/32"
+                ]
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "firewall_id": "${azurerm_network_security_group.network.id}",
+                "location": "${azurerm_resource_group.deployment.location}",
+                "network_cidr": "${one(azurerm_virtual_network.network.address_space)}",
+                "provider": "azure",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "subnet_id": "${azurerm_subnet.network.id}",
+                "vpc_id": "${azurerm_virtual_network.network.id}",
+                "vpc_ip_range": "10.42.0.0/16"
+              }
+            }
+          },
+          "provider": {
+            "azurerm": {
+              "features": {},
+              "subscription_id": "00000000-0000-0000-0000-000000000001"
+            }
+          },
+          "resource": {
+            "azurerm_network_security_group": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "${azurerm_resource_group.deployment.location}",
+                "name": "example-firewall",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}"
+              }
+            },
+            "azurerm_network_security_rule": {
+              "deny_inbound": {
+                "access": "Deny",
+                "destination_address_prefix": "*",
+                "destination_port_range": "*",
+                "direction": "Inbound",
+                "name": "colors-deny-inbound",
+                "network_security_group_name": "${azurerm_network_security_group.network.name}",
+                "priority": 4096,
+                "protocol": "*",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "source_address_prefix": "*",
+                "source_port_range": "*"
+              },
+              "ingress": {
+                "access": "Allow",
+                "destination_address_prefix": "*",
+                "destination_port_range": "${each.value.port}",
+                "direction": "Inbound",
+                "for_each": "${local.ingress}",
+                "name": "${each.key}",
+                "network_security_group_name": "${azurerm_network_security_group.network.name}",
+                "priority": "${each.value.priority}",
+                "protocol": "${each.value.protocol}",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "source_address_prefixes": "${each.value.sources}",
+                "source_port_range": "*"
+              }
+            },
+            "azurerm_resource_group": {
+              "deployment": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "westeurope",
+                "name": "example-compute"
+              }
+            },
+            "azurerm_subnet": {
+              "network": {
+                "address_prefixes": [
+                  "10.42.1.0/24"
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-subnet",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}",
+                "virtual_network_name": "${azurerm_virtual_network.network.name}"
+              }
+            },
+            "azurerm_subnet_network_security_group_association": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "network_security_group_id": "${azurerm_network_security_group.network.id}",
+                "subnet_id": "${azurerm_subnet.network.id}"
+              }
+            },
+            "azurerm_virtual_network": {
+              "network": {
+                "address_space": [
+                  "10.42.0.0/16"
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "${azurerm_resource_group.deployment.location}",
+                "name": "example-network",
+                "resource_group_name": "${azurerm_resource_group.deployment.name}"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "azurerm": {
+                "source": "hashicorp/azurerm",
+                "version": "4.30.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "peer-private": {
+            "port": "9093-9094",
+            "priority": 100,
+            "protocol": "Tcp",
+            "sources": [
+              "10.42.0.0/16"
+            ]
+          },
+          "ssh-192-0-2-1-32": {
+            "port": "22",
+            "priority": 101,
+            "protocol": "Tcp",
+            "sources": [
+              "192.0.2.1/32"
+            ]
+          }
+        },
+        "location": "westeurope",
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "prevent_destroy": true,
+        "resource_group_name": "example-compute",
+        "subnet_cidr": "10.42.1.0/24",
+        "subnet_name": "example-subnet",
+        "subscription_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "azure",
+      "stage": "shared"
+    },
+    "name": "azure-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "azure-boot-disk-size-gb": 32,
+        "azure-image-offer": "ubuntu-24_04-lts",
+        "azure-image-publisher": "Canonical",
+        "azure-image-sku": "server",
+        "azure-image-version": "latest",
+        "azure-location": "westeurope",
+        "azure-resource-group": "example-compute",
+        "azure-subscription-id": "00000000-0000-0000-0000-000000000001",
+        "azure-vm-size": "Standard_B2s",
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "azure"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "azure",
+          "security_group_id": "security-fixture",
+          "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${azurerm_public_ip.node.ip_address}",
+                "name": "${azurerm_linux_virtual_machine.node.name}",
+                "nic_id": "${azurerm_network_interface.node.id}",
+                "node_id": "0",
+                "provider": "azure",
+                "ssh_key_id": null,
+                "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vm_id": "${azurerm_linux_virtual_machine.node.id}",
+                "vpc_ip": "${azurerm_network_interface.node.private_ip_address}"
+              }
+            }
+          },
+          "provider": {
+            "azurerm": {
+              "features": {},
+              "subscription_id": "00000000-0000-0000-0000-000000000001"
+            }
+          },
+          "resource": {
+            "azurerm_linux_virtual_machine": {
+              "node": {
+                "admin_ssh_key": {
+                  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY",
+                  "username": "ubuntu"
+                },
+                "admin_username": "ubuntu",
+                "disable_password_authentication": true,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "westeurope",
+                "name": "example-0",
+                "network_interface_ids": [
+                  "${azurerm_network_interface.node.id}"
+                ],
+                "os_disk": {
+                  "caching": "ReadWrite",
+                  "disk_size_gb": 32,
+                  "storage_account_type": "Standard_LRS"
+                },
+                "resource_group_name": "example-compute",
+                "size": "Standard_B2s",
+                "source_image_reference": {
+                  "offer": "ubuntu-24_04-lts",
+                  "publisher": "Canonical",
+                  "sku": "server",
+                  "version": "latest"
+                }
+              }
+            },
+            "azurerm_network_interface": {
+              "node": {
+                "ip_configuration": {
+                  "name": "primary",
+                  "private_ip_address_allocation": "Dynamic",
+                  "public_ip_address_id": "${azurerm_public_ip.node.id}",
+                  "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet"
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "westeurope",
+                "name": "example-0-nic",
+                "resource_group_name": "example-compute"
+              }
+            },
+            "azurerm_public_ip": {
+              "node": {
+                "allocation_method": "Static",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "westeurope",
+                "name": "example-0-public",
+                "resource_group_name": "example-compute",
+                "sku": "Standard"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "azurerm": {
+                "source": "hashicorp/azurerm",
+                "version": "4.30.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "disk_size_gb": 32,
+        "image_reference": {
+          "offer": "ubuntu-24_04-lts",
+          "publisher": "Canonical",
+          "sku": "server",
+          "version": "latest"
+        },
+        "location": "westeurope",
+        "name": "example-0",
+        "nic_name": "example-0-nic",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "public_ip_name": "example-0-public",
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY",
+        "resource_group_name": "example-compute",
+        "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
+        "subscription_id": "00000000-0000-0000-0000-000000000001",
+        "vm_size": "Standard_B2s"
+      },
+      "provider": "azure",
+      "stage": "node"
+    },
+    "name": "azure-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${digitalocean_ssh_key.machine.id}",
+                "provider": "digitalocean",
+                "scope": "account"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${digitalocean_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "digitalocean_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "data": {
+            "digitalocean_vpc": {
+              "network": {
+                "region": "nyc3"
+              }
+            }
+          },
+          "locals": {
+            "private_ingress": {
+              "peer:private": {
+                "port_range": "9093-9094",
+                "protocol": "tcp"
+              }
+            },
+            "public_ingress": {
+              "ssh:192.0.2.1/32": {
+                "port_range": "22",
+                "protocol": "tcp",
+                "source_addresses": [
+                  "192.0.2.1/32"
+                ]
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "deployment_tag": "${digitalocean_tag.deployment.name}",
+                "firewall_id": "${digitalocean_firewall.network.id}",
+                "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+                "provider": "digitalocean",
+                "vpc_id": "${data.digitalocean_vpc.network.id}",
+                "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_firewall": {
+              "network": {
+                "dynamic": {
+                  "inbound_rule": [
+                    {
+                      "content": {
+                        "port_range": "${try(inbound_rule.value.port_range, null)}",
+                        "protocol": "${inbound_rule.value.protocol}",
+                        "source_addresses": "${inbound_rule.value.source_addresses}"
+                      },
+                      "for_each": "${local.public_ingress}"
+                    },
+                    {
+                      "content": {
+                        "port_range": "${try(inbound_rule.value.port_range, null)}",
+                        "protocol": "${inbound_rule.value.protocol}",
+                        "source_addresses": [
+                          "${data.digitalocean_vpc.network.ip_range}"
+                        ]
+                      },
+                      "for_each": "${local.private_ingress}"
+                    }
+                  ]
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-firewall",
+                "outbound_rule": [
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "port_range": "1-65535",
+                    "protocol": "tcp"
+                  },
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "port_range": "1-65535",
+                    "protocol": "udp"
+                  },
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "protocol": "icmp"
+                  }
+                ],
+                "tags": [
+                  "${digitalocean_tag.deployment.name}"
+                ]
+              }
+            },
+            "digitalocean_tag": {
+              "deployment": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "colors-compute-example"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "deployment_tag": "colors-compute-example",
+        "firewall_name": "example-firewall",
+        "outbound_rules": [
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "port_range": "1-65535",
+            "protocol": "tcp"
+          },
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "port_range": "1-65535",
+            "protocol": "udp"
+          },
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "protocol": "icmp"
+          }
+        ],
+        "prevent_destroy": true,
+        "private_ingress": {
+          "peer:private": {
+            "port_range": "9093-9094",
+            "protocol": "tcp"
+          }
+        },
+        "profile": "example",
+        "public_ingress": {
+          "ssh:192.0.2.1/32": {
+            "port_range": "22",
+            "protocol": "tcp",
+            "source_addresses": [
+              "192.0.2.1/32"
+            ]
+          }
+        },
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "nyc3"
+      },
+      "provider": "digitalocean",
+      "stage": "shared-keygen"
+    },
+    "name": "digitalocean-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "digitalocean-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "e2-medium",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "example",
+        "provider-compute": "google"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer:private": {
+                "name": "example-1fe634a6041b",
+                "ports": [
+                  "9093-9094"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ssh:192.0.2.1/32": {
+                "name": "example-54ac72a076a8",
+                "ports": [
+                  "22"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "192.0.2.1/32"
+                ]
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "firewall_ids": "${ {for key, rule in google_compute_firewall.ingress : key => rule.id} }",
+                "network_cidr": "${google_compute_subnetwork.network.ip_cidr_range}",
+                "network_id": "${google_compute_network.network.id}",
+                "network_tag": "example-network",
+                "provider": "google",
+                "subnetwork_id": "${google_compute_subnetwork.network.id}"
+              }
+            }
+          },
+          "provider": {
+            "google": {
+              "project": "colors-example-project",
+              "region": "europe-west1",
+              "zone": "europe-west1-b"
+            }
+          },
+          "resource": {
+            "google_compute_firewall": {
+              "ingress": {
+                "allow": [
+                  {
+                    "ports": "${each.value.ports}",
+                    "protocol": "${each.value.protocol}"
+                  }
+                ],
+                "direction": "INGRESS",
+                "for_each": "${local.ingress}",
+                "name": "${each.value.name}",
+                "network": "${google_compute_network.network.id}",
+                "source_ranges": "${each.value.source_ranges}",
+                "target_tags": [
+                  "example-network"
+                ]
+              }
+            },
+            "google_compute_network": {
+              "network": {
+                "auto_create_subnetworks": false,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network"
+              }
+            },
+            "google_compute_subnetwork": {
+              "network": {
+                "ip_cidr_range": "10.42.0.0/16",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network",
+                "network": "${google_compute_network.network.id}",
+                "region": "europe-west1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "google": {
+                "source": "hashicorp/google",
+                "version": "6.0.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "ingress": {
+          "peer:private": {
+            "name": "example-1fe634a6041b",
+            "ports": [
+              "9093-9094"
+            ],
+            "protocol": "tcp",
+            "source_ranges": [
+              "10.42.0.0/16"
+            ]
+          },
+          "ssh:192.0.2.1/32": {
+            "name": "example-54ac72a076a8",
+            "ports": [
+              "22"
+            ],
+            "protocol": "tcp",
+            "source_ranges": [
+              "192.0.2.1/32"
+            ]
+          }
+        },
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "network_tag": "example-network",
+        "prevent_destroy": true,
+        "project": "colors-example-project",
+        "region": "europe-west1",
+        "zone": "europe-west1-b"
+      },
+      "provider": "google",
+      "stage": "shared"
+    },
+    "name": "google-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "e2-medium",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "example",
+        "provider-compute": "google"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "google",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "locals": {
+            "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+          },
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${google_compute_address.node.address}",
+                "metadata": {
+                  "address_id": "${google_compute_address.node.id}",
+                  "instance_id": "${google_compute_instance.node.instance_id}",
+                  "self_link": "${google_compute_instance.node.self_link}",
+                  "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+                  "zone": "europe-west1-b"
+                },
+                "name": "${google_compute_instance.node.name}",
+                "node_id": "0",
+                "provider": "google",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
+              }
+            }
+          },
+          "provider": {
+            "google": {
+              "project": "colors-example-project",
+              "region": "europe-west1",
+              "zone": "europe-west1-b"
+            }
+          },
+          "resource": {
+            "google_compute_address": {
+              "node": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "europe-west1"
+              }
+            },
+            "google_compute_instance": {
+              "node": {
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+                        "size": 20,
+                        "type": "pd-balanced"
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "machine_type": "e2-medium",
+                "metadata": {
+                  "block-project-ssh-keys": "true",
+                  "enable-oslogin": "false",
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "example-0",
+                "network_interface": [
+                  {
+                    "access_config": [
+                      {
+                        "nat_ip": "${google_compute_address.node.address}"
+                      }
+                    ],
+                    "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network"
+                  }
+                ],
+                "tags": [
+                  "example-network"
+                ],
+                "zone": "europe-west1-b"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "google": {
+                "source": "hashicorp/google",
+                "version": "6.0.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "boot_disk_size": 20,
+        "image": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "machine_type": "e2-medium",
+        "name": "example-0",
+        "network_tag": "example-network",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "project": "colors-example-project",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "europe-west1",
+        "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+        "zone": "europe-west1-b"
+      },
+      "provider": "google",
+      "stage": "node"
+    },
+    "name": "google-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${hcloud_ssh_key.machine.id}",
+                "provider": "hcloud",
+                "scope": "project"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${hcloud_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "hcloud_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "firewall_id": "${hcloud_firewall.network.id}",
+                "network_cidr": "${hcloud_network.network.ip_range}",
+                "provider": "hcloud",
+                "subnet_cidr": "${hcloud_network_subnet.network.ip_range}",
+                "subnet_id": "${hcloud_network_subnet.network.id}",
+                "vpc_id": "${hcloud_network.network.id}",
+                "vpc_ip_range": "${hcloud_network.network.ip_range}"
+              }
+            }
+          },
+          "provider": {
+            "hcloud": {}
+          },
+          "resource": {
+            "hcloud_firewall": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-firewall",
+                "rule": [
+                  {
+                    "direction": "in",
+                    "port": "22",
+                    "protocol": "tcp",
+                    "source_ips": [
+                      "192.0.2.1/32"
+                    ]
+                  }
+                ]
+              }
+            },
+            "hcloud_network": {
+              "network": {
+                "ip_range": "10.42.0.0/16",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network"
+              }
+            },
+            "hcloud_network_subnet": {
+              "network": {
+                "ip_range": "10.42.1.0/24",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "network_id": "${hcloud_network.network.id}",
+                "network_zone": "eu-central",
+                "type": "cloud"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "hcloud": {
+                "source": "hetznercloud/hcloud",
+                "version": "1.54.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_name": "example-firewall",
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "network_zone": "eu-central",
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "public_rules": [
+          {
+            "direction": "in",
+            "port": "22",
+            "protocol": "tcp",
+            "source_ips": [
+              "192.0.2.1/32"
+            ]
+          }
+        ],
+        "subnet_cidr": "10.42.1.0/24"
+      },
+      "provider": "hcloud",
+      "stage": "shared-keygen"
+    },
+    "name": "hcloud-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 23456,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "hcloud",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": 34567
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${hcloud_server.node.ipv4_address}",
+                "name": "${hcloud_server.node.name}",
+                "network_attachment_id": "${hcloud_server_network.node.id}",
+                "node_id": "0",
+                "provider": "hcloud",
+                "server_id": "${hcloud_server.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${hcloud_server_network.node.network_id}",
+                "vpc_ip": "${hcloud_server_network.node.ip}"
+              }
+            }
+          },
+          "provider": {
+            "hcloud": {}
+          },
+          "resource": {
+            "hcloud_server": {
+              "node": {
+                "firewall_ids": [
+                  23456
+                ],
+                "image": "ubuntu-24.04",
+                "labels": {
+                  "colors-profile": "example"
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "location": "fsn1",
+                "name": "example-0",
+                "public_net": {
+                  "ipv4_enabled": true,
+                  "ipv6_enabled": false
+                },
+                "server_type": "cx22",
+                "ssh_keys": [
+                  12345
+                ]
+              }
+            },
+            "hcloud_server_network": {
+              "node": {
+                "ip": null,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "network_id": 34567,
+                "server_id": "${hcloud_server.node.id}"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "hcloud": {
+                "source": "hetznercloud/hcloud",
+                "version": "1.54.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_ids": [
+          23456
+        ],
+        "image": "ubuntu-24.04",
+        "labels": {
+          "colors-profile": "example"
+        },
+        "location": "fsn1",
+        "name": "example-0",
+        "network_id": 34567,
+        "node_id": "0",
+        "prevent_destroy": true,
+        "private_ip": null,
+        "server_type": "cx22",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ]
+      },
+      "provider": "hcloud",
+      "stage": "node"
+    },
+    "name": "hcloud-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "oci-availability-domain": "example:EU-FRANKFURT-1-AD-1",
+        "oci-boot-volume-size-in-gbs": 50,
+        "oci-boot-volume-vpus-per-gb": 10,
+        "oci-compartment-id": "ocid1.compartment.oc1..example",
+        "oci-config-file-profile": "DEFAULT",
+        "oci-image-id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "oci-memory-in-gbs": 6,
+        "oci-ocpus": 1,
+        "oci-shape": "VM.Standard.A1.Flex",
+        "oci-subnet-id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "oci-uid": "1001",
+        "profile": "example",
+        "provider-compute": "oci"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "data": {
+            "oci_core_subnet": {
+              "existing": {
+                "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example"
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${data.oci_core_subnet.existing.cidr_block}",
+                "nsg_ids": [
+                  "${oci_core_network_security_group.network.id}"
+                ],
+                "provider": "oci",
+                "subnet_id": "${data.oci_core_subnet.existing.id}",
+                "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+              }
+            }
+          },
+          "provider": {
+            "oci": {
+              "config_file_profile": "DEFAULT"
+            }
+          },
+          "resource": {
+            "oci_core_network_security_group": {
+              "network": {
+                "compartment_id": "ocid1.compartment.oc1..example",
+                "display_name": "example-firewall",
+                "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+              }
+            },
+            "oci_core_network_security_group_security_rule": {
+              "rules": {
+                "destination": "${each.value.direction == \"EGRESS\" ? each.value.cidr : null}",
+                "destination_type": "${each.value.direction == \"EGRESS\" ? \"CIDR_BLOCK\" : null}",
+                "direction": "${each.value.direction}",
+                "dynamic": {
+                  "tcp_options": {
+                    "content": {
+                      "destination_port_range": {
+                        "max": "${tcp_options.value.to_port}",
+                        "min": "${tcp_options.value.from_port}"
+                      }
+                    },
+                    "for_each": "${each.value.protocol == \"6\" ? [each.value] : []}"
+                  },
+                  "udp_options": {
+                    "content": {
+                      "destination_port_range": {
+                        "max": "${udp_options.value.to_port}",
+                        "min": "${udp_options.value.from_port}"
+                      }
+                    },
+                    "for_each": "${each.value.protocol == \"17\" ? [each.value] : []}"
+                  }
+                },
+                "for_each": {
+                  "outbound-all": {
+                    "cidr": "0.0.0.0/0",
+                    "direction": "EGRESS",
+                    "from_port": null,
+                    "protocol": "all",
+                    "to_port": null
+                  },
+                  "peer:private": {
+                    "cidr": "10.42.0.0/16",
+                    "direction": "INGRESS",
+                    "from_port": 9093,
+                    "protocol": "6",
+                    "to_port": 9094
+                  },
+                  "ssh:192.0.2.1/32": {
+                    "cidr": "192.0.2.1/32",
+                    "direction": "INGRESS",
+                    "from_port": 22,
+                    "protocol": "6",
+                    "to_port": 22
+                  }
+                },
+                "network_security_group_id": "${oci_core_network_security_group.network.id}",
+                "protocol": "${each.value.protocol}",
+                "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+                "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
+                "stateless": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "oci": {
+                "source": "oracle/oci",
+                "version": "8.4.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "compartment_id": "ocid1.compartment.oc1..example",
+        "config_file_profile": "DEFAULT",
+        "firewall_name": "example-firewall",
+        "rules": {
+          "outbound-all": {
+            "cidr": "0.0.0.0/0",
+            "direction": "EGRESS",
+            "from_port": null,
+            "protocol": "all",
+            "to_port": null
+          },
+          "peer:private": {
+            "cidr": "10.42.0.0/16",
+            "direction": "INGRESS",
+            "from_port": 9093,
+            "protocol": "6",
+            "to_port": 9094
+          },
+          "ssh:192.0.2.1/32": {
+            "cidr": "192.0.2.1/32",
+            "direction": "INGRESS",
+            "from_port": 22,
+            "protocol": "6",
+            "to_port": 22
+          }
+        },
+        "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example"
+      },
+      "provider": "oci",
+      "stage": "shared"
+    },
+    "name": "oci-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "oci-availability-domain": "example:EU-FRANKFURT-1-AD-1",
+        "oci-boot-volume-size-in-gbs": 50,
+        "oci-boot-volume-vpus-per-gb": 10,
+        "oci-compartment-id": "ocid1.compartment.oc1..example",
+        "oci-config-file-profile": "DEFAULT",
+        "oci-image-id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "oci-memory-in-gbs": 6,
+        "oci-ocpus": 1,
+        "oci-shape": "VM.Standard.A1.Flex",
+        "oci-subnet-id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "oci-uid": "1001",
+        "profile": "example",
+        "provider-compute": "oci"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+          ],
+          "provider": "oci",
+          "security_group_id": "security-fixture",
+          "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node-image-pinned.tf.json": {
+          "locals": {
+            "image_id": "ocid1.image.oc1.eu-frankfurt-1.example"
+          }
+        },
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "instance_id": "${oci_core_instance.node.id}",
+                "ip": "${oci_core_instance.node.public_ip}",
+                "metadata": {
+                  "availability_domain": "${oci_core_instance.node.availability_domain}",
+                  "image_id": "${local.image_id}"
+                },
+                "name": "${oci_core_instance.node.display_name}",
+                "node_id": "0",
+                "provider": "oci",
+                "sudoer": "ubuntu",
+                "uid": "1001",
+                "user": "ubuntu",
+                "vpc_ip": "${oci_core_instance.node.private_ip}"
+              }
+            }
+          },
+          "provider": {
+            "oci": {
+              "config_file_profile": "DEFAULT"
+            }
+          },
+          "resource": {
+            "oci_core_instance": {
+              "node": {
+                "availability_domain": "example:EU-FRANKFURT-1-AD-1",
+                "compartment_id": "ocid1.compartment.oc1..example",
+                "create_vnic_details": {
+                  "assign_public_ip": true,
+                  "nsg_ids": [
+                    "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+                  ],
+                  "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example"
+                },
+                "display_name": "example-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "metadata": {
+                  "ssh_authorized_keys": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+                },
+                "shape": "VM.Standard.A1.Flex",
+                "shape_config": {
+                  "memory_in_gbs": 6,
+                  "ocpus": 1
+                },
+                "source_details": {
+                  "boot_volume_size_in_gbs": 50,
+                  "boot_volume_vpus_per_gb": 10,
+                  "source_id": "${local.image_id}",
+                  "source_type": "image"
+                }
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "oci": {
+                "source": "oracle/oci",
+                "version": "8.4.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "availability_domain": "example:EU-FRANKFURT-1-AD-1",
+        "boot_volume_size_in_gbs": 50,
+        "boot_volume_vpus_per_gb": 10,
+        "compartment_id": "ocid1.compartment.oc1..example",
+        "config_file_profile": "DEFAULT",
+        "image_id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "memory_in_gbs": 6,
+        "name": "example-0",
+        "node_id": "0",
+        "nsg_ids": [
+          "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+        ],
+        "ocpus": 1,
+        "prevent_destroy": true,
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only",
+        "shape": "VM.Standard.A1.Flex",
+        "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "sudoer": "ubuntu",
+        "uid": "1001",
+        "user": "ubuntu"
+      },
+      "provider": "oci",
+      "stage": "node"
+    },
+    "name": "oci-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${vultr_ssh_key.machine.id}",
+                "provider": "vultr",
+                "scope": "account"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${vultr_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "vultr_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer:private": {
+                "ip_type": "v4",
+                "port": "9093-9094",
+                "protocol": "tcp",
+                "subnet": "10.42.0.0",
+                "subnet_size": 16
+              },
+              "ssh:192.0.2.1/32": {
+                "ip_type": "v4",
+                "port": "22",
+                "protocol": "tcp",
+                "subnet": "192.0.2.1",
+                "subnet_size": 32
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "firewall_group_id": "${vultr_firewall_group.network.id}",
+                "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
+                "provider": "vultr",
+                "vpc_id": "${vultr_vpc.network.id}",
+                "vpc_ip_range": "10.42.0.0/16"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_firewall_group": {
+              "network": {
+                "description": "example-firewall",
+                "lifecycle": {
+                  "prevent_destroy": true
+                }
+              }
+            },
+            "vultr_firewall_rule": {
+              "ingress": {
+                "firewall_group_id": "${vultr_firewall_group.network.id}",
+                "for_each": "${local.ingress}",
+                "ip_type": "${each.value.ip_type}",
+                "port": "${each.value.port}",
+                "protocol": "${each.value.protocol}",
+                "subnet": "${each.value.subnet}",
+                "subnet_size": "${each.value.subnet_size}"
+              }
+            },
+            "vultr_vpc": {
+              "network": {
+                "description": "example-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "region": "ewr",
+                "v4_subnet": "10.42.0.0",
+                "v4_subnet_mask": 16
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "peer:private": {
+            "ip_type": "v4",
+            "port": "9093-9094",
+            "protocol": "tcp",
+            "subnet": "10.42.0.0",
+            "subnet_size": 16
+          },
+          "ssh:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          }
+        },
+        "name": "example-0",
+        "network_address": "10.42.0.0",
+        "network_cidr": "10.42.0.0/16",
+        "network_prefix": 16,
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "ewr"
+      },
+      "provider": "vultr",
+      "stage": "shared-keygen"
+    },
+    "name": "vultr-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${vultr_instance.node.main_ip}",
+                "name": "${vultr_instance.node.label}",
+                "node_id": "0",
+                "provider": "vultr",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_ip": "${vultr_instance.node.internal_ip}"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_instance": {
+              "node": {
+                "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+                "label": "example-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "os_id": 2284,
+                "plan": "vc2-2c-4gb",
+                "region": "ewr",
+                "ssh_key_ids": [
+                  12345
+                ],
+                "vpc_ids": [
+                  "network-fixture"
+                ]
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+        "name": "example-0",
+        "node_id": "0",
+        "os_id": 2284,
+        "plan": "vc2-2c-4gb",
+        "prevent_destroy": true,
+        "region": "ewr",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "network-fixture"
+        ]
+      },
+      "provider": "vultr",
+      "stage": "node"
+    },
+    "name": "vultr-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared.tf.json": {
+          "locals": {
+            "egress": {
+              "all-ipv4": {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "from_port": 0,
+                "protocol": "ANY",
+                "to_port": 65535
+              }
+            },
+            "ingress": {
+              "peer:private": {
+                "cidr_blocks": [
+                  "10.42.0.0/16"
+                ],
+                "from_port": 9093,
+                "protocol": "TCP",
+                "to_port": 9094
+              },
+              "ssh:192.0.2.1/32": {
+                "cidr_blocks": [
+                  "192.0.2.1/32"
+                ],
+                "from_port": 22,
+                "protocol": "TCP",
+                "to_port": 22
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${yandex_vpc_subnet.network.v4_cidr_blocks[0]}",
+                "network_id": "${yandex_vpc_network.network.id}",
+                "provider": "yandex",
+                "security_group_id": "${yandex_vpc_security_group.network.id}",
+                "subnet_id": "${yandex_vpc_subnet.network.id}",
+                "zone": "ru-central1-a"
+              }
+            }
+          },
+          "provider": {
+            "yandex": {
+              "cloud_id": "b1g00000000000000000",
+              "folder_id": "b1g00000000000000001",
+              "zone": "ru-central1-a"
+            }
+          },
+          "resource": {
+            "yandex_vpc_network": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network"
+              }
+            },
+            "yandex_vpc_security_group": {
+              "network": {
+                "dynamic": {
+                  "egress": {
+                    "content": {
+                      "description": "${egress.key}",
+                      "from_port": "${egress.value.from_port}",
+                      "protocol": "${egress.value.protocol}",
+                      "to_port": "${egress.value.to_port}",
+                      "v4_cidr_blocks": "${egress.value.cidr_blocks}"
+                    },
+                    "for_each": "${local.egress}"
+                  },
+                  "ingress": {
+                    "content": {
+                      "description": "${ingress.key}",
+                      "from_port": "${ingress.value.from_port}",
+                      "protocol": "${ingress.value.protocol}",
+                      "to_port": "${ingress.value.to_port}",
+                      "v4_cidr_blocks": "${ingress.value.cidr_blocks}"
+                    },
+                    "for_each": "${local.ingress}"
+                  }
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network",
+                "network_id": "${yandex_vpc_network.network.id}"
+              }
+            },
+            "yandex_vpc_subnet": {
+              "network": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-network",
+                "network_id": "${yandex_vpc_network.network.id}",
+                "v4_cidr_blocks": [
+                  "10.42.0.0/16"
+                ],
+                "zone": "ru-central1-a"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "yandex": {
+                "source": "yandex-cloud/yandex",
+                "version": "0.120.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "cloud_id": "b1g00000000000000000",
+        "egress": {
+          "all-ipv4": {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "from_port": 0,
+            "protocol": "ANY",
+            "to_port": 65535
+          }
+        },
+        "folder_id": "b1g00000000000000001",
+        "ingress": {
+          "peer:private": {
+            "cidr_blocks": [
+              "10.42.0.0/16"
+            ],
+            "from_port": 9093,
+            "protocol": "TCP",
+            "to_port": 9094
+          },
+          "ssh:192.0.2.1/32": {
+            "cidr_blocks": [
+              "192.0.2.1/32"
+            ],
+            "from_port": 22,
+            "protocol": "TCP",
+            "to_port": 22
+          }
+        },
+        "network_cidr": "10.42.0.0/16",
+        "network_name": "example-network",
+        "prevent_destroy": true,
+        "zone": "ru-central1-a"
+      },
+      "provider": "yandex",
+      "stage": "shared"
+    },
+    "name": "yandex-shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "yandex",
+          "security_group_id": "enp00000000000000000",
+          "subnet_id": "e9b00000000000000000",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "locals": {
+            "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+          },
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+                "metadata": {
+                  "address_id": "${yandex_vpc_address.node.id}",
+                  "fqdn": "${yandex_compute_instance.node.fqdn}",
+                  "instance_id": "${yandex_compute_instance.node.id}",
+                  "security_group_ids": [
+                    "enp00000000000000000"
+                  ],
+                  "subnet_id": "e9b00000000000000000",
+                  "zone": "ru-central1-a"
+                },
+                "name": "${yandex_compute_instance.node.name}",
+                "node_id": "0",
+                "provider": "yandex",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+              }
+            }
+          },
+          "provider": {
+            "yandex": {
+              "cloud_id": "b1g00000000000000000",
+              "folder_id": "b1g00000000000000001",
+              "zone": "ru-central1-a"
+            }
+          },
+          "resource": {
+            "yandex_compute_instance": {
+              "node": {
+                "allow_stopping_for_update": false,
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image_id": "fd800000000000000000",
+                        "size": 20
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "metadata": {
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "example-0",
+                "network_interface": [
+                  {
+                    "nat": true,
+                    "nat_ip_address": "${yandex_vpc_address.node.external_ipv4_address[0].address}",
+                    "security_group_ids": [
+                      "enp00000000000000000"
+                    ],
+                    "subnet_id": "e9b00000000000000000"
+                  }
+                ],
+                "platform_id": "standard-v3",
+                "resources": [
+                  {
+                    "core_fraction": 100,
+                    "cores": 2,
+                    "memory": 4
+                  }
+                ],
+                "zone": "ru-central1-a"
+              }
+            },
+            "yandex_vpc_address": {
+              "node": {
+                "external_ipv4_address": [
+                  {
+                    "zone_id": "ru-central1-a"
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "yandex": {
+                "source": "yandex-cloud/yandex",
+                "version": "0.120.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "allow_stopping_for_update": false,
+        "cloud_id": "b1g00000000000000000",
+        "core_fraction": 100,
+        "cores": 2,
+        "disk_size": 20,
+        "folder_id": "b1g00000000000000001",
+        "image_id": "fd800000000000000000",
+        "memory": 4,
+        "name": "example-0",
+        "node_id": "0",
+        "platform_id": "standard-v3",
+        "prevent_destroy": true,
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "security_group_ids": [
+          "enp00000000000000000"
+        ],
+        "subnet_id": "e9b00000000000000000",
+        "zone": "ru-central1-a"
+      },
+      "provider": "yandex",
+      "stage": "node"
+    },
+    "name": "yandex-node",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-family": "ubuntu-2404-lts",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "yandex",
+          "security_group_id": "enp00000000000000000",
+          "subnet_id": "e9b00000000000000000",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node-discovery.tf.json": {
+          "data": {
+            "yandex_compute_image": {
+              "ubuntu": {
+                "family": "ubuntu-2404-lts"
+              }
+            }
+          },
+          "locals": {
+            "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+          },
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+                "metadata": {
+                  "address_id": "${yandex_vpc_address.node.id}",
+                  "fqdn": "${yandex_compute_instance.node.fqdn}",
+                  "instance_id": "${yandex_compute_instance.node.id}",
+                  "security_group_ids": [
+                    "enp00000000000000000"
+                  ],
+                  "subnet_id": "e9b00000000000000000",
+                  "zone": "ru-central1-a"
+                },
+                "name": "${yandex_compute_instance.node.name}",
+                "node_id": "0",
+                "provider": "yandex",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+              }
+            }
+          },
+          "provider": {
+            "yandex": {
+              "cloud_id": "b1g00000000000000000",
+              "folder_id": "b1g00000000000000001",
+              "zone": "ru-central1-a"
+            }
+          },
+          "resource": {
+            "yandex_compute_instance": {
+              "node": {
+                "allow_stopping_for_update": false,
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image_id": "${data.yandex_compute_image.ubuntu.id}",
+                        "size": 20
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "ignore_changes": [
+                    "boot_disk[0].initialize_params[0].image_id"
+                  ],
+                  "prevent_destroy": true
+                },
+                "metadata": {
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "example-0",
+                "network_interface": [
+                  {
+                    "nat": true,
+                    "nat_ip_address": "${yandex_vpc_address.node.external_ipv4_address[0].address}",
+                    "security_group_ids": [
+                      "enp00000000000000000"
+                    ],
+                    "subnet_id": "e9b00000000000000000"
+                  }
+                ],
+                "platform_id": "standard-v3",
+                "resources": [
+                  {
+                    "core_fraction": 100,
+                    "cores": 2,
+                    "memory": 4
+                  }
+                ],
+                "zone": "ru-central1-a"
+              }
+            },
+            "yandex_vpc_address": {
+              "node": {
+                "external_ipv4_address": [
+                  {
+                    "zone_id": "ru-central1-a"
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "yandex": {
+                "source": "yandex-cloud/yandex",
+                "version": "0.120.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "allow_stopping_for_update": false,
+        "cloud_id": "b1g00000000000000000",
+        "core_fraction": 100,
+        "cores": 2,
+        "disk_size": 20,
+        "folder_id": "b1g00000000000000001",
+        "image_family": "ubuntu-2404-lts",
+        "memory": 4,
+        "name": "example-0",
+        "node_id": "0",
+        "platform_id": "standard-v3",
+        "prevent_destroy": true,
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "security_group_ids": [
+          "enp00000000000000000"
+        ],
+        "subnet_id": "e9b00000000000000000",
+        "zone": "ru-central1-a"
+      },
+      "provider": "yandex",
+      "stage": "node-discovery"
+    },
+    "name": "yandex-node-discovery",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "external",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "key_name": {
+              "value": "${aws_key_pair.machine.key_name}"
+            },
+            "registration": {
+              "value": {
+                "id": "${aws_key_pair.machine.id}",
+                "provider": "aws",
+                "scope": "region"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${aws_key_pair.machine.id}"
+            }
+          },
+          "resource": {
+            "aws_key_pair": {
+              "machine": {
+                "key_name": "example",
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${aws_vpc.network.cidr_block}",
+                "provider": "aws",
+                "security_group_id": "${aws_security_group.network.id}",
+                "subnet_id": "${aws_subnet.public.id}",
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            }
+          },
+          "provider": {
+            "aws": {
+              "region": "eu-west-1"
+            }
+          },
+          "resource": {
+            "aws_internet_gateway": {
+              "gateway": {
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_route": {
+              "internet": {
+                "destination_cidr_block": "0.0.0.0/0",
+                "gateway_id": "${aws_internet_gateway.gateway.id}",
+                "route_table_id": "${aws_route_table.public.id}"
+              }
+            },
+            "aws_route_table": {
+              "public": {
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_route_table_association": {
+              "public": {
+                "route_table_id": "${aws_route_table.public.id}",
+                "subnet_id": "${aws_subnet.public.id}"
+              }
+            },
+            "aws_security_group": {
+              "network": {
+                "description": "Deployment node access",
+                "name": "example-firewall",
+                "tags": {
+                  "Name": "example-firewall"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_subnet": {
+              "public": {
+                "availability_zone": "eu-west-1a",
+                "cidr_block": "10.42.1.0/24",
+                "map_public_ip_on_launch": true,
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_id": "${aws_vpc.network.id}"
+              }
+            },
+            "aws_vpc": {
+              "network": {
+                "cidr_block": "10.42.0.0/16",
+                "enable_dns_hostnames": true,
+                "enable_dns_support": true,
+                "tags": {
+                  "Name": "example-0"
+                }
+              }
+            },
+            "aws_vpc_security_group_egress_rule": {
+              "egress": {
+                "cidr_ipv4": "${each.value.cidr}",
+                "for_each": {
+                  "all-ipv4": {
+                    "cidr": "0.0.0.0/0",
+                    "from_port": null,
+                    "protocol": "-1",
+                    "to_port": null
+                  }
+                },
+                "from_port": "${each.value.from_port}",
+                "ip_protocol": "${each.value.protocol}",
+                "security_group_id": "${aws_security_group.network.id}",
+                "to_port": "${each.value.to_port}"
+              }
+            },
+            "aws_vpc_security_group_ingress_rule": {
+              "ingress": {
+                "cidr_ipv4": "${each.value.cidr}",
+                "for_each": {
+                  "peer:private": {
+                    "cidr": "10.42.0.0/16",
+                    "from_port": 9093,
+                    "protocol": "tcp",
+                    "to_port": 9094
+                  },
+                  "ssh:192.0.2.1/32": {
+                    "cidr": "192.0.2.1/32",
+                    "from_port": 22,
+                    "protocol": "tcp",
+                    "to_port": 22
+                  }
+                },
+                "from_port": "${each.value.from_port}",
+                "ip_protocol": "${each.value.protocol}",
+                "security_group_id": "${aws_security_group.network.id}",
+                "to_port": "${each.value.to_port}"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "aws": {
+                "source": "hashicorp/aws",
+                "version": "6.31.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "availability_zone": "eu-west-1a",
+        "egress": {
+          "all-ipv4": {
+            "cidr": "0.0.0.0/0",
+            "from_port": null,
+            "protocol": "-1",
+            "to_port": null
+          }
+        },
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "peer:private": {
+            "cidr": "10.42.0.0/16",
+            "from_port": 9093,
+            "protocol": "tcp",
+            "to_port": 9094
+          },
+          "ssh:192.0.2.1/32": {
+            "cidr": "192.0.2.1/32",
+            "from_port": 22,
+            "protocol": "tcp",
+            "to_port": 22
+          }
+        },
+        "name": "example-0",
+        "profile": "example",
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only",
+        "region": "eu-west-1",
+        "subnet_cidr": "10.42.1.0/24",
+        "vpc_cidr": "10.42.0.0/16"
+      },
+      "provider": "aws",
+      "stage": "shared-keygen"
+    },
+    "name": "AWS external public file owns shared registration shared",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "external",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "aws",
+          "security_group_id": "sg-0123456789abcdef0",
+          "subnet_id": "subnet-0123456789abcdef0",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "instance_id": "${aws_instance.node.id}",
+                "ip": "${aws_instance.node.public_ip}",
+                "name": "${aws_instance.node.tags[\"Name\"]}",
+                "node_id": "0",
+                "provider": "aws",
+                "ssh_key_id": 12345,
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${aws_instance.node.private_ip}"
+              }
+            }
+          },
+          "provider": {
+            "aws": {
+              "region": "eu-west-1"
+            }
+          },
+          "resource": {
+            "aws_instance": {
+              "node": {
+                "ami": "ami-0123456789abcdef0",
+                "associate_public_ip_address": true,
+                "availability_zone": "eu-west-1a",
+                "instance_type": "t3.small",
+                "key_name": "example",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "root_block_device": {
+                  "encrypted": true,
+                  "volume_size": 20,
+                  "volume_type": "gp3"
+                },
+                "subnet_id": "subnet-0123456789abcdef0",
+                "tags": {
+                  "Name": "example-0"
+                },
+                "vpc_security_group_ids": [
+                  "sg-0123456789abcdef0"
+                ]
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "aws": {
+                "source": "hashicorp/aws",
+                "version": "6.31.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "availability_zone": "eu-west-1a",
+        "image_id": "ami-0123456789abcdef0",
+        "instance_type": "t3.small",
+        "key_name": "example",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "eu-west-1",
+        "root_volume_size_gb": 20,
+        "security_group_ids": [
+          "sg-0123456789abcdef0"
+        ],
+        "ssh_key_id": 12345,
+        "subnet_id": "subnet-0123456789abcdef0",
+        "sudoer": "ubuntu",
+        "user": "ubuntu"
+      },
+      "provider": "aws",
+      "stage": "node"
+    },
+    "name": "AWS external public file owns shared registration node",
+    "op": "provider_request"
+  }
+]

@@ -66,3 +66,10 @@ test('constructor refuses invalid identities and snapshots requests', async () =
   const result = await run(wf, {});
   expect(result['colors-compute/cluster'].nodes[0].node_id).toBe('0');
 });
+test('negative node exit fails the fork before join or downstream',async()=>{
+  let downstream=false;
+  const result=await run(clusterWorkflow(expand([{count:2}]),'0',async opts=>({...await node(opts),'red/exit':opts['colors-compute/request'].node_id==='0'?-1:0}),opts=>{downstream=true;return opts;}),{});
+  expect(result['red/exit']).toBeGreaterThan(0);
+  expect(result['colors-compute/cluster']).toBeUndefined();
+  expect(downstream).toBe(false);
+});

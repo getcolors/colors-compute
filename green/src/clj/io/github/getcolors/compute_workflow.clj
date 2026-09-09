@@ -33,7 +33,13 @@
         [(fn [opts] (dissoc opts :colors-compute/cluster :colors-compute/params :green/branches))
          :colors-compute/node]
         :colors-compute/node
-        [node-step :colors-compute/join]
+        [(fn [opts]
+           (let [result (node-step opts)
+                 exit (get result :green/exit 0)]
+             (if (or (and (number? exit) (zero? exit)) (and (integer? exit) (pos? exit)))
+               result
+               (assoc result :green/exit 1))))
+         :colors-compute/join]
         :colors-compute/join
         (cond-> [(fn [opts]
            (let [branches (or (seq (:green/branches opts)) [opts])]
@@ -45,7 +51,7 @@
     :next-fn
     (fn [step successors opts]
       (cond
-        (pos? (:green/exit opts 0)) []
+        (not= 0 (:green/exit opts 0)) []
         (= step :colors-compute/dispatch)
         (mapv (fn [request] [:colors-compute/node (assoc opts :colors-compute/request request)]) requests)
         :else (mapv (fn [next-step] [next-step opts]) successors)))})))

@@ -1,3 +1,4 @@
+import {lifecycle,lifecycleDocumentValid} from './lifecycle.ts';
 import {registry, expand, state_keys} from './index.ts';
 type Map = Record<string, any>;
 const object = (value: unknown): value is Map => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -42,6 +43,7 @@ function observationValid(value: unknown): value is Map {
   return value.status === 'present' && fields(value,['status','etag','document']) && nonblank(value.etag);
 }
 export function documentValid(value: unknown): value is Map {
+  if(object(value)&&value.schema_version===2)return lifecycleDocumentValid(value);
   if (!fields(value,['schema_version','identity','revision','write_id','lock','topology_declared','nodes']) || value.schema_version !== 1 || !identityValid(value.identity) || !integer(value.revision,1,Number.MAX_SAFE_INTEGER) || !safe(value.write_id)) return false;
   if (!fields(value.lock,['state','run_id']) || !((value.lock.state === 'held' && safe(value.lock.run_id)) || (value.lock.state === 'idle' && value.lock.run_id === null))) return false;
   if (typeof value.topology_declared !== 'boolean' || !object(value.nodes)) return false;
@@ -70,13 +72,14 @@ function fail(message: string): never {throw new Error(message);}
 
 /** Plan one journal CAS. A returned plan does not authorize provider dispatch. */
 export function coordination(observation: unknown, identity: unknown, event: unknown) {
+  if(object(event)&&typeof event.type==='string'&&event.type.startsWith('lifecycle/'))return lifecycle(observation,identity,event);
   if(!identityValid(identity)) fail('invalid coordination identity');
   if(!eventValid(event)) fail('invalid coordination event');
   if(!observationValid(observation)) fail('invalid coordination observation');
   if(observation.status === 'error') fail('coordination read failed');
   const present=observation.status === 'present';
   const document=observation.document;
-  if(present && !documentValid(document)) fail('invalid coordination document');
+  if(present && (!documentValid(document)||document.schema_version!==1)) fail('invalid coordination document');
   if(present && !identityEqual(document.identity,identity)) fail('coordination identity mismatch');
   if(event.target_etag !== (present ? observation.etag : null)) fail('stale coordination observation');
   if(present && event.write_id === document.write_id) fail('coordination write_id reused');

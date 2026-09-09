@@ -1,5 +1,5 @@
 """Deterministic template and backend plans without credential access."""
-from copy import deepcopy
+from ._copy import deepcopy
 from importlib.resources import files
 import json
 import re

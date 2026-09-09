@@ -92,3 +92,15 @@ Official resource references:
 [compute instance](https://registry.terraform.io/providers/yandex-cloud/yandex/0.120.0/docs/resources/compute_instance),
 [security group](https://registry.terraform.io/providers/yandex-cloud/yandex/0.120.0/docs/resources/vpc_security_group),
 [reserved address](https://registry.terraform.io/providers/yandex-cloud/yandex/0.120.0/docs/resources/vpc_address).
+
+## Image family discovery extension
+
+The `node-discovery` packaged stage reads `data.yandex_compute_image.ubuntu`
+with a provider-owned `family` input. Its node addresses match pinned-image
+mode, and its lifecycle ignores `boot_disk[0].initialize_params[0].image_id`
+changes so a newly published family image does not replace an existing disk.
+Explicit image-ID mode retains normal replacement planning. This preserves
+ONCE's existing family/pin distinction. Schema validation passed with pinned
+Yandex provider0.120.0 and OpenTofu1.12.5 for the discovery variant; no image
+lookup or cloud operation was executed. The library recipe selects the variant,
+so packages do not branch on image-discovery implementation.

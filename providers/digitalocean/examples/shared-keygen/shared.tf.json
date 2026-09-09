@@ -25,7 +25,8 @@
         "vpc_id": "${data.digitalocean_vpc.network.id}",
         "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}",
         "firewall_id": "${digitalocean_firewall.network.id}",
-        "deployment_tag": "${digitalocean_tag.deployment.name}"
+        "deployment_tag": "${digitalocean_tag.deployment.name}",
+        "network_cidr": "${data.digitalocean_vpc.network.ip_range}"
       }
     }
   },

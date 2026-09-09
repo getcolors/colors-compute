@@ -4,6 +4,10 @@
   (cp/add-classpath (str (io/file root "green/src/clj") ":" (io/file root "green/src/resources"))))
 (require '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
          '[io.github.getcolors.compute-runtime :as runtime]
+         '[io.github.getcolors.compute-request :as request]
+         '[io.github.getcolors.compute-deployment-request :as deployment]
+         '[io.github.getcolors.compute-planning :as planning]
+         '[io.github.getcolors.compute-lifecycle :as lifecycle]
          '[io.github.getcolors.compute-coordination :as coordination]
          '[io.github.getcolors.compute-journal :as journal])
 (defn read-state-case [opts key environment responses]
@@ -27,7 +31,11 @@
      (if (nil? intent) (journal/journal-get opts env runner)
          (journal/journal-put opts intent env runner)))))
 (def operations
-  {"journal_case" journal-case
+  {"deployment_requests" deployment/deployment-requests
+   "plan_deployment" planning/plan-deployment
+   "lifecycle" lifecycle/lifecycle
+   "provider_request" request/provider-request
+   "journal_case" journal-case
    "coordination" coordination/coordination
    "read_state_case" read-state-case
    "validate" compute/validate

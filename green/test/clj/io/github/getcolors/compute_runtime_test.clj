@@ -137,3 +137,15 @@
              (runtime/run-command ["tofu" "exact-path"] "/tmp" {"PATH" (str directory)} 1000)))
       (is (= -1 (:exit (runtime/run-command ["env"] "/tmp" {"PATH" (str directory)} 1000))))
       (finally (Files/deleteIfExists executable) (Files/deleteIfExists directory)))))
+
+(deftest optional-flattened-outputs-refuse-sensitive-and-malformed-values
+  (let [read (fn [document include?]
+               (runtime/read-state s3 "example/compute/shared.tfstate" {}
+                                   (fn [argv _ _ _] {:exit 0 :out (if (= "state" (second argv)) (json/generate-string document) "")}) include?))]
+    (is (= {:status "present" :params {:provider "aws" :ip "192.0.2.1"}
+            :outputs {:params {:provider "aws" :ip "192.0.2.1"} :subnet_id "subnet-1"} :state_empty false}
+           (read (assoc-in valid-state [:outputs :subnet_id] {:value "subnet-1" :sensitive false}) true)))
+    (doseq [bad [{:value "private" :sensitive true} {:sensitive false} {:value "private" :sensitive nil} "malformed"]]
+      (let [document (assoc-in valid-state [:outputs :extra] bad)]
+        (is (= "error" (:status (read document true))))
+        (is (= "present" (:status (read document false))))))))

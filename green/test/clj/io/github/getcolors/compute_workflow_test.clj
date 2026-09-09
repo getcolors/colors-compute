@@ -77,3 +77,14 @@
                   #(assoc % :test/inventory (mapv :node_id (get-in % [:colors-compute/cluster :nodes])))) {})]
     (is (= 0 (:green/exit result)))
     (is (= ["0" "1"] (:test/inventory result)))))
+
+(deftest negative-or-invalid-node-exit-never-runs-downstream
+  (doseq [exit [-1 nil "bad" false -2.5]]
+    (let [downstream (atom false)
+          result (workflow/run
+                  (adapter/cluster-workflow [{:node_id "0" :role nil :index 0}] "0"
+                    #(assoc % :green/exit exit)
+                    #(do (reset! downstream true) %)) {})]
+      (is (= 1 (:green/exit result)))
+      (is (false? @downstream))
+      (is (nil? (:colors-compute/cluster result))))))

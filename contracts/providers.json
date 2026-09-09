@@ -87,11 +87,19 @@
         "google-region",
         "google-zone",
         "google-machine-type",
-        "google-image-project",
-        "google-image-family",
-        "google-image-id",
         "google-subnet-cidr",
         "google-boot-disk-size-gb"
+      ],
+      "required-one-of": [
+        [
+          [
+            "google-image-id"
+          ],
+          [
+            "google-image-project",
+            "google-image-family"
+          ]
+        ]
       ],
       "secrets": [],
       "ssh-setting": "google-ssh-authorized-keys",
@@ -158,13 +166,22 @@
         "yandex-cloud-id",
         "yandex-folder-id",
         "yandex-zone",
-        "yandex-image-family",
         "yandex-subnet-cidr",
         "yandex-platform-id",
         "yandex-cores",
         "yandex-memory-gb",
         "yandex-core-fraction",
         "yandex-disk-size-gb"
+      ],
+      "required-one-of": [
+        [
+          [
+            "yandex-image-id"
+          ],
+          [
+            "yandex-image-family"
+          ]
+        ]
       ],
       "secrets": [
         "yandex-token"

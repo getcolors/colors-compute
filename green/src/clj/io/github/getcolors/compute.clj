@@ -21,10 +21,14 @@
   (into (cond-> (selection-errors opts)
           (missing? (:profile opts)) (conj ":profile is required")
           (and (not (missing? (:profile opts))) (not (safe? (:profile opts)))) (conj ":profile must be a safe identifier"))
-        (for [key (sort (distinct (concat (:required (entry :compute (:provider-compute opts)))
+        (concat (for [key (sort (distinct (concat (:required (entry :compute (:provider-compute opts)))
                                          (:required (entry :backend (:provider-backend opts))))))
               :when (missing? (get opts (keyword key)))]
-          (str ":" key " is required"))))
+          (str ":" key " is required"))
+          (for [selected [(entry :compute (:provider-compute opts)) (entry :backend (:provider-backend opts))]
+                alternatives (:required-one-of selected)
+                :when (not-any? (fn [group] (every? #(not (missing? (get opts (keyword %)))) group)) alternatives)]
+            (str "one of " (str/join " or " (map #(str/join " and " (map (fn [key] (str ":" key)) %)) alternatives)) " is required")))))
 
 (defn credential-requirements [opts]
   (let [errors (selection-errors opts)]

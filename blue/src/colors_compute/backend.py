@@ -61,7 +61,17 @@ def _params(output):
     return params["value"]
 
 
-async def read_state(opts, state_key, environment=None, runner=None):
+def _outputs(output):
+    _params(output)
+    result = {}
+    for name, entry in json.loads(output)['outputs'].items():
+        if not isinstance(entry, dict) or 'value' not in entry or entry.get('sensitive', False) is not False:
+            raise ValueError('invalid outputs')
+        result[name] = entry['value']
+    return result
+
+
+async def read_state(opts, state_key, environment=None, runner=None, include_outputs=False):
     """Return present params or a generic error; callers must not log params.
 
     Runner receives (argv, cwd, exact_environment, timeout_ms). No mutations are
@@ -98,11 +108,13 @@ async def read_state(opts, state_key, environment=None, runner=None):
             if pull.exit != 0:
                 return {"status": "error"}
             params = _params(pull.out)
-            encoded = json.dumps(params, ensure_ascii=False)
+            outputs = _outputs(pull.out) if include_outputs else None
+            encoded = json.dumps(outputs if include_outputs else params, ensure_ascii=False)
             if any(secret in encoded or json.dumps(secret, ensure_ascii=False)[1:-1] in encoded
                    for secret in credentials.values()):
                 return {"status": "error"}
-            return {"status": "present", "params": params}
+            empty = json.loads(pull.out)['resources'] == [] and outputs == {} if include_outputs else False
+            return {"status": "present", "params": params, **({"outputs": outputs, "state_empty": empty} if include_outputs else {})}
     except Exception:
         # Diagnostics can contain backend secrets and raw state. Never forward.
         return {"status": "error"}

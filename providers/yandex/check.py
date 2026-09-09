@@ -31,8 +31,8 @@ def render(value, inputs):
 
 def check():
     inputs = json.loads((ROOT / 'examples/inputs.json').read_text())
-    for mode in ('shared', 'node'):
-        templates = {'main.tf.json': 'node' if mode == 'node' else 'shared'}
+    for mode in ('shared', 'node', 'node-discovery'):
+        templates = {'main.tf.json': mode}
         for output, template in templates.items():
             source = json.loads((ROOT / f'{template}.tf.json.template').read_text())
             rendered = render(source, inputs)
@@ -62,7 +62,7 @@ def main():
         # Schema checks need registry access but no ambient provider/backend credentials.
         env = {key: value for key, value in os.environ.items()
                if key in ('PATH', 'HOME', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NIX_SSL_CERT_FILE', 'LANG')}
-        for mode in ('shared', 'node'):
+        for mode in ('shared', 'node', 'node-discovery'):
             with tempfile.TemporaryDirectory(prefix='colors-compute-yandex-') as directory:
                 for source in (ROOT / 'examples' / mode).glob('*.tf.json'):
                     (Path(directory) / source.name).write_bytes(source.read_bytes())

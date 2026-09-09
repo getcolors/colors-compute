@@ -99,7 +99,8 @@
         "vcn_id": "${data.oci_core_subnet.existing.vcn_id}",
         "nsg_ids": [
           "${oci_core_network_security_group.network.id}"
-        ]
+        ],
+        "network_cidr": "${data.oci_core_subnet.existing.cidr_block}"
       }
     }
   }
