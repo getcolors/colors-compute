@@ -1,0 +1,761 @@
+[
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": true,
+          "schedule": {
+            "type": "daily",
+            "hour": 3
+          }
+        },
+        "ipv6": false
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${vultr_instance.node.main_ip}",
+                "name": "${vultr_instance.node.label}",
+                "node_id": "0",
+                "provider": "vultr",
+                "provider_id": "${vultr_instance.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_ip": "${vultr_instance.node.internal_ip}"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_instance": {
+              "node": {
+                "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+                "label": "example-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "os_id": 2284,
+                "plan": "vc2-2c-4gb",
+                "region": "ewr",
+                "ssh_key_ids": [
+                  12345
+                ],
+                "vpc_ids": [
+                  "network-fixture"
+                ],
+                "backups": "enabled",
+                "backups_schedule": [
+                  {
+                    "type": "daily",
+                    "hour": 3
+                  }
+                ],
+                "enable_ipv6": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+        "name": "example-0",
+        "node_id": "0",
+        "os_id": 2284,
+        "plan": "vc2-2c-4gb",
+        "prevent_destroy": true,
+        "region": "ewr",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "network-fixture"
+        ]
+      },
+      "provider": "vultr",
+      "stage": "node"
+    },
+    "name": "backups-daily",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": false
+        },
+        "ipv6": true
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${vultr_instance.node.main_ip}",
+                "name": "${vultr_instance.node.label}",
+                "node_id": "0",
+                "provider": "vultr",
+                "provider_id": "${vultr_instance.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_ip": "${vultr_instance.node.internal_ip}"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_instance": {
+              "node": {
+                "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+                "label": "example-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "os_id": 2284,
+                "plan": "vc2-2c-4gb",
+                "region": "ewr",
+                "ssh_key_ids": [
+                  12345
+                ],
+                "vpc_ids": [
+                  "network-fixture"
+                ],
+                "backups": "disabled",
+                "enable_ipv6": true
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+        "name": "example-0",
+        "node_id": "0",
+        "os_id": 2284,
+        "plan": "vc2-2c-4gb",
+        "prevent_destroy": true,
+        "region": "ewr",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "network-fixture"
+        ]
+      },
+      "provider": "vultr",
+      "stage": "node"
+    },
+    "name": "backups-disabled",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": null
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup policy"
+    },
+    "name": "reject-option-2",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": true,
+          "schedule": {
+            "type": "daily",
+            "hour": true
+          }
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup schedule"
+    },
+    "name": "reject-option-3",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": true,
+          "schedule": {
+            "type": "weekly",
+            "hour": 3
+          }
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup schedule"
+    },
+    "name": "reject-option-4",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": false,
+          "schedule": {}
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup policy"
+    },
+    "name": "reject-option-5",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ipv6": 0
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute IPv6 policy"
+    },
+    "name": "reject-option-6",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": false
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "unsupported compute options capability"
+    },
+    "name": "unsupported-backup-provider",
+    "op": "provider_request"
+  }
+]

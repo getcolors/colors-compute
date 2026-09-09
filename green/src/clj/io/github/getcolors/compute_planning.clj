@@ -22,15 +22,15 @@
         network (get-in assembly [:shared :network])
         cidr (or (:subnet_cidr network) (:cidr network)
                  (some #(get opts (keyword %)) (concat (:subnet_cidr_options recipe) (:network_cidr_options recipe))) "10.0.0.0/24")
-        parsed (request/cidr cidr)
-        shared (assoc-in shared [:params :network_cidr] (str (:address parsed) "/" (:prefix parsed)))
+        parsed (when-not (= "none" (:mode network)) (request/cidr cidr))
+        shared (if parsed (assoc-in shared [:params :network_cidr] (str (:address parsed) "/" (:prefix parsed))) (update shared :params #(apply dissoc % [:vpc_id :vpc_ip_range :network_cidr :subnet_id :subnet_cidr])))
         shared (cond-> shared (contains? requirements :endpoint) (assoc-in [:params :endpoint_ip] "198.51.100.10"))
         resolved (mapv (fn [ordinal node]
                          (let [plan (request/provider-request opts "node" node shared) offset (+ ordinal 10)]
-                           (when (>= offset (- (:end parsed) (:start parsed))) (throw (ex-info "build exceeds private network address capacity" {})))
+                           (when (and parsed (>= offset (- (:end parsed) (:start parsed)))) (throw (ex-info "build exceeds private network address capacity" {})))
                            {:documents (:documents plan)
                             :params (cond-> {:provider_id (if (re-matches #"[0-9]+" (:planning_provider_id recipe)) (str (+ (Long/parseLong (:planning_provider_id recipe)) ordinal)) (str (:planning_provider_id recipe) "-" (:node_id node))) :node_id (:node_id node) :provider provider :name (:name node) :ip (str "192.0.2." offset)
-                                             :vpc_ip (address (+ (:start parsed) offset)) :user (:user entry) :sudoer (:sudoer entry)}
+                                             :vpc_ip (when parsed (address (+ (:start parsed) offset))) :user (:user entry) :sudoer (:sudoer entry)}
                                       (= "managed" (:mode selected)) (assoc :ssh_identity_file (str "$HOME/.ssh/" (:profile opts)))
                                       (:private_key_path selected) (assoc :ssh_identity_file (:private_key_path selected)))}))
                        (range) (:nodes assembly))]

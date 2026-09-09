@@ -1,0 +1,13 @@
+{
+  "vultr": {
+    "resource_type": "vultr_instance",
+    "resource_name": "node",
+    "backups_field": "backups",
+    "backups_values": {
+      "true": "enabled",
+      "false": "disabled"
+    },
+    "schedule_field": "backups_schedule",
+    "ipv6_field": "enable_ipv6"
+  }
+}

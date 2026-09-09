@@ -416,12 +416,18 @@
     "network_mode": "discovered",
     "network_modes": [
       "discovered",
-      "created"
+      "created",
+      "none"
     ],
     "network_stages": {
       "created": {
         "shared": "shared-created",
         "shared-keygen": "shared-created-keygen"
+      },
+      "none": {
+        "node": "node-none",
+        "shared": "shared-none",
+        "shared-keygen": "shared-none-keygen"
       }
     },
     "planning_provider_id": "1000000",
@@ -462,7 +468,8 @@
     },
     "role_tag_param": "deployment_tag",
     "static_private_ip": false,
-    "subnet_cidr_options": []
+    "subnet_cidr_options": [],
+    "ipv6_ingress": true
   },
   "google": {
     "application_reserved_ip": false,
@@ -739,7 +746,19 @@
     "static_private_ip": true,
     "subnet_cidr_options": [
       "hcloud-subnet-cidr"
-    ]
+    ],
+    "network_modes": [
+      "created",
+      "none"
+    ],
+    "network_stages": {
+      "none": {
+        "shared": "shared-none",
+        "shared-keygen": "shared-none-keygen",
+        "node": "node-none"
+      }
+    },
+    "ipv6_ingress": true
   },
   "oci": {
     "application_reserved_ip": false,
@@ -995,6 +1014,17 @@
       "vultr-vpc-subnet"
     ],
     "network_mode": "created",
+    "network_modes": [
+      "created",
+      "none"
+    ],
+    "network_stages": {
+      "none": {
+        "node": "node-none",
+        "shared": "shared-none",
+        "shared-keygen": "shared-none-keygen"
+      }
+    },
     "planning_provider_id": "planned-vultr",
     "planning_shared": {
       "key_name": "example",
@@ -1180,6 +1210,15 @@
       "image": "yandex-image-id"
     },
     "static_private_ip": false,
-    "subnet_cidr_options": []
+    "subnet_cidr_options": [],
+    "boolean_stages": {
+      "yandex-static-ip": {
+        "false": {
+          "node": "node-dynamic",
+          "node-discovery": "node-discovery-dynamic"
+        },
+        "true": {}
+      }
+    }
   }
 }

@@ -11,12 +11,13 @@
 (defn deployment-requests [opts topology requirements key]
   (let [provider (:provider-compute opts) recipe (when (string? provider) (get recipes (keyword provider)))]
     (when-not recipe (fail "compute provider recipe unavailable"))
-    (when-not (and (map? requirements) (contains? requirements :security) (every? #{:security :network :single_host :legacy_state_keys :private :endpoint :roles :entry_node_id :kubernetes_controller} (keys requirements)))
+    (when-not (and (map? requirements) (contains? requirements :security) (every? #{:security :network :single_host :legacy_state_keys :private :endpoint :roles :entry_node_id :kubernetes_controller :backups :ipv6} (keys requirements)))
       (fail "invalid deployment requirements"))
     (when (contains? requirements :kubernetes_controller)
       (when-not (true? (:kubernetes_controller requirements)) (fail "invalid Kubernetes controller requirement"))
       (controller/controller-artifact opts (:planning_shared recipe)))
     (let [single (get requirements :single_host false) nodes (compute/expand topology)]
+      (when (and (= "none" (get-in requirements [:network :mode])) (or (not (true? single)) (not (false? (get requirements :private false))))) (fail "network none requires public-only single host"))
       (when-not (boolean? single) (fail "invalid single-host requirement"))
       (when (or (> (count nodes) 1000) (and single (or (not= 1 (count nodes)) (some? (:role (first nodes)))))) (fail "invalid deployment topology"))
       (let [role-names (set (keep :role nodes)) roles (:roles requirements)
@@ -42,8 +43,8 @@
             network (get requirements :network {})]
         (when-not (safe? name) (fail "invalid compute name"))
         (when-not (map? network) (fail "invalid compute network request"))
-        (let [base (cond-> {:key (select-keys key [:mode :public_key :ids :reference])
-                    :network (merge {:mode (:network_mode recipe)} network) :security (:security requirements)} (contains? requirements :endpoint) (assoc :endpoint (:endpoint requirements)))
+        (let [base (cond-> (merge (select-keys requirements [:backups :ipv6]) {:key (select-keys key [:mode :public_key :ids :reference])
+                    :network (merge {:mode (if (and single (false? (get requirements :private false)) (some #{"none"} (:network_modes recipe))) "none" (:network_mode recipe))} network) :security (:security requirements)}) (contains? requirements :endpoint) (assoc :endpoint (:endpoint requirements)))
               requests (mapv (fn [node]
                                (let [node-name (if single name (str name "-" (:node_id node)))]
                                  (when-not (safe? node-name) (fail "invalid derived compute name"))

@@ -9,16 +9,6 @@
   "node": [
     "node.tf.json"
   ],
-  "shared-roles": [
-    "shared-roles.tf.json"
-  ],
-  "shared-roles-keygen": [
-    "shared-roles.tf.json",
-    "shared-keygen.tf.json"
-  ],
-  "managed-kubernetes": [
-    "managed-kubernetes.tf.json"
-  ],
   "shared-none": [
     "shared-none.tf.json"
   ],

@@ -97,3 +97,29 @@
     (is (= {:status "error"} (o/orchestrate opts topology requirements {} deps)))
     (is (= 1 (count @renders)))
     (is (= 1 (count (filter #(= ["demo/compute/shared.tfstate" "create"] %) @calls))))))
+(deftest public-singleton-runtime-and-inspection-without-private-network
+  (let [{:keys [deps storage states]} (world)
+        opts (assoc opts :provider-compute "vultr")
+        topology [{:role nil :count 1}]
+        requirements {:single_host true :private false :network {:mode "none"}
+                      :security {:egress "all" :private_filter false
+                                 :ingress [{:id "ssh" :protocol "tcp" :from_port 22 :to_port 22 :sources ["192.0.2.1/32"]}]}}
+        converge (:converge-state deps)
+        deps (assoc deps
+               :deployment-requests (fn [_ _ _ key] {:shared {:node_id "shared" :key key} :nodes [{:node_id "0" :key key}]})
+               :converge-state (fn [& args]
+                                (let [result (apply converge args)]
+                                  (if (= "ready" (:status result))
+                                    (let [params (cond-> (assoc (:params result) :provider "vultr")
+                                                   (:node_id (:params result)) (assoc :vpc_ip nil))
+                                          result (assoc result :params params :outputs {:params params})]
+                                      (swap! states assoc (second args) (assoc result :status "present")) result)
+                                    result))))
+        result (o/orchestrate opts topology requirements {} deps)
+        reader {:journal-get (fn [& _] ((:read storage))) :read-state (:read-state deps)}]
+    (is (= "ready" (:status result)))
+    (is (nil? (get-in result [:cluster :nodes 0 :vpc_ip])))
+    (is (not (contains? (get-in result [:shared :params]) :network_cidr)))
+    (is (= "present" (:status (inspection/read-deployment opts {} reader requirements))))
+    (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
+    (is (= "destroyed" (:status (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps))))))

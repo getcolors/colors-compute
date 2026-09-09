@@ -91,7 +91,7 @@ def test_invalid_and_unsupported_requirements_fail(mutation, message):
     case = sample('hcloud-shared' if mutation == 'private' else 'vultr-shared')
     request = case['request']
     if mutation == 'unknown': request['secret'] = 'do-not-echo'
-    if mutation == 'network': request['network']['mode'] = 'none'
+    if mutation == 'network': request['network']['mode'] = 'unsupported'
     if mutation == 'sources': request['security']['ingress'][0]['sources'] *= 2
     if mutation == 'cidr': request['network']['cidr'] = '10.42.0.1/16'
     if mutation == 'egress': request['security']['egress'] = 'restricted'

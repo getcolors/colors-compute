@@ -1,0 +1,473 @@
+[
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a",
+        "yandex-static-ip": true
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "yandex",
+          "security_group_id": "enp00000000000000000",
+          "subnet_id": "e9b00000000000000000",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "locals": {
+            "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+          },
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+                "metadata": {
+                  "address_id": "${yandex_vpc_address.node.id}",
+                  "fqdn": "${yandex_compute_instance.node.fqdn}",
+                  "instance_id": "${yandex_compute_instance.node.id}",
+                  "security_group_ids": [
+                    "enp00000000000000000"
+                  ],
+                  "subnet_id": "e9b00000000000000000",
+                  "zone": "ru-central1-a"
+                },
+                "name": "${yandex_compute_instance.node.name}",
+                "node_id": "0",
+                "provider": "yandex",
+                "provider_id": "${yandex_compute_instance.node.id}",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+              }
+            }
+          },
+          "provider": {
+            "yandex": {
+              "cloud_id": "b1g00000000000000000",
+              "folder_id": "b1g00000000000000001",
+              "zone": "ru-central1-a"
+            }
+          },
+          "resource": {
+            "yandex_compute_instance": {
+              "node": {
+                "allow_stopping_for_update": false,
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image_id": "fd800000000000000000",
+                        "size": 20
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "metadata": {
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "example-0",
+                "network_interface": [
+                  {
+                    "nat": true,
+                    "nat_ip_address": "${yandex_vpc_address.node.external_ipv4_address[0].address}",
+                    "security_group_ids": [
+                      "enp00000000000000000"
+                    ],
+                    "subnet_id": "e9b00000000000000000"
+                  }
+                ],
+                "platform_id": "standard-v3",
+                "resources": [
+                  {
+                    "core_fraction": 100,
+                    "cores": 2,
+                    "memory": 4
+                  }
+                ],
+                "zone": "ru-central1-a"
+              }
+            },
+            "yandex_vpc_address": {
+              "node": {
+                "external_ipv4_address": [
+                  {
+                    "zone_id": "ru-central1-a"
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "yandex": {
+                "source": "yandex-cloud/yandex",
+                "version": "0.120.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "allow_stopping_for_update": false,
+        "cloud_id": "b1g00000000000000000",
+        "core_fraction": 100,
+        "cores": 2,
+        "disk_size": 20,
+        "folder_id": "b1g00000000000000001",
+        "image_id": "fd800000000000000000",
+        "memory": 4,
+        "name": "example-0",
+        "node_id": "0",
+        "platform_id": "standard-v3",
+        "prevent_destroy": true,
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "security_group_ids": [
+          "enp00000000000000000"
+        ],
+        "subnet_id": "e9b00000000000000000",
+        "zone": "ru-central1-a"
+      },
+      "provider": "yandex",
+      "stage": "node"
+    },
+    "name": "yandex-static-True",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a",
+        "yandex-static-ip": false
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "yandex",
+          "security_group_id": "enp00000000000000000",
+          "subnet_id": "e9b00000000000000000",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node-dynamic.tf.json": {
+          "locals": {
+            "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+          },
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+                "metadata": {
+                  "fqdn": "${yandex_compute_instance.node.fqdn}",
+                  "instance_id": "${yandex_compute_instance.node.id}",
+                  "security_group_ids": [
+                    "enp00000000000000000"
+                  ],
+                  "subnet_id": "e9b00000000000000000",
+                  "zone": "ru-central1-a"
+                },
+                "name": "${yandex_compute_instance.node.name}",
+                "node_id": "0",
+                "provider": "yandex",
+                "provider_id": "${yandex_compute_instance.node.id}",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+              }
+            }
+          },
+          "provider": {
+            "yandex": {
+              "cloud_id": "b1g00000000000000000",
+              "folder_id": "b1g00000000000000001",
+              "zone": "ru-central1-a"
+            }
+          },
+          "resource": {
+            "yandex_compute_instance": {
+              "node": {
+                "allow_stopping_for_update": false,
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image_id": "fd800000000000000000",
+                        "size": 20
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "metadata": {
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "example-0",
+                "network_interface": [
+                  {
+                    "nat": true,
+                    "security_group_ids": [
+                      "enp00000000000000000"
+                    ],
+                    "subnet_id": "e9b00000000000000000"
+                  }
+                ],
+                "platform_id": "standard-v3",
+                "resources": [
+                  {
+                    "core_fraction": 100,
+                    "cores": 2,
+                    "memory": 4
+                  }
+                ],
+                "zone": "ru-central1-a"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "yandex": {
+                "source": "yandex-cloud/yandex",
+                "version": "0.120.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "allow_stopping_for_update": false,
+        "cloud_id": "b1g00000000000000000",
+        "core_fraction": 100,
+        "cores": 2,
+        "disk_size": 20,
+        "folder_id": "b1g00000000000000001",
+        "image_id": "fd800000000000000000",
+        "memory": 4,
+        "name": "example-0",
+        "node_id": "0",
+        "platform_id": "standard-v3",
+        "prevent_destroy": true,
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "security_group_ids": [
+          "enp00000000000000000"
+        ],
+        "subnet_id": "e9b00000000000000000",
+        "zone": "ru-central1-a"
+      },
+      "provider": "yandex",
+      "stage": "node-dynamic"
+    },
+    "name": "yandex-static-False",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a",
+        "yandex-static-ip": "false"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "yandex",
+          "security_group_id": "enp00000000000000000",
+          "subnet_id": "e9b00000000000000000",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute boolean option"
+    },
+    "name": "yandex-static-false",
+    "op": "provider_request"
+  }
+]

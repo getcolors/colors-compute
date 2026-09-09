@@ -1,0 +1,32 @@
+{
+  "terraform": {
+    "required_providers": {
+      "hcloud": {
+        "source": "hetznercloud/hcloud",
+        "version": "1.54.0"
+      }
+    }
+  },
+  "provider": {
+    "hcloud": {}
+  },
+  "resource": {
+    "hcloud_firewall": {
+      "network": {
+        "name": "{{firewall_name}}",
+        "rule": "{{public_rules}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "hcloud",
+        "firewall_id": "${hcloud_firewall.network.id}"
+      }
+    }
+  }
+}

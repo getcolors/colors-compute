@@ -159,7 +159,7 @@
           },
           "name": "demo",
           "network": {
-            "mode": "created"
+            "mode": "none"
           },
           "node_id": "0",
           "security": {}
@@ -172,7 +172,7 @@
         },
         "name": "demo",
         "network": {
-          "mode": "created"
+          "mode": "none"
         },
         "node_id": "shared",
         "security": {}

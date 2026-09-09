@@ -1,0 +1,1128 @@
+[
+  {
+    "name": "vultr public singleton no private network",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "expected": {
+      "status": "planned",
+      "documents": {
+        "shared": {
+          "shared-keygen.tf.json": {
+            "output": {
+              "registration": {
+                "value": {
+                  "id": "${vultr_ssh_key.machine.id}",
+                  "provider": "vultr",
+                  "scope": "account"
+                }
+              },
+              "ssh_key_id": {
+                "value": "${vultr_ssh_key.machine.id}"
+              }
+            },
+            "resource": {
+              "vultr_ssh_key": {
+                "machine": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example",
+                  "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+                }
+              }
+            }
+          },
+          "shared-none.tf.json": {
+            "locals": {
+              "ingress": {
+                "ssh:192.0.2.1/32": {
+                  "protocol": "tcp",
+                  "port": "22",
+                  "ip_type": "v4",
+                  "subnet": "192.0.2.1",
+                  "subnet_size": 32
+                },
+                "ssh:::/0": {
+                  "protocol": "tcp",
+                  "port": "22",
+                  "ip_type": "v6",
+                  "subnet": "::",
+                  "subnet_size": 0
+                }
+              }
+            },
+            "output": {
+              "params": {
+                "value": {
+                  "firewall_group_id": "${vultr_firewall_group.network.id}",
+                  "provider": "vultr"
+                }
+              }
+            },
+            "provider": {
+              "vultr": {}
+            },
+            "resource": {
+              "vultr_firewall_group": {
+                "network": {
+                  "description": "example-firewall",
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  }
+                }
+              },
+              "vultr_firewall_rule": {
+                "ingress": {
+                  "firewall_group_id": "${vultr_firewall_group.network.id}",
+                  "for_each": "${local.ingress}",
+                  "ip_type": "${each.value.ip_type}",
+                  "port": "${each.value.port}",
+                  "protocol": "${each.value.protocol}",
+                  "subnet": "${each.value.subnet}",
+                  "subnet_size": "${each.value.subnet_size}"
+                }
+              }
+            },
+            "terraform": {
+              "required_providers": {
+                "vultr": {
+                  "source": "vultr/vultr",
+                  "version": "2.32.0"
+                }
+              }
+            }
+          }
+        },
+        "nodes": {
+          "0": {
+            "node-none.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "ip": "${vultr_instance.node.main_ip}",
+                    "name": "${vultr_instance.node.label}",
+                    "node_id": "0",
+                    "provider": "vultr",
+                    "provider_id": "${vultr_instance.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_ip": null
+                  }
+                }
+              },
+              "provider": {
+                "vultr": {}
+              },
+              "resource": {
+                "vultr_instance": {
+                  "node": {
+                    "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+                    "label": "example",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "os_id": 2284,
+                    "plan": "vc2-2c-4gb",
+                    "region": "ewr",
+                    "ssh_key_ids": [
+                      12345
+                    ]
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "vultr": {
+                    "source": "vultr/vultr",
+                    "version": "2.32.0"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "shared": {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "vultr",
+          "security_group_id": "security-fixture",
+          "subnetwork_id": "subnetwork-fixture"
+        },
+        "ssh_key_id": 12345
+      },
+      "state_keys": {
+        "shared": "example/compute/shared.tfstate",
+        "nodes": {
+          "0": "example/compute/nodes/0.tfstate"
+        }
+      },
+      "cluster": {
+        "provider": "vultr",
+        "entry_node_id": "0",
+        "nodes": [
+          {
+            "provider_id": "planned-vultr-0",
+            "node_id": "0",
+            "provider": "vultr",
+            "name": "example",
+            "ip": "192.0.2.10",
+            "vpc_ip": null,
+            "user": "root",
+            "sudoer": "root",
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "role": null,
+            "index": 0
+          }
+        ]
+      },
+      "key": {
+        "mode": "managed",
+        "private_key_path": "$HOME/.ssh/example"
+      }
+    }
+  },
+  {
+    "name": "vultr none refuses private",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": true,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only single host"
+    }
+  },
+  {
+    "name": "vultr none refuses cluster",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      [
+        {
+          "count": 2
+        }
+      ],
+      {
+        "single_host": false,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only single host"
+    }
+  },
+  {
+    "name": "vultr none refuses private-source",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "private"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only security"
+    }
+  },
+  {
+    "name": "digitalocean public singleton no private network",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "expected": {
+      "status": "planned",
+      "documents": {
+        "shared": {
+          "shared-keygen.tf.json": {
+            "output": {
+              "registration": {
+                "value": {
+                  "id": "${digitalocean_ssh_key.machine.id}",
+                  "provider": "digitalocean",
+                  "scope": "account"
+                }
+              },
+              "ssh_key_id": {
+                "value": "${digitalocean_ssh_key.machine.id}"
+              }
+            },
+            "resource": {
+              "digitalocean_ssh_key": {
+                "machine": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example",
+                  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+                }
+              }
+            }
+          },
+          "shared-none.tf.json": {
+            "locals": {
+              "public_ingress": {
+                "ssh:192.0.2.1/32": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "192.0.2.1/32"
+                  ]
+                },
+                "ssh:::/0": {
+                  "protocol": "tcp",
+                  "port_range": "22",
+                  "source_addresses": [
+                    "::/0"
+                  ]
+                }
+              }
+            },
+            "output": {
+              "params": {
+                "value": {
+                  "deployment_tag": "${digitalocean_tag.deployment.name}",
+                  "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+                  "firewall_id": "${digitalocean_firewall.network.id}",
+                  "provider": "digitalocean"
+                }
+              }
+            },
+            "provider": {
+              "digitalocean": {}
+            },
+            "resource": {
+              "digitalocean_firewall": {
+                "network": {
+                  "dynamic": {
+                    "inbound_rule": [
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": "${inbound_rule.value.source_addresses}"
+                        },
+                        "for_each": "${local.public_ingress}"
+                      }
+                    ]
+                  },
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example-firewall",
+                  "outbound_rule": [
+                    {
+                      "protocol": "tcp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "udp",
+                      "port_range": "1-65535",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    },
+                    {
+                      "protocol": "icmp",
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ]
+                    }
+                  ],
+                  "tags": [
+                    "${digitalocean_tag.deployment.name}"
+                  ]
+                }
+              },
+              "digitalocean_reserved_ip": {
+                "endpoint": {
+                  "count": 0,
+                  "lifecycle": {
+                    "ignore_changes": [
+                      "droplet_id"
+                    ],
+                    "prevent_destroy": true
+                  },
+                  "region": "nyc3"
+                }
+              },
+              "digitalocean_tag": {
+                "deployment": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "colors-compute-example"
+                }
+              }
+            },
+            "terraform": {
+              "required_providers": {
+                "digitalocean": {
+                  "source": "digitalocean/digitalocean",
+                  "version": "2.51.0"
+                }
+              },
+              "required_version": ">= 1.8.0"
+            }
+          }
+        },
+        "nodes": {
+          "0": {
+            "node-none.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "droplet_id": "${digitalocean_droplet.node.id}",
+                    "ip": "${digitalocean_droplet.node.ipv4_address}",
+                    "name": "${digitalocean_droplet.node.name}",
+                    "node_id": "0",
+                    "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_ip": null
+                  }
+                }
+              },
+              "provider": {
+                "digitalocean": {}
+              },
+              "resource": {
+                "digitalocean_droplet": {
+                  "node": {
+                    "image": "ubuntu-24-04-x64",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "name": "example",
+                    "region": "nyc3",
+                    "size": "s-2vcpu-4gb",
+                    "ssh_keys": [
+                      12345
+                    ],
+                    "tags": [
+                      "colors-compute-example"
+                    ]
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "digitalocean": {
+                    "source": "digitalocean/digitalocean",
+                    "version": "2.51.0"
+                  }
+                },
+                "required_version": ">= 1.8.0"
+              }
+            }
+          }
+        }
+      },
+      "shared": {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnetwork_id": "subnetwork-fixture"
+        },
+        "ssh_key_id": 12345
+      },
+      "state_keys": {
+        "shared": "example/compute/shared.tfstate",
+        "nodes": {
+          "0": "example/compute/nodes/0.tfstate"
+        }
+      },
+      "cluster": {
+        "provider": "digitalocean",
+        "entry_node_id": "0",
+        "nodes": [
+          {
+            "provider_id": "1000000",
+            "node_id": "0",
+            "provider": "digitalocean",
+            "name": "example",
+            "ip": "192.0.2.10",
+            "vpc_ip": null,
+            "user": "root",
+            "sudoer": "root",
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "role": null,
+            "index": 0
+          }
+        ]
+      },
+      "key": {
+        "mode": "managed",
+        "private_key_path": "$HOME/.ssh/example"
+      }
+    }
+  },
+  {
+    "name": "digitalocean none refuses private",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": true,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only single host"
+    }
+  },
+  {
+    "name": "digitalocean none refuses cluster",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      [
+        {
+          "count": 2
+        }
+      ],
+      {
+        "single_host": false,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only single host"
+    }
+  },
+  {
+    "name": "digitalocean none refuses private-source",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "private"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only security"
+    }
+  },
+  {
+    "name": "hcloud public singleton no private network",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "expected": {
+      "status": "planned",
+      "documents": {
+        "shared": {
+          "shared-keygen.tf.json": {
+            "output": {
+              "registration": {
+                "value": {
+                  "id": "${hcloud_ssh_key.machine.id}",
+                  "provider": "hcloud",
+                  "scope": "project"
+                }
+              },
+              "ssh_key_id": {
+                "value": "${hcloud_ssh_key.machine.id}"
+              }
+            },
+            "resource": {
+              "hcloud_ssh_key": {
+                "machine": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example",
+                  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+                }
+              }
+            }
+          },
+          "shared-none.tf.json": {
+            "output": {
+              "params": {
+                "value": {
+                  "firewall_id": "${hcloud_firewall.network.id}",
+                  "provider": "hcloud"
+                }
+              }
+            },
+            "provider": {
+              "hcloud": {}
+            },
+            "resource": {
+              "hcloud_firewall": {
+                "network": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example-firewall",
+                  "rule": [
+                    {
+                      "direction": "in",
+                      "protocol": "tcp",
+                      "port": "22",
+                      "source_ips": [
+                        "192.0.2.1/32"
+                      ]
+                    },
+                    {
+                      "direction": "in",
+                      "protocol": "tcp",
+                      "port": "22",
+                      "source_ips": [
+                        "::/0"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "terraform": {
+              "required_providers": {
+                "hcloud": {
+                  "source": "hetznercloud/hcloud",
+                  "version": "1.54.0"
+                }
+              }
+            }
+          }
+        },
+        "nodes": {
+          "0": {
+            "node-none.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "ip": "${hcloud_server.node.ipv4_address}",
+                    "name": "${hcloud_server.node.name}",
+                    "node_id": "0",
+                    "provider": "hcloud",
+                    "provider_id": "${hcloud_server.node.id}",
+                    "server_id": "${hcloud_server.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_ip": null
+                  }
+                }
+              },
+              "provider": {
+                "hcloud": {}
+              },
+              "resource": {
+                "hcloud_server": {
+                  "node": {
+                    "firewall_ids": [
+                      23456
+                    ],
+                    "image": "ubuntu-24.04",
+                    "labels": {
+                      "colors-profile": "example"
+                    },
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "location": "fsn1",
+                    "name": "example",
+                    "public_net": {
+                      "ipv4_enabled": true,
+                      "ipv6_enabled": false
+                    },
+                    "server_type": "cx22",
+                    "ssh_keys": [
+                      12345
+                    ]
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "hcloud": {
+                    "source": "hetznercloud/hcloud",
+                    "version": "1.54.0"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "shared": {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 23456,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "hcloud",
+          "security_group_id": "security-fixture",
+          "subnetwork_id": "subnetwork-fixture"
+        },
+        "ssh_key_id": 12345
+      },
+      "state_keys": {
+        "shared": "example/compute/shared.tfstate",
+        "nodes": {
+          "0": "example/compute/nodes/0.tfstate"
+        }
+      },
+      "cluster": {
+        "provider": "hcloud",
+        "entry_node_id": "0",
+        "nodes": [
+          {
+            "provider_id": "planned-hcloud-0",
+            "node_id": "0",
+            "provider": "hcloud",
+            "name": "example",
+            "ip": "192.0.2.10",
+            "vpc_ip": null,
+            "user": "root",
+            "sudoer": "root",
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "role": null,
+            "index": 0
+          }
+        ]
+      },
+      "key": {
+        "mode": "managed",
+        "private_key_path": "$HOME/.ssh/example"
+      }
+    }
+  },
+  {
+    "name": "hcloud none refuses private",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": true,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only single host"
+    }
+  },
+  {
+    "name": "hcloud none refuses cluster",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      [
+        {
+          "count": 2
+        }
+      ],
+      {
+        "single_host": false,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "192.0.2.1/32",
+                "::/0"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only single host"
+    }
+  },
+  {
+    "name": "hcloud none refuses private-source",
+    "op": "plan_deployment",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      [
+        {
+          "count": 1
+        }
+      ],
+      {
+        "single_host": true,
+        "private": false,
+        "security": {
+          "egress": "all",
+          "private_filter": false,
+          "ingress": [
+            {
+              "id": "ssh",
+              "protocol": "tcp",
+              "from_port": 22,
+              "to_port": 22,
+              "sources": [
+                "private"
+              ]
+            }
+          ]
+        },
+        "network": {
+          "mode": "none"
+        }
+      }
+    ],
+    "expected": {
+      "error": "network none requires public-only security"
+    }
+  }
+]

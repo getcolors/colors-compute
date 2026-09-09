@@ -1,0 +1,73 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "digitalocean",
+        "firewall_id": "${digitalocean_firewall.network.id}",
+        "deployment_tag": "${digitalocean_tag.deployment.name}",
+        "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}"
+      }
+    }
+  },
+  "locals": {
+    "public_ingress": "{{public_ingress}}"
+  },
+  "resource": {
+    "digitalocean_firewall": {
+      "network": {
+        "name": "{{firewall_name}}",
+        "dynamic": {
+          "inbound_rule": [
+            {
+              "for_each": "${local.public_ingress}",
+              "content": {
+                "protocol": "${inbound_rule.value.protocol}",
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "source_addresses": "${inbound_rule.value.source_addresses}"
+              }
+            }
+          ]
+        },
+        "outbound_rule": "{{outbound_rules}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        },
+        "tags": [
+          "${digitalocean_tag.deployment.name}"
+        ]
+      }
+    },
+    "digitalocean_tag": {
+      "deployment": {
+        "name": "{{deployment_tag}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "digitalocean_reserved_ip": {
+      "endpoint": {
+        "count": "{{endpoint_count}}",
+        "region": "{{region}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}",
+          "ignore_changes": [
+            "droplet_id"
+          ]
+        }
+      }
+    }
+  }
+}

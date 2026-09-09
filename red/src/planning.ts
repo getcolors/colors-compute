@@ -13,16 +13,17 @@ export function plan_deployment(input:Map,topology:Map[],requirements:Map) {
  const recipe=(recipes as Map)[provider],shared=planningShared(recipe,opts,requirements),sharedPlan=provider_request(opts,'shared',assembly.shared);
  const declarations=expand(topology);if(declarations.length>245)throw Error('build exceeds documentation address capacity');
  const entry=(registry.compute as Map)[provider],documents:Map={shared:sharedPlan.documents,nodes:{}},results:Map[]=[];
- const cidr=assembly.shared.network.subnet_cidr||assembly.shared.network.cidr||[...recipe.subnet_cidr_options,...recipe.network_cidr_options].map(name=>opts[name]).find(Boolean)||'10.0.0.0/24';
+ const noNetwork=assembly.shared.network.mode==='none';
+ const cidr=(noNetwork?'10.0.0.0/24':null)||assembly.shared.network.subnet_cidr||assembly.shared.network.cidr||[...recipe.subnet_cidr_options,...recipe.network_cidr_options].map(name=>opts[name]).find(Boolean)||'10.0.0.0/24';
  const [address,prefixText]=cidr.split('/'),octets=address.split('.').map(Number),prefix=Number(prefixText);
  if(octets.length!==4||octets.some((n:number,i:number)=>!Number.isInteger(n)||n<0||n>255||String(n)!==address.split('.')[i])||!Number.isInteger(prefix)||prefix<0||prefix>32)throw Error('invalid compute network CIDR');
  const base=octets.reduce((n:number,p:number)=>n*256+p,0),size=2**(32-prefix);if(base%size)throw Error('invalid compute network CIDR');
- shared.params.network_cidr=cidr;
+ if(noNetwork){for(const key of ['vpc_id','vpc_ip_range','network_cidr','subnet_id','subnet_cidr'])delete shared.params[key];}else shared.params.network_cidr=cidr;
  if(Object.hasOwn(requirements,'endpoint'))shared.params.endpoint_ip='198.51.100.10';
  for(const [ordinal,node] of assembly.nodes.entries()){
   documents.nodes[node.node_id]=provider_request(opts,'node',node,shared).documents;
-  const offset=ordinal+10;if(offset>=size-1)throw Error('build exceeds private network address capacity');
-  const ip=base+offset,params:Map={provider_id:/^[0-9]+$/.test(recipe.planning_provider_id)?String(Number(recipe.planning_provider_id)+ordinal):recipe.planning_provider_id+'-'+node.node_id,node_id:node.node_id,provider,name:node.name,ip:'192.0.2.'+offset,vpc_ip:[24,16,8,0].map(shift=>Math.floor(ip/2**shift)%256).join('.'),user:entry.user,sudoer:entry.sudoer};
+  const offset=ordinal+10;if(!noNetwork&&offset>=size-1)throw Error('build exceeds private network address capacity');
+  const ip=base+offset,params:Map={provider_id:/^[0-9]+$/.test(recipe.planning_provider_id)?String(Number(recipe.planning_provider_id)+ordinal):recipe.planning_provider_id+'-'+node.node_id,node_id:node.node_id,provider,name:node.name,ip:'192.0.2.'+offset,vpc_ip:noNetwork?null:[24,16,8,0].map(shift=>Math.floor(ip/2**shift)%256).join('.'),user:entry.user,sudoer:entry.sudoer};
   if(selected.mode==='managed')params.ssh_identity_file='$HOME/.ssh/'+opts.profile;else if(selected.private_key_path)params.ssh_identity_file=selected.private_key_path;
   results.push(params);
  }

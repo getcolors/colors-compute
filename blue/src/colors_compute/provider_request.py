@@ -8,6 +8,7 @@ import re
 
 from .contract import _safe, _missing, registry
 from .rendering import provider_plan
+from .compute_options import apply_options
 
 
 def _fail(message):
@@ -160,7 +161,7 @@ def provider_request(opts, stage, request, shared=None):
     entry = registry()['compute'][provider]
     if not _safe(opts.get('profile')):
         _fail('invalid compute profile')
-    if not _fields(request, ('node_id', 'key', 'network', 'security'), ('name', 'endpoint', 'role', 'roles', 'peers')) or not _safe(request['node_id']):
+    if not _fields(request, ('node_id', 'key', 'network', 'security'), ('name', 'endpoint', 'role', 'roles', 'peers', 'backups', 'ipv6')) or not _safe(request['node_id']):
         _fail('invalid compute request')
     roles = request.get('roles')
     if roles is not None and (not recipe.get('role_firewalls') or not isinstance(roles, dict) or not roles or
@@ -195,6 +196,8 @@ def provider_request(opts, stage, request, shared=None):
         _fail('unsupported compute network mode')
     if not _fields(security, ('ingress', 'egress', 'private_filter')) or security['egress'] != 'all' or type(security['private_filter']) is not bool:
         _fail('unsupported compute security policy')
+    if network['mode'] == 'none' and (set(network) != {'mode'} or security['private_filter'] or roles is not None or any('peer_roles' in rule or 'private' in rule.get('sources', []) for rule in security.get('ingress', []) if isinstance(rule, dict))):
+        _fail('network none requires public-only security')
     if security['private_filter'] and not recipe['private_filter']:
         _fail('unsupported compute private filtering')
     if not isinstance(security['ingress'], list) or not security['ingress']:
@@ -310,6 +313,11 @@ def provider_request(opts, stage, request, shared=None):
         derived['role_tags'] = {r: 'colors-compute-' + profile + '-' + r for r in sorted(roles)}
         derived['firewall_groups'] = {r: profile + '-' + r + '-firewall' for r in sorted(roles)}
         selected_stage = recipe['role_stages'][selected_stage]
+    for option, choices in recipe.get('boolean_stages', {}).items():
+        if option in opts:
+            if type(opts[option]) is not bool:
+                _fail('invalid compute boolean option')
+            selected_stage = choices[str(opts[option]).lower()].get(selected_stage, selected_stage)
     templates = json.loads(files('colors_compute').joinpath('templates.json').read_text())[provider][selected_stage]
     tokens = sorted(set(re.findall(r'\{\{([a-z_]+)\}\}', json.dumps(templates))))
     context = {'opts': opts, 'request': request, 'shared': shared, 'derived': derived}
@@ -335,4 +343,4 @@ def provider_request(opts, stage, request, shared=None):
                 check_literals(item)
     check_literals(inputs)
     return {'provider': provider, 'stage': selected_stage, 'inputs': inputs,
-            'documents': provider_plan(provider, selected_stage, inputs)}
+            'documents': apply_options(provider, stage, request, provider_plan(provider, selected_stage, inputs))}

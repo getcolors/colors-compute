@@ -104,3 +104,11 @@ ONCE's existing family/pin distinction. Schema validation passed with pinned
 Yandex provider0.120.0 and OpenTofu1.12.5 for the discovery variant; no image
 lookup or cloud operation was executed. The library recipe selects the variant,
 so packages do not branch on image-discovery implementation.
+
+`yandex-static-ip: false` selects the dynamic-address node template, including
+the image-family discovery variant. No address resource is owned and
+`network_interface.nat_ip_address` is observed from the instance. Explicit true
+and omission retain the existing static-address template. This selected-provider
+boolean is resolved in the library recipe; consumers require no provider branch.
+Changing an existing selection is a real resource change and remains subject to
+the library plan/replacement guard.

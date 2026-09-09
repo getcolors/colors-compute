@@ -31,7 +31,7 @@ def deployment_requests(opts, topology, requirements, key):
     provider = opts.get('provider-compute')
     if not isinstance(provider, str) or provider not in recipes:
         raise ValueError('compute provider recipe unavailable')
-    if not isinstance(requirements, dict) or set(requirements) - {'security', 'network', 'single_host', 'legacy_state_keys', 'private', 'endpoint', 'roles', 'entry_node_id', 'kubernetes_controller'} or 'security' not in requirements:
+    if not isinstance(requirements, dict) or set(requirements) - {'security', 'network', 'single_host', 'legacy_state_keys', 'private', 'endpoint', 'roles', 'entry_node_id', 'kubernetes_controller', 'backups', 'ipv6'} or 'security' not in requirements:
         raise ValueError('invalid deployment requirements')
     if 'kubernetes_controller' in requirements:
         if requirements['kubernetes_controller'] is not True:
@@ -77,13 +77,17 @@ def deployment_requests(opts, topology, requirements, key):
     network = deepcopy(requirements.get('network', {}))
     if not isinstance(network, dict):
         raise ValueError('invalid compute network request')
-    network.setdefault('mode', recipes[provider]['network_mode'])
+    default_mode = 'none' if single and requirements.get('private', False) is False and 'none' in recipes[provider].get('network_modes', []) else recipes[provider]['network_mode']
+    network.setdefault('mode', default_mode)
+    if network['mode'] == 'none' and (single is not True or requirements.get('private', False) is not False):
+        raise ValueError('network none requires public-only single host')
     # The key runtime returns local path references in addition to public data.
     # Only fields accepted by the renderer cross this boundary.
     public_key = {field: deepcopy(key[field]) for field in ('mode', 'public_key', 'ids', 'reference') if field in key}
     base = {'key': public_key, 'network': network, 'security': deepcopy(requirements['security'])}
     if 'endpoint' in requirements:
         base['endpoint'] = deepcopy(requirements['endpoint'])
+    base.update({field: deepcopy(requirements[field]) for field in ('backups', 'ipv6') if field in requirements})
     requests = []
     for node in nodes:
         node_name = name if single else name + '-' + node['node_id']

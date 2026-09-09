@@ -25,7 +25,7 @@ test('Google rule resource names remain stable when adding earlier-sorted ingres
 test('request capabilities, ingress, and ownership are validated before rendering',()=>{
   const cases:[(args:any[])=>void,string][]=[
     [args=>{args[2].secret='do-not-echo';},'invalid compute request'],
-    [args=>{args[2].network.mode='none';},'unsupported compute network mode'],
+    [args=>{args[2].network.mode='unsupported';},'unsupported compute network mode'],
     [args=>{args[2].security.ingress[0].sources.push(args[2].security.ingress[0].sources[0]);},'invalid compute ingress'],
     [args=>{args[2].network.cidr='10.42.0.1/16';},'invalid compute network CIDR'],
     [args=>{args[2].security.egress='restricted';},'unsupported compute security policy'],

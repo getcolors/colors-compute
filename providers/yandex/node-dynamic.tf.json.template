@@ -1,0 +1,81 @@
+{
+  "terraform": {
+    "required_providers": {
+      "yandex": {
+        "source": "yandex-cloud/yandex",
+        "version": "0.120.0"
+      }
+    }
+  },
+  "provider": {
+    "yandex": {
+      "cloud_id": "{{cloud_id}}",
+      "folder_id": "{{folder_id}}",
+      "zone": "{{zone}}"
+    }
+  },
+  "locals": {
+    "public_key": "{{public_key}}"
+  },
+  "resource": {
+    "yandex_compute_instance": {
+      "node": {
+        "name": "{{name}}",
+        "zone": "{{zone}}",
+        "platform_id": "{{platform_id}}",
+        "allow_stopping_for_update": "{{allow_stopping_for_update}}",
+        "resources": [
+          {
+            "cores": "{{cores}}",
+            "memory": "{{memory}}",
+            "core_fraction": "{{core_fraction}}"
+          }
+        ],
+        "boot_disk": [
+          {
+            "initialize_params": [
+              {
+                "image_id": "{{image_id}}",
+                "size": "{{disk_size}}"
+              }
+            ]
+          }
+        ],
+        "network_interface": [
+          {
+            "subnet_id": "{{subnet_id}}",
+            "security_group_ids": "{{security_group_ids}}",
+            "nat": true
+          }
+        ],
+        "metadata": {
+          "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+        },
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "yandex",
+        "node_id": "{{node_id}}",
+        "name": "${yandex_compute_instance.node.name}",
+        "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+        "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}",
+        "user": "ubuntu",
+        "sudoer": "ubuntu",
+        "metadata": {
+          "instance_id": "${yandex_compute_instance.node.id}",
+          "fqdn": "${yandex_compute_instance.node.fqdn}",
+          "subnet_id": "{{subnet_id}}",
+          "security_group_ids": "{{security_group_ids}}",
+          "zone": "{{zone}}"
+        },
+        "provider_id": "${yandex_compute_instance.node.id}"
+      }
+    }
+  }
+}

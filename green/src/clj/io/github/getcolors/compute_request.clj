@@ -1,6 +1,6 @@
 (ns io.github.getcolors.compute-request
   "Pure provider-neutral requests resolved through packaged declarative recipes."
-  (:require [cheshire.core :as json]
+  (:require [io.github.getcolors.compute-options :as options] [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [io.github.getcolors.compute :as compute])
@@ -138,7 +138,7 @@
        (when-not (:application_reserved_ip recipe) (fail "unsupported compute endpoint capability")))
      (when-not (contains? #{"shared" "node"} stage) (fail "unsupported compute request stage"))
      (when-not (safe? (:profile opts)) (fail "invalid compute profile"))
-     (when-not (and (fields? request #{:node_id :key :network :security} #{:name :endpoint :role :roles :peers}) (safe? (:node_id request)))
+     (when-not (and (fields? request #{:node_id :key :network :security} #{:name :endpoint :role :roles :peers :backups :ipv6}) (safe? (:node_id request)))
        (fail "invalid compute request"))
      (let [roles (:roles request) peers (get request :peers {})]
        (when (and (some? roles) (not (and (:role_firewalls recipe) (map? roles) (seq roles)
@@ -162,6 +162,8 @@
        (when-not (some #{(:mode network)} (or (:network_modes recipe) [(:network_mode recipe)])) (fail "unsupported compute network mode"))
        (when-not (and (fields? security #{:ingress :egress :private_filter} #{}) (= "all" (:egress security)) (boolean? (:private_filter security)))
          (fail "unsupported compute security policy"))
+       (when (and (= "none" (:mode network)) (or (not= #{:mode} (set (keys network))) (:private_filter security) (some? (:roles request))
+          (some #(and (map? %) (or (contains? % :peer_roles) (some #{"private"} (:sources %)))) (:ingress security)))) (fail "network none requires public-only security"))
        (when (and (:private_filter security) (not (:private_filter recipe))) (fail "unsupported compute private filtering"))
        (when-not (and (vector? (:ingress security)) (seq (:ingress security))) (fail "invalid compute ingress"))
        (let [has-ssh (atom false)]
@@ -262,6 +264,10 @@
                       :firewall_groups (into {} (map (fn [role] [role (str profile "-" (clojure.core/name role) "-firewall")]) (keys roles)))}))
                  derived (merge derived role-derived)
                  selected-stage (if role-derived (get-in recipe [:role_stages (keyword selected-stage)]) selected-stage)
+                 selected-stage (reduce (fn [selected [option choices]]
+                    (if (contains? opts option)
+                     (do (when-not (boolean? (get opts option)) (fail "invalid compute boolean option"))
+                         (get-in choices [(keyword (str (get opts option))) (keyword selected)] selected)) selected)) selected-stage (:boolean_stages recipe))
                  documents (get-in templates [(keyword provider) (keyword selected-stage)])
                  tokens (sort (set (map second (re-seq #"\{\{([a-z_]+)\}\}" (json/generate-string documents)))))
                  context {:opts opts :request request :shared shared :derived derived}
@@ -270,7 +276,7 @@
                                      (when-not binding (fail (str "missing provider recipe binding: " token)))
                                      [(keyword token) (if (= token "ssh_key_id") primary (binding-value binding context))])))]
              (check-literals! inputs)
-             {:provider provider :stage selected-stage :inputs inputs :documents (compute/provider-plan provider selected-stage inputs)})))))))
+             {:provider provider :stage selected-stage :inputs inputs :documents (options/apply-options provider stage request (compute/provider-plan provider selected-stage inputs))})))))))
 
 (defn provider-request
   ([opts stage request] (provider-request opts stage request {}))

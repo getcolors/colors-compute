@@ -57,18 +57,22 @@ def plan_deployment(opts, topology, requirements):
     cidr = assembly['shared']['network'].get('subnet_cidr') or assembly['shared']['network'].get('cidr')
     if cidr is None:
         cidr = next((opts[name] for name in recipe['subnet_cidr_options'] + recipe['network_cidr_options'] if opts.get(name)), '10.0.0.0/24')
-    network = ipaddress.ip_network(cidr, strict=True)
-    shared['params']['network_cidr'] = str(network)
+    network = None if assembly['shared']['network']['mode'] == 'none' else ipaddress.ip_network(cidr, strict=True)
+    if network is None:
+        for name in ('vpc_id', 'vpc_ip_range', 'network_cidr', 'subnet_id', 'subnet_cidr'):
+            shared['params'].pop(name, None)
+    else:
+        shared['params']['network_cidr'] = str(network)
     if 'endpoint' in requirements:
         shared['params']['endpoint_ip'] = '198.51.100.10'
     for ordinal, node in enumerate(assembly['nodes']):
         plan = provider_request(opts, 'node', node, shared)
         documents['nodes'][node['node_id']] = plan['documents']
         offset = ordinal + 10
-        if offset >= network.num_addresses - 1:
+        if network is not None and offset >= network.num_addresses - 1:
             raise ValueError('build exceeds private network address capacity')
         params = {'provider_id': str(int(recipe['planning_provider_id']) + ordinal) if recipe['planning_provider_id'].isdigit() else recipe['planning_provider_id'] + '-' + node['node_id'], 'node_id': node['node_id'], 'provider': provider, 'name': node['name'],
-                  'ip': '192.0.2.' + str(offset), 'vpc_ip': str(network.network_address + offset),
+                  'ip': '192.0.2.' + str(offset), 'vpc_ip': str(network.network_address + offset) if network is not None else None,
                   'user': entry['user'], 'sudoer': entry['sudoer']}
         if selected['mode'] == 'managed':
             params['ssh_identity_file'] = '$HOME/.ssh/' + opts['profile']

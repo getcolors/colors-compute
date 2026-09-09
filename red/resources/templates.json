@@ -742,6 +742,53 @@
         }
       }
     },
+    "node-none": {
+      "node-none.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "droplet_id": "${digitalocean_droplet.node.id}",
+              "ip": "${digitalocean_droplet.node.ipv4_address}",
+              "name": "${digitalocean_droplet.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "digitalocean",
+              "provider_id": "${digitalocean_droplet.node.id}",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "root",
+              "user": "root",
+              "vpc_ip": null
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_droplet": {
+            "node": {
+              "image": "{{image}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{name}}",
+              "region": "{{region}}",
+              "size": "{{size}}",
+              "ssh_keys": "{{ssh_key_ids}}",
+              "tags": "{{tags}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
     "shared": {
       "shared.tf.json": {
         "data": {
@@ -1427,6 +1474,181 @@
         }
       }
     },
+    "shared-none": {
+      "shared-none.tf.json": {
+        "locals": {
+          "public_ingress": "{{public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "firewall_id": "${digitalocean_firewall.network.id}",
+              "provider": "digitalocean"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.public_ingress}"
+                  }
+                ]
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.deployment.name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-none-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "registration": {
+            "value": {
+              "id": "${digitalocean_ssh_key.machine.id}",
+              "provider": "digitalocean",
+              "scope": "account"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${digitalocean_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "digitalocean_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared-none.tf.json": {
+        "locals": {
+          "public_ingress": "{{public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "firewall_id": "${digitalocean_firewall.network.id}",
+              "provider": "digitalocean"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.public_ingress}"
+                  }
+                ]
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.deployment.name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
     "shared-roles": {
       "shared-roles.tf.json": {
         "data": {
@@ -1974,6 +2196,57 @@
         }
       }
     },
+    "node-none": {
+      "node-none.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${hcloud_server.node.ipv4_address}",
+              "name": "${hcloud_server.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "hcloud",
+              "provider_id": "${hcloud_server.node.id}",
+              "server_id": "${hcloud_server.node.id}",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "root",
+              "user": "root",
+              "vpc_ip": null
+            }
+          }
+        },
+        "provider": {
+          "hcloud": {}
+        },
+        "resource": {
+          "hcloud_server": {
+            "node": {
+              "firewall_ids": "{{firewall_ids}}",
+              "image": "{{image}}",
+              "labels": "{{labels}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "{{location}}",
+              "name": "{{name}}",
+              "public_net": {
+                "ipv4_enabled": true,
+                "ipv6_enabled": false
+              },
+              "server_type": "{{server_type}}",
+              "ssh_keys": "{{ssh_key_ids}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "hcloud": {
+              "source": "hetznercloud/hcloud",
+              "version": "1.54.0"
+            }
+          }
+        }
+      }
+    },
     "shared": {
       "shared.tf.json": {
         "output": {
@@ -2104,6 +2377,99 @@
               "network_id": "${hcloud_network.network.id}",
               "network_zone": "{{network_zone}}",
               "type": "cloud"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "hcloud": {
+              "source": "hetznercloud/hcloud",
+              "version": "1.54.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-none": {
+      "shared-none.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "firewall_id": "${hcloud_firewall.network.id}",
+              "provider": "hcloud"
+            }
+          }
+        },
+        "provider": {
+          "hcloud": {}
+        },
+        "resource": {
+          "hcloud_firewall": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "rule": "{{public_rules}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "hcloud": {
+              "source": "hetznercloud/hcloud",
+              "version": "1.54.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-none-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "registration": {
+            "value": {
+              "id": "${hcloud_ssh_key.machine.id}",
+              "provider": "hcloud",
+              "scope": "project"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${hcloud_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "hcloud_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared-none.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "firewall_id": "${hcloud_firewall.network.id}",
+              "provider": "hcloud"
+            }
+          }
+        },
+        "provider": {
+          "hcloud": {}
+        },
+        "resource": {
+          "hcloud_firewall": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "rule": "{{public_rules}}"
             }
           }
         },
@@ -2536,6 +2902,51 @@
         }
       }
     },
+    "node-none": {
+      "node-none.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${vultr_instance.node.main_ip}",
+              "name": "${vultr_instance.node.label}",
+              "node_id": "{{node_id}}",
+              "provider": "vultr",
+              "provider_id": "${vultr_instance.node.id}",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "{{sudoer}}",
+              "user": "{{user}}",
+              "vpc_ip": null
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_instance": {
+            "node": {
+              "firewall_group_id": "{{firewall_group_id}}",
+              "label": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "os_id": "{{os_id}}",
+              "plan": "{{plan}}",
+              "region": "{{region}}",
+              "ssh_key_ids": "{{ssh_key_ids}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    },
     "shared": {
       "shared.tf.json": {
         "locals": {
@@ -2670,6 +3081,125 @@
               "region": "{{region}}",
               "v4_subnet": "{{network_address}}",
               "v4_subnet_mask": "{{network_prefix}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-none": {
+      "shared-none.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "provider": "vultr"
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_firewall_group": {
+            "network": {
+              "description": "{{firewall_name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              }
+            }
+          },
+          "vultr_firewall_rule": {
+            "ingress": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "for_each": "${local.ingress}",
+              "ip_type": "${each.value.ip_type}",
+              "port": "${each.value.port}",
+              "protocol": "${each.value.protocol}",
+              "subnet": "${each.value.subnet}",
+              "subnet_size": "${each.value.subnet_size}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-none-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "registration": {
+            "value": {
+              "id": "${vultr_ssh_key.machine.id}",
+              "provider": "vultr",
+              "scope": "account"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${vultr_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "vultr_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "ssh_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared-none.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "provider": "vultr"
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_firewall_group": {
+            "network": {
+              "description": "{{firewall_name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              }
+            }
+          },
+          "vultr_firewall_rule": {
+            "ingress": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "for_each": "${local.ingress}",
+              "ip_type": "${each.value.ip_type}",
+              "port": "${each.value.port}",
+              "protocol": "${each.value.protocol}",
+              "subnet": "${each.value.subnet}",
+              "subnet_size": "${each.value.subnet_size}"
             }
           }
         },
@@ -3027,6 +3557,182 @@
                 "prevent_destroy": "{{prevent_destroy}}"
               },
               "name": "{{name}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "yandex": {
+              "source": "yandex-cloud/yandex",
+              "version": "0.120.0"
+            }
+          }
+        }
+      }
+    },
+    "node-discovery-dynamic": {
+      "node-discovery-dynamic.tf.json": {
+        "data": {
+          "yandex_compute_image": {
+            "ubuntu": {
+              "family": "{{image_family}}"
+            }
+          }
+        },
+        "locals": {
+          "public_key": "{{public_key}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+              "metadata": {
+                "fqdn": "${yandex_compute_instance.node.fqdn}",
+                "instance_id": "${yandex_compute_instance.node.id}",
+                "security_group_ids": "{{security_group_ids}}",
+                "subnet_id": "{{subnet_id}}",
+                "zone": "{{zone}}"
+              },
+              "name": "${yandex_compute_instance.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "yandex",
+              "provider_id": "${yandex_compute_instance.node.id}",
+              "sudoer": "ubuntu",
+              "user": "ubuntu",
+              "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+            }
+          }
+        },
+        "provider": {
+          "yandex": {
+            "cloud_id": "{{cloud_id}}",
+            "folder_id": "{{folder_id}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "yandex_compute_instance": {
+            "node": {
+              "allow_stopping_for_update": "{{allow_stopping_for_update}}",
+              "boot_disk": [
+                {
+                  "initialize_params": [
+                    {
+                      "image_id": "${data.yandex_compute_image.ubuntu.id}",
+                      "size": "{{disk_size}}"
+                    }
+                  ]
+                }
+              ],
+              "lifecycle": {
+                "ignore_changes": [
+                  "boot_disk[0].initialize_params[0].image_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "metadata": {
+                "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+              },
+              "name": "{{name}}",
+              "network_interface": [
+                {
+                  "nat": true,
+                  "security_group_ids": "{{security_group_ids}}",
+                  "subnet_id": "{{subnet_id}}"
+                }
+              ],
+              "platform_id": "{{platform_id}}",
+              "resources": [
+                {
+                  "core_fraction": "{{core_fraction}}",
+                  "cores": "{{cores}}",
+                  "memory": "{{memory}}"
+                }
+              ],
+              "zone": "{{zone}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "yandex": {
+              "source": "yandex-cloud/yandex",
+              "version": "0.120.0"
+            }
+          }
+        }
+      }
+    },
+    "node-dynamic": {
+      "node-dynamic.tf.json": {
+        "locals": {
+          "public_key": "{{public_key}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+              "metadata": {
+                "fqdn": "${yandex_compute_instance.node.fqdn}",
+                "instance_id": "${yandex_compute_instance.node.id}",
+                "security_group_ids": "{{security_group_ids}}",
+                "subnet_id": "{{subnet_id}}",
+                "zone": "{{zone}}"
+              },
+              "name": "${yandex_compute_instance.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "yandex",
+              "provider_id": "${yandex_compute_instance.node.id}",
+              "sudoer": "ubuntu",
+              "user": "ubuntu",
+              "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+            }
+          }
+        },
+        "provider": {
+          "yandex": {
+            "cloud_id": "{{cloud_id}}",
+            "folder_id": "{{folder_id}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "yandex_compute_instance": {
+            "node": {
+              "allow_stopping_for_update": "{{allow_stopping_for_update}}",
+              "boot_disk": [
+                {
+                  "initialize_params": [
+                    {
+                      "image_id": "{{image_id}}",
+                      "size": "{{disk_size}}"
+                    }
+                  ]
+                }
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "metadata": {
+                "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+              },
+              "name": "{{name}}",
+              "network_interface": [
+                {
+                  "nat": true,
+                  "security_group_ids": "{{security_group_ids}}",
+                  "subnet_id": "{{subnet_id}}"
+                }
+              ],
+              "platform_id": "{{platform_id}}",
+              "resources": [
+                {
+                  "core_fraction": "{{core_fraction}}",
+                  "cores": "{{cores}}",
+                  "memory": "{{memory}}"
+                }
+              ],
+              "zone": "{{zone}}"
             }
           }
         },

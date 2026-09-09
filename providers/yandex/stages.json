@@ -10,5 +10,11 @@
   ],
   "node-discovery": [
     "node-discovery.tf.json"
+  ],
+  "node-dynamic": [
+    "node-dynamic.tf.json"
+  ],
+  "node-discovery-dynamic": [
+    "node-discovery-dynamic.tf.json"
   ]
 }

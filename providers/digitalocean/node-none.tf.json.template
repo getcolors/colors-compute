@@ -1,0 +1,45 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "resource": {
+    "digitalocean_droplet": {
+      "node": {
+        "name": "{{name}}",
+        "region": "{{region}}",
+        "size": "{{size}}",
+        "image": "{{image}}",
+        "ssh_keys": "{{ssh_key_ids}}",
+        "tags": "{{tags}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "{{node_id}}",
+        "provider": "digitalocean",
+        "name": "${digitalocean_droplet.node.name}",
+        "ip": "${digitalocean_droplet.node.ipv4_address}",
+        "vpc_ip": null,
+        "droplet_id": "${digitalocean_droplet.node.id}",
+        "user": "root",
+        "sudoer": "root",
+        "ssh_key_id": "{{ssh_key_id}}",
+        "provider_id": "${digitalocean_droplet.node.id}"
+      }
+    }
+  }
+}

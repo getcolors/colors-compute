@@ -32,5 +32,15 @@
   ],
   "managed-kubernetes": [
     "managed-kubernetes.tf.json"
+  ],
+  "shared-none": [
+    "shared-none.tf.json"
+  ],
+  "shared-none-keygen": [
+    "shared-none.tf.json",
+    "shared-keygen.tf.json"
+  ],
+  "node-none": [
+    "node-none.tf.json"
   ]
 }

@@ -1,3 +1,4 @@
+import {applyOptions} from './compute-options.ts';
 import {isIP} from 'node:net';
 import {createHash} from 'node:crypto';
 import recipeData from '../resources/provider-recipes.json';
@@ -113,7 +114,7 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   }
   if(stage!=='shared'&&stage!=='node')fail('unsupported compute request stage');
   if(!safe(opts.profile))fail('invalid compute profile');
-  if(!fields(request,['node_id','key','network','security'],['name','endpoint','role','roles','peers'])||!safe(request.node_id))fail('invalid compute request');
+  if(!fields(request,['node_id','key','network','security'],['name','endpoint','role','roles','peers','backups','ipv6'])||!safe(request.node_id))fail('invalid compute request');
   const roles=request.roles;
   if(roles!=null&&(!recipe.role_firewalls||!object(roles)||!Object.keys(roles).length||Object.entries(roles).some(([r,p])=>!safe(r)||!fields(p,['security']))))fail('unsupported compute role firewall policy');
   const peers=request.peers??{};if(!object(peers)||Object.keys(peers).length>1000)fail('invalid compute peers');
@@ -126,6 +127,7 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   if(!fields(network,['mode'],['cidr','subnet_cidr','zone','private_ip']))fail('invalid compute network request');
   if(!(recipe.network_modes??[recipe.network_mode]).includes(network.mode))fail('unsupported compute network mode');
   if(!fields(security,['ingress','egress','private_filter'])||security.egress!=='all'||typeof security.private_filter!=='boolean')fail('unsupported compute security policy');
+  if(network.mode==='none'&&(Object.keys(network).length!==1||security.private_filter||roles!==undefined&&roles!==null||Array.isArray(security.ingress)&&security.ingress.some((rule:any)=>rule&&typeof rule==='object'&&('peer_roles' in rule||Array.isArray(rule.sources)&&rule.sources.includes('private')))))fail('network none requires public-only security');
   if(security.private_filter&&!recipe.private_filter)fail('unsupported compute private filtering');
   if(!Array.isArray(security.ingress)||!security.ingress.length)fail('invalid compute ingress');
   const seen=new Set<string>();let hasSSH=false;
@@ -187,6 +189,7 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
    Object.assign(derived,{role_ingress:roleIngress,role_public_ingress:rolePublic,role_private_ingress:rolePrivate,role_tags:Object.fromEntries(Object.keys(roles).sort().map(r=>[r,'colors-compute-'+profile+'-'+r])),firewall_groups:Object.fromEntries(Object.keys(roles).sort().map(r=>[r,profile+'-'+r+'-firewall']))});
    selectedStage=recipe.role_stages[selectedStage];
   }
+  for(const [option,choices] of Object.entries(recipe.boolean_stages??{}) as [string,Map][])if(Object.hasOwn(opts,option)){if(typeof opts[option]!=='boolean')fail('invalid compute boolean option');selectedStage=choices[String(opts[option])][selectedStage]??selectedStage;}
   const tokens=[...new Set([...JSON.stringify(templates[provider][selectedStage]).matchAll(/\{\{([a-z_]+)\}\}/g)].map(match=>match[1]))].sort();
   const context={opts,request,shared,derived};const inputs:Map={};
   for(const token of tokens) {
@@ -199,5 +202,5 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
     else if(object(value))for(const [key,item] of Object.entries(value)){checkLiterals(key);checkLiterals(item);}
   };
   checkLiterals(inputs);
-  return {provider,stage:selectedStage,inputs,documents:provider_plan(provider,selectedStage,inputs)};
+  return {provider,stage:selectedStage,inputs,documents:applyOptions(provider,stage,request,provider_plan(provider,selectedStage,inputs))};
 }
