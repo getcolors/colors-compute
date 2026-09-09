@@ -127,3 +127,14 @@ transfers, backups, and reviewed plans before applying the new configurations.
 The full plan is in the workspace repository at
 `plans/colors-compute-implementation.md`; the five compute/SSH standards there
 define the target. Foundation code must not be presented as completed rollout.
+
+`power_deployment(opts, "start"|"stop", environment?, dependencies?)` powers an
+owned singleton through the library. Green exposes `compute-power/power-deployment`.
+OCI and Vultr are supported; other providers fail before mutations. The runtime
+acquires an existing lifecycle lease, reads the immutable provider ID from owned
+state, waits for the terminal state, and returns refreshed public IP metadata on
+start. An uncertain mutation retains the lease for explicit recovery. It never
+runs an OpenTofu apply or changes the VM's desired power state. See
+[the power contract](contracts/power-runtime.md) for result and recovery semantics.
+The test suite includes synthetic local HTTPS calls and OCI CLI input generation;
+these checks do not prove live permissions or availability.

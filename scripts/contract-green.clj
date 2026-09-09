@@ -4,6 +4,7 @@
   (deps/add-deps {:deps {'io.github.getcolors/colors-compute {:local/root (str (io/file root "green"))}}})
   (cp/add-classpath (str (io/file root "green/src/clj") ":" (io/file root "green/src/resources"))))
 (require '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
+         '[io.github.getcolors.compute-power :as power]
          '[io.github.getcolors.compute-runtime :as runtime]
          '[io.github.getcolors.compute-request :as request]
          '[io.github.getcolors.compute-deployment-request :as deployment]
@@ -33,8 +34,12 @@
                   response)]
      (if (nil? intent) (journal/journal-get opts env runner)
          (journal/journal-put opts intent env runner)))))
+(defn provider-power-case [opts action id env responses]
+  (let [pending (atom responses) take-result (fn [& _] (let [result (first @pending)] (swap! pending subvec 1) result))]
+    (power/provider-power opts action id (into {} (map (fn [[k v]] [(name k) v]) env)) {:http take-result :runner take-result :sleep (fn [_] nil)})))
 (def operations
-  {"managed_application_artifacts" managed/managed-application-artifacts
+  {"provider_power_case" provider-power-case
+   "managed_application_artifacts" managed/managed-application-artifacts
    "managed_application_settings" managed/managed-application-settings
    "plan_managed_kubernetes" managed/plan-managed-kubernetes
    "controller_artifact" controller/controller-artifact

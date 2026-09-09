@@ -21,6 +21,7 @@ def check_output(color, output, cases):
 
 def main():
     cases = json.loads((ROOT / "test/fixtures/contracts.json").read_text())
+    cases.extend(json.loads((ROOT / "test/fixtures/power.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/coordination.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/managed-journal.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/journal.json").read_text()))

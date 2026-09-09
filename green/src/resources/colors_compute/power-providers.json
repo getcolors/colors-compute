@@ -1,0 +1,32 @@
+{
+  "oci": {
+    "transport": "oci",
+    "id_pattern": "ocid1\\.instance\\.[A-Za-z0-9._-]+",
+    "actions": {
+      "start": {
+        "action": "START",
+        "state": "RUNNING"
+      },
+      "stop": {
+        "action": "SOFTSTOP",
+        "state": "STOPPED"
+      }
+    }
+  },
+  "vultr": {
+    "transport": "http",
+    "origin": "https://api.vultr.com/v2",
+    "credential": "COLORS_PAR_VULTR_API_KEY",
+    "id_pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+    "actions": {
+      "start": {
+        "action": "start",
+        "state": "running"
+      },
+      "stop": {
+        "action": "halt",
+        "state": "stopped"
+      }
+    }
+  }
+}

@@ -42,3 +42,6 @@ __all__.append('check_deployment_drift')
 
 from .controller import controller_artifact
 __all__.append("controller_artifact")
+
+from .power import power_deployment
+__all__.append("power_deployment")

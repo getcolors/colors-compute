@@ -9,5 +9,16 @@
     },
     "schedule_field": "backups_schedule",
     "ipv6_field": "enable_ipv6"
+  },
+  "digitalocean": {
+    "resource_type": "digitalocean_droplet",
+    "resource_name": "node",
+    "backups_field": "backups",
+    "backups_values": {
+      "true": true,
+      "false": false
+    },
+    "backups_option": "digitalocean-backups",
+    "ipv6_field": "ipv6"
   }
 }

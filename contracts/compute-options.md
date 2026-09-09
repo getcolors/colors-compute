@@ -21,3 +21,11 @@ unchanged. Managed Kubernetes does not use these VM requirements.
 OpenTofu 1.12.5 init (`-backend=false`) and validate passed the enabled daily
 backup/disabled IPv6 example using Vultr provider 2.32.0. This is a provider
 schema check, not evidence of a live deployment.
+
+DigitalOcean supports `backups:{enabled:true|false}` and `ipv6:true|false`.
+Its backup policy has no schedule field: a schedule is rejected rather than
+invented. When no neutral backup requirement is present, the library recognizes
+legacy `digitalocean-backups` as an enabled boolean. A present invalid legacy
+value fails; explicit neutral requirements take precedence. The node receives
+DigitalOcean's boolean `backups` and `ipv6` fields. The combined policy passed
+OpenTofu 1.12.5 initialization and validation with DigitalOcean provider 2.51.0.

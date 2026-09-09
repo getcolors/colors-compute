@@ -13,6 +13,7 @@ from colors_compute.managed import plan_managed_kubernetes, managed_application_
 from colors_compute.controller import controller_artifact
 from colors_compute.backend import read_state, ProcessResult
 from colors_compute.journal import journal_get, journal_put
+from colors_compute.power import provider_power
 
 def read_state_case(opts, key, environment, responses):
     pending = iter(responses)
@@ -29,8 +30,13 @@ def journal_case(opts, environment, response, body, intent=None):
     return asyncio.run(journal_get(opts, environment, runner) if intent is None
                        else journal_put(opts, intent, environment, runner))
 
+def provider_power_case(opts, action, identity, env, responses):
+    pending = iter(responses)
+    return asyncio.run(provider_power(opts, action, identity, env, {
+        'http': lambda *_: next(pending), 'runner': lambda *_: next(pending), 'sleep': lambda _: None}))
+
 operations = {f.__name__: f for f in (
-    managed_application_artifacts, managed_application_settings, plan_managed_kubernetes, controller_artifact, deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
+    provider_power_case, managed_application_artifacts, managed_application_settings, plan_managed_kubernetes, controller_artifact, deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
 )}
 for line in sys.stdin:
     try:

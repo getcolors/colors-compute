@@ -205,5 +205,5 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
     else if(object(value))for(const [key,item] of Object.entries(value)){checkLiterals(key);checkLiterals(item);}
   };
   checkLiterals(inputs);
-  return {provider,stage:selectedStage,inputs,documents:applyOptions(provider,stage,request,provider_plan(provider,selectedStage,inputs))};
+  return {provider,stage:selectedStage,inputs,documents:applyOptions(provider,stage,request,provider_plan(provider,selectedStage,inputs),opts)};
 }

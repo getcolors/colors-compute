@@ -282,7 +282,7 @@
                                      (when-not binding (fail (str "missing provider recipe binding: " token)))
                                      [(keyword token) (if (= token "ssh_key_id") primary (binding-value binding context))])))]
              (check-literals! inputs)
-             {:provider provider :stage selected-stage :inputs inputs :documents (options/apply-options provider stage request (compute/provider-plan provider selected-stage inputs))})))))))
+             {:provider provider :stage selected-stage :inputs inputs :documents (options/apply-options provider stage request (compute/provider-plan provider selected-stage inputs) opts)})))))))
 
 (defn provider-request
   ([opts stage request] (provider-request opts stage request {}))

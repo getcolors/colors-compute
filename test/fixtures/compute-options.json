@@ -687,6 +687,72 @@
     "args": [
       {
         "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": false
+        },
+        "backups": {
+          "enabled": false
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 23456,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "hcloud",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": 34567
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "unsupported compute options capability"
+    },
+    "name": "unsupported-backup-provider",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
         "digitalocean-image": "ubuntu-24-04-x64",
         "digitalocean-region": "nyc3",
         "digitalocean-size": "s-2vcpu-4gb",
@@ -753,9 +819,1395 @@
       }
     ],
     "expected": {
-      "error": "unsupported compute options capability"
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "backups": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
     },
-    "name": "unsupported-backup-provider",
+    "name": "DO neutral backups False",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "backups": true
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "DO neutral backups True",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-backups": false
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "backups": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "DO legacy backups False",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-backups": true
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "backups": true
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "DO legacy backups True",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-backups": "true"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup policy"
+    },
+    "name": "DO rejects nonboolean legacy backups \"true\"",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-backups": null
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup policy"
+    },
+    "name": "DO rejects nonboolean legacy backups null",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-backups": 0
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup policy"
+    },
+    "name": "DO rejects nonboolean legacy backups 0",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean",
+        "digitalocean-backups": true
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": false
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "backups": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "DO explicit neutral backups wins over legacy",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": true,
+          "schedule": {
+            "type": "daily",
+            "hour": 3
+          }
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "error": "invalid compute backup policy"
+    },
+    "name": "DO rejects invented schedule",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ipv6": true
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "ipv6": true
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "DO explicit IPv6 True",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ipv6": false
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "ipv6": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "DO explicit IPv6 False",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "backups": {
+          "enabled": true
+        },
+        "ipv6": false
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "droplet_id": "${digitalocean_droplet.node.id}",
+                "ip": "${digitalocean_droplet.node.ipv4_address}",
+                "name": "${digitalocean_droplet.node.name}",
+                "node_id": "0",
+                "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
+                "ssh_key_id": 12345,
+                "sudoer": "root",
+                "user": "root",
+                "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_droplet": {
+              "node": {
+                "image": "ubuntu-24-04-x64",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "nyc3",
+                "size": "s-2vcpu-4gb",
+                "ssh_keys": [
+                  12345
+                ],
+                "tags": [
+                  "colors-compute-example"
+                ],
+                "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+                "backups": true,
+                "ipv6": false
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "image": "ubuntu-24-04-x64",
+        "name": "example-0",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "ssh_key_id": 12345,
+        "ssh_key_ids": [
+          12345
+        ],
+        "tags": [
+          "colors-compute-example"
+        ],
+        "vpc_id": "00000000-0000-0000-0000-000000000001"
+      },
+      "provider": "digitalocean",
+      "stage": "node"
+    },
+    "name": "DO backups and IPv6 combined",
     "op": "provider_request"
   }
 ]

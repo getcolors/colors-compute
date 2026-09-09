@@ -348,4 +348,4 @@ def provider_request(opts, stage, request, shared=None):
                 check_literals(item)
     check_literals(inputs)
     return {'provider': provider, 'stage': selected_stage, 'inputs': inputs,
-            'documents': apply_options(provider, stage, request, provider_plan(provider, selected_stage, inputs))}
+            'documents': apply_options(provider, stage, request, provider_plan(provider, selected_stage, inputs), opts)}

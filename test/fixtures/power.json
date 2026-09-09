@@ -1,0 +1,330 @@
+[
+  {
+    "name": "power already running",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"running\", \"main_ip\": \"203.0.113.9\"}}"
+      ]
+    ],
+    "expected": {
+      "status": "ready",
+      "ip": "203.0.113.9"
+    }
+  },
+  {
+    "name": "power start after polling",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"stopped\", \"main_ip\": \"203.0.113.9\"}}",
+        "",
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"stopped\", \"main_ip\": \"203.0.113.9\"}}",
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"running\", \"main_ip\": \"203.0.113.9\"}}"
+      ]
+    ],
+    "expected": {
+      "status": "ready",
+      "ip": "203.0.113.9"
+    }
+  },
+  {
+    "name": "power stop",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "stop",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"running\", \"main_ip\": \"203.0.113.9\"}}",
+        "",
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"stopped\", \"main_ip\": \"203.0.113.9\"}}"
+      ]
+    ],
+    "expected": {
+      "status": "ready"
+    }
+  },
+  {
+    "name": "power wrong identity",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{\"instance\": {\"id\": \"other\", \"power_status\": \"running\", \"main_ip\": \"203.0.113.9\"}}"
+      ]
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power malformed JSON",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{"
+      ]
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power wrong IP",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"running\", \"main_ip\": \"hostname.invalid\"}}"
+      ]
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power IPv6 IP",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"running\", \"main_ip\": \"2001:db8::1\"}}"
+      ]
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power unknown state exhausts",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      [
+        "{\"instance\": {\"id\": \"12345678-1234-1234-1234-123456789abc\", \"power_status\": \"unknown\", \"main_ip\": \"203.0.113.9\"}}",
+        ""
+      ]
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power unknown provider",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "aws"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      []
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power invalid id",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "name",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      []
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power invalid action",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "destroy",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      []
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power missing token",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr"
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {},
+      []
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power invalid timeout",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "vultr",
+        "power-wait-seconds": true
+      },
+      "start",
+      "12345678-1234-1234-1234-123456789abc",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "synthetic-token"
+      },
+      []
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power OCI soft stop",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "oci",
+        "oci-config-file-profile": "OPERATOR"
+      },
+      "stop",
+      "ocid1.instance.oc1.example",
+      {},
+      [
+        {
+          "exit": 0,
+          "out": "{\"data\": {\"id\": \"ocid1.instance.oc1.example\", \"lifecycle-state\": \"RUNNING\"}}"
+        },
+        {
+          "exit": 0,
+          "out": "{\"data\": {\"id\": \"ocid1.instance.oc1.example\", \"lifecycle-state\": \"STOPPED\"}}"
+        },
+        {
+          "exit": 0,
+          "out": "{\"data\": {\"id\": \"ocid1.instance.oc1.example\", \"lifecycle-state\": \"STOPPED\"}}"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "ready"
+    }
+  },
+  {
+    "name": "power OCI nonzero exit",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "oci",
+        "oci-config-file-profile": "OPERATOR"
+      },
+      "stop",
+      "ocid1.instance.oc1.example",
+      {},
+      [
+        {
+          "exit": -1,
+          "out": "secret diagnostic"
+        }
+      ]
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  },
+  {
+    "name": "power OCI profile bound secret",
+    "op": "provider_power_case",
+    "args": [
+      {
+        "provider-compute": "oci",
+        "oci-config-file-profile": "OPERATOR"
+      },
+      "stop",
+      "ocid1.instance.oc1.example",
+      {
+        "COLORS_PAR_VULTR_API_KEY": "OPERATOR"
+      },
+      []
+    ],
+    "expected": {
+      "error": "compute power refused"
+    }
+  }
+]
