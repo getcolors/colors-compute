@@ -91,7 +91,8 @@
           "subnet_id": "{{subnet_id}}",
           "security_group_ids": "{{security_group_ids}}",
           "zone": "{{zone}}"
-        }
+        },
+        "provider_id": "${yandex_compute_instance.node.id}"
       }
     }
   },

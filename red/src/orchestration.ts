@@ -1,7 +1,8 @@
+import {copy} from './copy.ts';
 import {validate_deployment} from './planning.ts';
 import {run} from 'red/workflow';
 import {readState} from './backend.ts';
-import {expand,state_keys} from './index.ts';
+import {expand,state_keys,compute_credential_errors} from './index.ts';
 import {Coordinator} from './coordinator.ts';
 import {statePresence,convergeState} from './execution.ts';
 import {provider_request} from './provider-request.ts';
@@ -11,7 +12,7 @@ import {prepareKeypair,cleanupKeypair,mode} from './ssh.ts';
 import {clusterWorkflow} from './workflow.ts';
 type Map=Record<string,any>;
 export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map,environment:Map=process.env,dependencies:Map={}) {
- const opts=structuredClone(input),topology=structuredClone(topologyInput),request=structuredClone(requestInput),env={...environment},deps=dependencies;
+ const opts=copy(input),topology=structuredClone(topologyInput),request=structuredClone(requestInput),env={...environment},deps=dependencies;
  let coordinator:any,acquired=false,keys:any;
  const call=async(name:string,defaultFn:any,...args:any[])=>await (deps[name]??defaultFn)(...args);
  const require=(value:any)=>{if(!value)throw Error('compute lifecycle refused');};
@@ -60,6 +61,8 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
    await coordinator.declare(topology);
   }else await coordinator.transition('begin-delete');
   doc=await snapshot();
+  const missingCredentials=await call('compute_credential_errors',compute_credential_errors,opts,env);
+  if(missingCredentials.length)return {status:'error',errors:missingCredentials};
   if(operation==='create'){
    await call('validate_deployment',validate_deployment,opts,topology,request);
    const defaultPreflight=async(...args:any[])=>{const {registrationPreflight}=await import('./registration.ts');return (registrationPreflight as any)(...args);};

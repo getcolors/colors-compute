@@ -59,6 +59,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "aws",
+            "provider_id": "planned-aws-0",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -71,6 +72,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "aws",
+            "provider_id": "planned-aws-1",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -83,6 +85,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "aws",
+            "provider_id": "planned-aws-2",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -104,6 +107,7 @@
                     "name": "${aws_instance.node.tags[\"Name\"]}",
                     "node_id": "0",
                     "provider": "aws",
+                    "provider_id": "${aws_instance.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
@@ -163,6 +167,7 @@
                     "name": "${aws_instance.node.tags[\"Name\"]}",
                     "node_id": "1",
                     "provider": "aws",
+                    "provider_id": "${aws_instance.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
@@ -222,6 +227,7 @@
                     "name": "${aws_instance.node.tags[\"Name\"]}",
                     "node_id": "2",
                     "provider": "aws",
+                    "provider_id": "${aws_instance.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
@@ -527,6 +533,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "azure",
+            "provider_id": "planned-azure-0",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -539,6 +546,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "azure",
+            "provider_id": "planned-azure-1",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -551,6 +559,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "azure",
+            "provider_id": "planned-azure-2",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -572,6 +581,7 @@
                     "nic_id": "${azurerm_network_interface.node.id}",
                     "node_id": "0",
                     "provider": "azure",
+                    "provider_id": "${azurerm_linux_virtual_machine.node.id}",
                     "ssh_key_id": null,
                     "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
                     "sudoer": "ubuntu",
@@ -668,6 +678,7 @@
                     "nic_id": "${azurerm_network_interface.node.id}",
                     "node_id": "1",
                     "provider": "azure",
+                    "provider_id": "${azurerm_linux_virtual_machine.node.id}",
                     "ssh_key_id": null,
                     "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
                     "sudoer": "ubuntu",
@@ -764,6 +775,7 @@
                     "nic_id": "${azurerm_network_interface.node.id}",
                     "node_id": "2",
                     "provider": "azure",
+                    "provider_id": "${azurerm_linux_virtual_machine.node.id}",
                     "ssh_key_id": null,
                     "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
                     "sudoer": "ubuntu",
@@ -1081,6 +1093,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "digitalocean",
+            "provider_id": "1000000",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -1093,6 +1106,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "digitalocean",
+            "provider_id": "1000001",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -1105,6 +1119,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "digitalocean",
+            "provider_id": "1000002",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -1126,6 +1141,7 @@
                     "name": "${digitalocean_droplet.node.name}",
                     "node_id": "0",
                     "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
                     "user": "root",
@@ -1178,6 +1194,7 @@
                     "name": "${digitalocean_droplet.node.name}",
                     "node_id": "1",
                     "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
                     "user": "root",
@@ -1230,6 +1247,7 @@
                     "name": "${digitalocean_droplet.node.name}",
                     "node_id": "2",
                     "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
                     "user": "root",
@@ -1328,6 +1346,7 @@
               "params": {
                 "value": {
                   "deployment_tag": "${digitalocean_tag.deployment.name}",
+                  "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
                   "firewall_id": "${digitalocean_firewall.network.id}",
                   "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
                   "provider": "digitalocean",
@@ -1396,6 +1415,18 @@
                   "tags": [
                     "${digitalocean_tag.deployment.name}"
                   ]
+                }
+              },
+              "digitalocean_reserved_ip": {
+                "endpoint": {
+                  "count": 0,
+                  "lifecycle": {
+                    "ignore_changes": [
+                      "droplet_id"
+                    ],
+                    "prevent_destroy": true
+                  },
+                  "region": "nyc3"
                 }
               },
               "digitalocean_tag": {
@@ -1514,6 +1545,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "google",
+            "provider_id": "planned-google-0",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -1526,6 +1558,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "google",
+            "provider_id": "planned-google-1",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -1538,6 +1571,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "google",
+            "provider_id": "planned-google-2",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -1568,6 +1602,7 @@
                     "name": "${google_compute_instance.node.name}",
                     "node_id": "0",
                     "provider": "google",
+                    "provider_id": "${google_compute_instance.node.id}",
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
                     "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
@@ -1660,6 +1695,7 @@
                     "name": "${google_compute_instance.node.name}",
                     "node_id": "1",
                     "provider": "google",
+                    "provider_id": "${google_compute_instance.node.id}",
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
                     "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
@@ -1752,6 +1788,7 @@
                     "name": "${google_compute_instance.node.name}",
                     "node_id": "2",
                     "provider": "google",
+                    "provider_id": "${google_compute_instance.node.id}",
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
                     "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
@@ -2005,6 +2042,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "hcloud",
+            "provider_id": "planned-hcloud-0",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -2017,6 +2055,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "hcloud",
+            "provider_id": "planned-hcloud-1",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -2029,6 +2068,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "hcloud",
+            "provider_id": "planned-hcloud-2",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -2050,6 +2090,7 @@
                     "network_attachment_id": "${hcloud_server_network.node.id}",
                     "node_id": "0",
                     "provider": "hcloud",
+                    "provider_id": "${hcloud_server.node.id}",
                     "server_id": "${hcloud_server.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
@@ -2118,6 +2159,7 @@
                     "network_attachment_id": "${hcloud_server_network.node.id}",
                     "node_id": "1",
                     "provider": "hcloud",
+                    "provider_id": "${hcloud_server.node.id}",
                     "server_id": "${hcloud_server.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
@@ -2186,6 +2228,7 @@
                     "network_attachment_id": "${hcloud_server_network.node.id}",
                     "node_id": "2",
                     "provider": "hcloud",
+                    "provider_id": "${hcloud_server.node.id}",
                     "server_id": "${hcloud_server.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
@@ -2439,6 +2482,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "oci",
+            "provider_id": "planned-oci-0",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -2451,6 +2495,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "oci",
+            "provider_id": "planned-oci-1",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -2463,6 +2508,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "oci",
+            "provider_id": "planned-oci-2",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -2493,6 +2539,7 @@
                     "name": "${oci_core_instance.node.display_name}",
                     "node_id": "0",
                     "provider": "oci",
+                    "provider_id": "${oci_core_instance.node.id}",
                     "sudoer": "ubuntu",
                     "uid": "1001",
                     "user": "ubuntu",
@@ -2568,6 +2615,7 @@
                     "name": "${oci_core_instance.node.display_name}",
                     "node_id": "1",
                     "provider": "oci",
+                    "provider_id": "${oci_core_instance.node.id}",
                     "sudoer": "ubuntu",
                     "uid": "1001",
                     "user": "ubuntu",
@@ -2643,6 +2691,7 @@
                     "name": "${oci_core_instance.node.display_name}",
                     "node_id": "2",
                     "provider": "oci",
+                    "provider_id": "${oci_core_instance.node.id}",
                     "sudoer": "ubuntu",
                     "uid": "1001",
                     "user": "ubuntu",
@@ -2895,6 +2944,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "vultr",
+            "provider_id": "planned-vultr-0",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -2907,6 +2957,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "vultr",
+            "provider_id": "planned-vultr-1",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -2919,6 +2970,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "vultr",
+            "provider_id": "planned-vultr-2",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "root",
@@ -2939,6 +2991,7 @@
                     "name": "${vultr_instance.node.label}",
                     "node_id": "0",
                     "provider": "vultr",
+                    "provider_id": "${vultr_instance.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
                     "user": "root",
@@ -2988,6 +3041,7 @@
                     "name": "${vultr_instance.node.label}",
                     "node_id": "1",
                     "provider": "vultr",
+                    "provider_id": "${vultr_instance.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
                     "user": "root",
@@ -3037,6 +3091,7 @@
                     "name": "${vultr_instance.node.label}",
                     "node_id": "2",
                     "provider": "vultr",
+                    "provider_id": "${vultr_instance.node.id}",
                     "ssh_key_id": 12345,
                     "sudoer": "root",
                     "user": "root",
@@ -3279,6 +3334,7 @@
             "name": "example-0",
             "node_id": "0",
             "provider": "yandex",
+            "provider_id": "planned-yandex-0",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -3291,6 +3347,7 @@
             "name": "example-1",
             "node_id": "1",
             "provider": "yandex",
+            "provider_id": "planned-yandex-1",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -3303,6 +3360,7 @@
             "name": "example-2",
             "node_id": "2",
             "provider": "yandex",
+            "provider_id": "planned-yandex-2",
             "role": null,
             "ssh_identity_file": "$HOME/.ssh/example",
             "sudoer": "ubuntu",
@@ -3336,6 +3394,7 @@
                     "name": "${yandex_compute_instance.node.name}",
                     "node_id": "0",
                     "provider": "yandex",
+                    "provider_id": "${yandex_compute_instance.node.id}",
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
                     "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
@@ -3437,6 +3496,7 @@
                     "name": "${yandex_compute_instance.node.name}",
                     "node_id": "1",
                     "provider": "yandex",
+                    "provider_id": "${yandex_compute_instance.node.id}",
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
                     "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
@@ -3538,6 +3598,7 @@
                     "name": "${yandex_compute_instance.node.name}",
                     "node_id": "2",
                     "provider": "yandex",
+                    "provider_id": "${yandex_compute_instance.node.id}",
                     "sudoer": "ubuntu",
                     "user": "ubuntu",
                     "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
@@ -3766,6 +3827,460 @@
       "status": "planned"
     },
     "name": "yandex credential-free deployment build",
+    "op": "plan_deployment"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      [
+        {
+          "count": 3
+        }
+      ],
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      }
+    ],
+    "expected": {
+      "cluster": {
+        "entry_node_id": "0",
+        "nodes": [
+          {
+            "index": 0,
+            "ip": "192.0.2.10",
+            "name": "example-0",
+            "node_id": "0",
+            "provider": "digitalocean",
+            "provider_id": "1000000",
+            "role": null,
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "sudoer": "root",
+            "user": "root",
+            "vpc_ip": "10.42.1.10"
+          },
+          {
+            "index": 1,
+            "ip": "192.0.2.11",
+            "name": "example-1",
+            "node_id": "1",
+            "provider": "digitalocean",
+            "provider_id": "1000001",
+            "role": null,
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "sudoer": "root",
+            "user": "root",
+            "vpc_ip": "10.42.1.11"
+          },
+          {
+            "index": 2,
+            "ip": "192.0.2.12",
+            "name": "example-2",
+            "node_id": "2",
+            "provider": "digitalocean",
+            "provider_id": "1000002",
+            "role": null,
+            "ssh_identity_file": "$HOME/.ssh/example",
+            "sudoer": "root",
+            "user": "root",
+            "vpc_ip": "10.42.1.12"
+          }
+        ],
+        "provider": "digitalocean"
+      },
+      "documents": {
+        "nodes": {
+          "0": {
+            "node.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "droplet_id": "${digitalocean_droplet.node.id}",
+                    "ip": "${digitalocean_droplet.node.ipv4_address}",
+                    "name": "${digitalocean_droplet.node.name}",
+                    "node_id": "0",
+                    "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                    "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+                  }
+                }
+              },
+              "provider": {
+                "digitalocean": {}
+              },
+              "resource": {
+                "digitalocean_droplet": {
+                  "node": {
+                    "image": "ubuntu-24-04-x64",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "name": "example-0",
+                    "region": "nyc3",
+                    "size": "s-2vcpu-4gb",
+                    "ssh_keys": [
+                      12345
+                    ],
+                    "tags": [
+                      "colors-compute-example"
+                    ],
+                    "vpc_uuid": "00000000-0000-0000-0000-000000000001"
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "digitalocean": {
+                    "source": "digitalocean/digitalocean",
+                    "version": "2.51.0"
+                  }
+                },
+                "required_version": ">= 1.8.0"
+              }
+            }
+          },
+          "1": {
+            "node.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "droplet_id": "${digitalocean_droplet.node.id}",
+                    "ip": "${digitalocean_droplet.node.ipv4_address}",
+                    "name": "${digitalocean_droplet.node.name}",
+                    "node_id": "1",
+                    "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                    "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+                  }
+                }
+              },
+              "provider": {
+                "digitalocean": {}
+              },
+              "resource": {
+                "digitalocean_droplet": {
+                  "node": {
+                    "image": "ubuntu-24-04-x64",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "name": "example-1",
+                    "region": "nyc3",
+                    "size": "s-2vcpu-4gb",
+                    "ssh_keys": [
+                      12345
+                    ],
+                    "tags": [
+                      "colors-compute-example"
+                    ],
+                    "vpc_uuid": "00000000-0000-0000-0000-000000000001"
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "digitalocean": {
+                    "source": "digitalocean/digitalocean",
+                    "version": "2.51.0"
+                  }
+                },
+                "required_version": ">= 1.8.0"
+              }
+            }
+          },
+          "2": {
+            "node.tf.json": {
+              "output": {
+                "params": {
+                  "value": {
+                    "droplet_id": "${digitalocean_droplet.node.id}",
+                    "ip": "${digitalocean_droplet.node.ipv4_address}",
+                    "name": "${digitalocean_droplet.node.name}",
+                    "node_id": "2",
+                    "provider": "digitalocean",
+                    "provider_id": "${digitalocean_droplet.node.id}",
+                    "ssh_key_id": 12345,
+                    "sudoer": "root",
+                    "user": "root",
+                    "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+                    "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+                  }
+                }
+              },
+              "provider": {
+                "digitalocean": {}
+              },
+              "resource": {
+                "digitalocean_droplet": {
+                  "node": {
+                    "image": "ubuntu-24-04-x64",
+                    "lifecycle": {
+                      "prevent_destroy": true
+                    },
+                    "name": "example-2",
+                    "region": "nyc3",
+                    "size": "s-2vcpu-4gb",
+                    "ssh_keys": [
+                      12345
+                    ],
+                    "tags": [
+                      "colors-compute-example"
+                    ],
+                    "vpc_uuid": "00000000-0000-0000-0000-000000000001"
+                  }
+                }
+              },
+              "terraform": {
+                "required_providers": {
+                  "digitalocean": {
+                    "source": "digitalocean/digitalocean",
+                    "version": "2.51.0"
+                  }
+                },
+                "required_version": ">= 1.8.0"
+              }
+            }
+          }
+        },
+        "shared": {
+          "shared-keygen.tf.json": {
+            "output": {
+              "registration": {
+                "value": {
+                  "id": "${digitalocean_ssh_key.machine.id}",
+                  "provider": "digitalocean",
+                  "scope": "account"
+                }
+              },
+              "ssh_key_id": {
+                "value": "${digitalocean_ssh_key.machine.id}"
+              }
+            },
+            "resource": {
+              "digitalocean_ssh_key": {
+                "machine": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example",
+                  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+                }
+              }
+            }
+          },
+          "shared.tf.json": {
+            "data": {
+              "digitalocean_vpc": {
+                "network": {
+                  "region": "nyc3"
+                }
+              }
+            },
+            "locals": {
+              "private_ingress": {
+                "peer:private": {
+                  "port_range": "9093-9094",
+                  "protocol": "tcp"
+                }
+              },
+              "public_ingress": {
+                "ssh:192.0.2.1/32": {
+                  "port_range": "22",
+                  "protocol": "tcp",
+                  "source_addresses": [
+                    "192.0.2.1/32"
+                  ]
+                }
+              }
+            },
+            "output": {
+              "params": {
+                "value": {
+                  "deployment_tag": "${digitalocean_tag.deployment.name}",
+                  "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+                  "firewall_id": "${digitalocean_firewall.network.id}",
+                  "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+                  "provider": "digitalocean",
+                  "vpc_id": "${data.digitalocean_vpc.network.id}",
+                  "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+                }
+              }
+            },
+            "provider": {
+              "digitalocean": {}
+            },
+            "resource": {
+              "digitalocean_firewall": {
+                "network": {
+                  "dynamic": {
+                    "inbound_rule": [
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": "${inbound_rule.value.source_addresses}"
+                        },
+                        "for_each": "${local.public_ingress}"
+                      },
+                      {
+                        "content": {
+                          "port_range": "${try(inbound_rule.value.port_range, null)}",
+                          "protocol": "${inbound_rule.value.protocol}",
+                          "source_addresses": [
+                            "${data.digitalocean_vpc.network.ip_range}"
+                          ]
+                        },
+                        "for_each": "${local.private_ingress}"
+                      }
+                    ]
+                  },
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "example-firewall",
+                  "outbound_rule": [
+                    {
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ],
+                      "port_range": "1-65535",
+                      "protocol": "tcp"
+                    },
+                    {
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ],
+                      "port_range": "1-65535",
+                      "protocol": "udp"
+                    },
+                    {
+                      "destination_addresses": [
+                        "0.0.0.0/0",
+                        "::/0"
+                      ],
+                      "protocol": "icmp"
+                    }
+                  ],
+                  "tags": [
+                    "${digitalocean_tag.deployment.name}"
+                  ]
+                }
+              },
+              "digitalocean_reserved_ip": {
+                "endpoint": {
+                  "count": 1,
+                  "lifecycle": {
+                    "ignore_changes": [
+                      "droplet_id"
+                    ],
+                    "prevent_destroy": true
+                  },
+                  "region": "nyc3"
+                }
+              },
+              "digitalocean_tag": {
+                "deployment": {
+                  "lifecycle": {
+                    "prevent_destroy": true
+                  },
+                  "name": "colors-compute-example"
+                }
+              }
+            },
+            "terraform": {
+              "required_providers": {
+                "digitalocean": {
+                  "source": "digitalocean/digitalocean",
+                  "version": "2.51.0"
+                }
+              },
+              "required_version": ">= 1.8.0"
+            }
+          }
+        }
+      },
+      "key": {
+        "mode": "managed",
+        "private_key_path": "$HOME/.ssh/example"
+      },
+      "shared": {
+        "key_name": "example",
+        "params": {
+          "endpoint_ip": "198.51.100.10",
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "network_cidr": "10.42.1.0/24",
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "digitalocean",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "00000000-0000-0000-0000-000000000001"
+        },
+        "ssh_key_id": 12345
+      },
+      "state_keys": {
+        "nodes": {
+          "0": "example/compute/nodes/0.tfstate",
+          "1": "example/compute/nodes/1.tfstate",
+          "2": "example/compute/nodes/2.tfstate"
+        },
+        "shared": "example/compute/shared.tfstate"
+      },
+      "status": "planned"
+    },
+    "name": "digitalocean endpoint planning",
     "op": "plan_deployment"
   }
 ]

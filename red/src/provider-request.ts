@@ -93,10 +93,15 @@ function rules(format:string,request:Map,network:string|null,name:string):Map {
 export function provider_request(opts:Map,stage:string,request:Map,shared:Map|null=null) {
   const provider=object(opts)?opts['provider-compute']:null;
   if(typeof provider!=='string'||!Object.hasOwn(recipes,provider))fail('compute provider recipe unavailable');
-  if(stage!=='shared'&&stage!=='node')fail('unsupported compute request stage');
   const recipe=recipes[provider],entry=(registry.compute as Map)[provider];
+  const endpoint=object(request)&&Object.hasOwn(request,'endpoint')?request.endpoint:undefined;
+  if(object(request)&&Object.hasOwn(request,'endpoint')){
+    if(!fields(endpoint,['kind','assignment'])||endpoint.kind!=='reserved-ip'||endpoint.assignment!=='application')fail('invalid compute endpoint request');
+    if(!recipe.application_reserved_ip)fail('unsupported compute endpoint capability');
+  }
+  if(stage!=='shared'&&stage!=='node')fail('unsupported compute request stage');
   if(!safe(opts.profile))fail('invalid compute profile');
-  if(!fields(request,['node_id','key','network','security'],['name'])||!safe(request.node_id))fail('invalid compute request');
+  if(!fields(request,['node_id','key','network','security'],['name','endpoint'])||!safe(request.node_id))fail('invalid compute request');
   const profile=opts.profile;const name=Object.hasOwn(request,'name')?request.name:stage==='shared'?profile:profile+'-'+request.node_id;
   if(!safe(name))fail('invalid compute name');
   const {key,network,security}=request;
@@ -138,7 +143,7 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   const ids=registrationOwned&&primary!==null?[primary]:(Object.hasOwn(key,'ids')?key.ids:[]);
   if(!Array.isArray(ids)||ids.some(item=>!((typeof item==='string'&&!missing(item))||integer(item,1,Number.MAX_SAFE_INTEGER))))fail('invalid compute key references');
   if(stage==='node'&&entry.registration&&!ids.length)fail('compute key references required');
-  const derived:Map={profile,name,node_id:request.node_id,prevent_destroy:protect,public_key:key.public_key??null,ssh_key_id:primary,ssh_key_ids:ids,key_name:Object.hasOwn(shared,'key_name')?shared.key_name:key.reference??null,user:entry.user,sudoer:entry.sudoer,network_cidr:networkCIDR,subnet_cidr:subnet,network_address:parsed?.address??null,network_prefix:parsed?.prefix??null,network_name:profile+'-network',subnet_name:profile+'-subnet',firewall_name:profile+'-firewall',network_tag:profile+'-network',deployment_tag:'colors-compute-'+profile,nic_name:name+'-nic',public_ip_name:name+'-public',...rules(recipe.firewall_format,request,networkCIDR,profile)};
+  const derived:Map={endpoint_count:endpoint===undefined?0:1,profile,name,node_id:request.node_id,prevent_destroy:protect,public_key:key.public_key??null,ssh_key_id:primary,ssh_key_ids:ids,key_name:Object.hasOwn(shared,'key_name')?shared.key_name:key.reference??null,user:entry.user,sudoer:entry.sudoer,network_cidr:networkCIDR,subnet_cidr:subnet,network_address:parsed?.address??null,network_prefix:parsed?.prefix??null,network_name:profile+'-network',subnet_name:profile+'-subnet',firewall_name:profile+'-firewall',network_tag:profile+'-network',deployment_tag:'colors-compute-'+profile,nic_name:name+'-nic',public_ip_name:name+'-public',...rules(recipe.firewall_format,request,networkCIDR,profile)};
   let image=opts['google-image-id'];
   if(missing(image)&&!missing(opts['google-image-project'])&&!missing(opts['google-image-family']))image='projects/'+opts['google-image-project']+'/global/images/family/'+opts['google-image-family'];
   derived.google_image=image??null;

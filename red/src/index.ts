@@ -44,6 +44,13 @@ export function credential_requirements(opts: Map): string[] {
   if (errors.length) fail(errors.join('; '));
   return [...new Set<string>(selected(opts).flatMap(e => e.secrets.map((key: string) => 'COLORS_PAR_' + key.toUpperCase().replaceAll('-', '_'))))].sort();
 }
+export function compute_credential_errors(opts: Map, environment: Map): string[] {
+  const provider=opts['provider-compute'];
+  if(typeof provider!=='string'||!Object.hasOwn(entries.compute,provider))fail('invalid compute provider');
+  return entries.compute[provider].secrets.map((key:string)=>'COLORS_PAR_'+key.toUpperCase().replaceAll('-','_')).sort()
+    .filter((key:string)=>typeof environment[key]!=='string'||missing(environment[key]))
+    .map((key:string)=>'required credential is not set: '+key);
+}
 export function state_keys(profile: string, node_ids: string[]) {
   if (!safe(profile)) fail(':profile must be a safe identifier');
   const nodes: Record<string, string> = Object.create(null);
@@ -135,3 +142,4 @@ export {read_deployment} from './inspection.ts';
 export {registrationPreflight} from './registration.ts';
 export {mode as keyMode} from './ssh.ts';
 export {validate_deployment} from './planning.ts';
+export {endpoint_agent} from './endpoint.ts';

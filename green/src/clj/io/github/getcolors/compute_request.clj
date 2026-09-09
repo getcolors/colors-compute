@@ -116,9 +116,12 @@
   ([opts stage request shared]
    (let [provider (:provider-compute opts) recipe (when (string? provider) (get recipes (keyword provider)))]
      (when-not recipe (fail "compute provider recipe unavailable"))
+     (when (contains? request :endpoint)
+       (when-not (= {:kind "reserved-ip" :assignment "application"} (:endpoint request)) (fail "invalid compute endpoint request"))
+       (when-not (:application_reserved_ip recipe) (fail "unsupported compute endpoint capability")))
      (when-not (contains? #{"shared" "node"} stage) (fail "unsupported compute request stage"))
      (when-not (safe? (:profile opts)) (fail "invalid compute profile"))
-     (when-not (and (fields? request #{:node_id :key :network :security} #{:name}) (safe? (:node_id request)))
+     (when-not (and (fields? request #{:node_id :key :network :security} #{:name :endpoint}) (safe? (:node_id request)))
        (fail "invalid compute request"))
      (let [profile (:profile opts) name (get request :name (if (= "shared" stage) profile (str profile "-" (:node_id request))))
            {:keys [key network security]} request
@@ -175,7 +178,7 @@
            (when-not (and (vector? ids) (every? #(or (and (string? %) (not (missing? %))) (integer-in? % 1 9007199254740991)) ids))
              (fail "invalid compute key references"))
            (when (and (= stage "node") (:registration entry) (empty? ids)) (fail "compute key references required"))
-           (let [derived (merge {:profile profile :name name :node_id (:node_id request) :prevent_destroy (get opts :compute-prevent-destroy true)
+           (let [derived (merge {:endpoint_count (if (contains? request :endpoint) 1 0) :profile profile :name name :node_id (:node_id request) :prevent_destroy (get opts :compute-prevent-destroy true)
                                  :public_key (:public_key key) :ssh_key_id primary :ssh_key_ids ids :key_name (get shared :key_name (:reference key))
                                  :user (:user entry) :sudoer (:sudoer entry) :network_cidr network-cidr :subnet_cidr subnet
                                  :network_address (:address parsed) :network_prefix (:prefix parsed)

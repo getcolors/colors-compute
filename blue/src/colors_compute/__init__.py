@@ -1,7 +1,7 @@
 """Provider selection and node contracts shared by Colors package skills."""
 
 from .contract import (
-    collect, credential_requirements, expand, state_decision, state_keys, validate,
+    collect, credential_requirements, compute_credential_errors, expand, state_decision, state_keys, validate,
 )
 from .journal import journal_get, journal_put
 from .coordination import coordination
@@ -25,9 +25,11 @@ from .key_request import key_request
 from .planning import plan_deployment
 from .inspection import read_deployment
 from .contract import registry
+from .endpoint import endpoint_agent
 
 __all__ += ['deployment_requests', 'source_cidrs', 'key_request', 'plan_deployment',
-            'read_deployment', 'registry', 'orchestrate']
+            'read_deployment', 'registry', 'orchestrate', 'endpoint_agent',
+            'compute_credential_errors']
 
 
 async def orchestrate(*args, **kwargs):

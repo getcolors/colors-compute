@@ -11,7 +11,7 @@
 (defn world []
   (let [storage (ct/store) states (atom {}) calls (atom []) failures (atom #{})]
     {:storage storage :states states :calls calls :failures failures
-     :deps {:validate-deployment (fn [& _] true)
+     :deps {:validate-deployment (fn [& _] true) :compute-credential-errors (fn [& _] [])
             :coordinator (fn [opts env] (c/coordinator opts env (:read storage) (:write storage) (ct/ids) {:event-prefix "lifecycle/"}))
             :registration-preflight (fn [& _] {:status "checked"})
             :prepare-keypair (fn [_ ownership _ intent prepared]

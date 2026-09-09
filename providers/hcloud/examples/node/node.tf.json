@@ -59,7 +59,8 @@
         "network_attachment_id": "${hcloud_server_network.node.id}",
         "user": "root",
         "sudoer": "root",
-        "ssh_key_id": "12345"
+        "ssh_key_id": "12345",
+        "provider_id": "${hcloud_server.node.id}"
       }
     }
   }

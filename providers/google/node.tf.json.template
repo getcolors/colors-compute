@@ -83,7 +83,8 @@
           "subnetwork_id": "{{subnetwork_id}}",
           "zone": "{{zone}}",
           "address_id": "${google_compute_address.node.id}"
-        }
+        },
+        "provider_id": "${google_compute_instance.node.id}"
       }
     }
   }

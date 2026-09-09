@@ -85,5 +85,6 @@
       ]
     }
   ],
-  "deployment_tag": "colors-compute-example"
+  "deployment_tag": "colors-compute-example",
+  "endpoint_count": 0
 }

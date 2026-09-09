@@ -1,5 +1,6 @@
 {
   "aws": {
+    "application_reserved_ip": false,
     "bindings": {
       "availability_zone": {
         "path": "opts.aws-availability-zone"
@@ -99,12 +100,14 @@
         "path": "derived.network_cidr"
       }
     },
+    "endpoint_credentials": [],
     "external_key_kind": "public_file",
     "firewall_format": "aws",
     "network_cidr_options": [
       "aws-vpc-cidr"
     ],
     "network_mode": "created",
+    "planning_provider_id": "planned-aws",
     "planning_shared": {
       "key_name": "example",
       "params": {
@@ -129,6 +132,7 @@
     ]
   },
   "azure": {
+    "application_reserved_ip": false,
     "bindings": {
       "deployment_tag": {
         "path": "derived.deployment_tag"
@@ -231,12 +235,14 @@
         "path": "opts.azure-vm-size"
       }
     },
+    "endpoint_credentials": [],
     "external_key_kind": "public_file",
     "firewall_format": "azure",
     "network_cidr_options": [
       "azure-vnet-cidr"
     ],
     "network_mode": "created",
+    "planning_provider_id": "planned-azure",
     "planning_shared": {
       "key_name": "example",
       "params": {
@@ -261,9 +267,13 @@
     ]
   },
   "digitalocean": {
+    "application_reserved_ip": true,
     "bindings": {
       "deployment_tag": {
         "path": "derived.deployment_tag"
+      },
+      "endpoint_count": {
+        "path": "derived.endpoint_count"
       },
       "firewall_name": {
         "path": "derived.firewall_name"
@@ -354,10 +364,14 @@
         "path": "shared.params.vpc_id"
       }
     },
+    "endpoint_credentials": [
+      "COLORS_PAR_DO_TOKEN"
+    ],
     "external_key_kind": "ids",
     "firewall_format": "digitalocean",
     "network_cidr_options": [],
     "network_mode": "discovered",
+    "planning_provider_id": "1000000",
     "planning_shared": {
       "key_name": "example",
       "params": {
@@ -380,6 +394,7 @@
     "subnet_cidr_options": []
   },
   "google": {
+    "application_reserved_ip": false,
     "bindings": {
       "boot_disk_size": {
         "path": "opts.google-boot-disk-size-gb"
@@ -469,12 +484,14 @@
         "path": "opts.google-zone"
       }
     },
+    "endpoint_credentials": [],
     "external_key_kind": "public_file",
     "firewall_format": "google",
     "network_cidr_options": [
       "google-subnet-cidr"
     ],
     "network_mode": "created",
+    "planning_provider_id": "planned-google",
     "planning_shared": {
       "key_name": "example",
       "params": {
@@ -497,6 +514,7 @@
     "subnet_cidr_options": []
   },
   "hcloud": {
+    "application_reserved_ip": false,
     "bindings": {
       "deployment_tag": {
         "path": "derived.deployment_tag"
@@ -605,12 +623,14 @@
         "path": "derived.user"
       }
     },
+    "endpoint_credentials": [],
     "external_key_kind": "ids",
     "firewall_format": "hcloud",
     "network_cidr_options": [
       "hcloud-network-cidr"
     ],
     "network_mode": "created",
+    "planning_provider_id": "planned-hcloud",
     "planning_shared": {
       "key_name": "example",
       "params": {
@@ -635,6 +655,7 @@
     ]
   },
   "oci": {
+    "application_reserved_ip": false,
     "bindings": {
       "availability_domain": {
         "path": "opts.oci-availability-domain"
@@ -748,11 +769,13 @@
       }
     },
     "discovery_stage": "node-discovery",
+    "endpoint_credentials": [],
     "external_key_kind": "public_file",
     "firewall_format": "oci",
     "image_option": "oci-image-id",
     "network_cidr_options": [],
     "network_mode": "discovered",
+    "planning_provider_id": "planned-oci",
     "planning_shared": {
       "key_name": "example",
       "params": {
@@ -775,6 +798,7 @@
     "subnet_cidr_options": []
   },
   "vultr": {
+    "application_reserved_ip": false,
     "bindings": {
       "deployment_tag": {
         "path": "derived.deployment_tag"
@@ -862,12 +886,14 @@
         ]
       }
     },
+    "endpoint_credentials": [],
     "external_key_kind": "ids",
     "firewall_format": "vultr",
     "network_cidr_options": [
       "vultr-vpc-subnet"
     ],
     "network_mode": "created",
+    "planning_provider_id": "planned-vultr",
     "planning_shared": {
       "key_name": "example",
       "params": {
@@ -890,6 +916,7 @@
     "subnet_cidr_options": []
   },
   "yandex": {
+    "application_reserved_ip": false,
     "bindings": {
       "allow_stopping_for_update": {
         "default": false,
@@ -1006,6 +1033,7 @@
       }
     },
     "discovery_stage": "node-discovery",
+    "endpoint_credentials": [],
     "external_key_kind": "content",
     "firewall_format": "yandex",
     "image_option": "yandex-image-id",
@@ -1013,6 +1041,7 @@
       "yandex-subnet-cidr"
     ],
     "network_mode": "created",
+    "planning_provider_id": "planned-yandex",
     "planning_shared": {
       "key_name": "example",
       "params": {

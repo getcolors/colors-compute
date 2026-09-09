@@ -10,6 +10,7 @@
               "name": "${aws_instance.node.tags[\"Name\"]}",
               "node_id": "{{node_id}}",
               "provider": "aws",
+              "provider_id": "${aws_instance.node.id}",
               "ssh_key_id": "{{ssh_key_id}}",
               "sudoer": "{{sudoer}}",
               "user": "{{user}}",
@@ -316,6 +317,7 @@
               "nic_id": "${azurerm_network_interface.node.id}",
               "node_id": "{{node_id}}",
               "provider": "azure",
+              "provider_id": "${azurerm_linux_virtual_machine.node.id}",
               "ssh_key_id": null,
               "subnet_id": "{{subnet_id}}",
               "sudoer": "ubuntu",
@@ -649,6 +651,7 @@
               "name": "${digitalocean_droplet.node.name}",
               "node_id": "{{node_id}}",
               "provider": "digitalocean",
+              "provider_id": "${digitalocean_droplet.node.id}",
               "ssh_key_id": "{{ssh_key_id}}",
               "sudoer": "root",
               "user": "root",
@@ -704,6 +707,7 @@
           "params": {
             "value": {
               "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
               "firewall_id": "${digitalocean_firewall.network.id}",
               "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
               "provider": "digitalocean",
@@ -748,6 +752,18 @@
               "tags": [
                 "${digitalocean_tag.deployment.name}"
               ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
             }
           },
           "digitalocean_tag": {
@@ -812,6 +828,7 @@
           "params": {
             "value": {
               "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
               "firewall_id": "${digitalocean_firewall.network.id}",
               "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
               "provider": "digitalocean",
@@ -858,6 +875,18 @@
               ]
             }
           },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
           "digitalocean_tag": {
             "deployment": {
               "lifecycle": {
@@ -899,6 +928,7 @@
               "name": "${google_compute_instance.node.name}",
               "node_id": "{{node_id}}",
               "provider": "google",
+              "provider_id": "${google_compute_instance.node.id}",
               "sudoer": "ubuntu",
               "user": "ubuntu",
               "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
@@ -1132,6 +1162,7 @@
               "network_attachment_id": "${hcloud_server_network.node.id}",
               "node_id": "{{node_id}}",
               "provider": "hcloud",
+              "provider_id": "${hcloud_server.node.id}",
               "server_id": "${hcloud_server.node.id}",
               "ssh_key_id": "{{ssh_key_id}}",
               "sudoer": "root",
@@ -1348,6 +1379,7 @@
               "name": "${oci_core_instance.node.display_name}",
               "node_id": "{{node_id}}",
               "provider": "oci",
+              "provider_id": "${oci_core_instance.node.id}",
               "sudoer": "{{sudoer}}",
               "uid": "{{uid}}",
               "user": "{{user}}",
@@ -1433,6 +1465,7 @@
               "name": "${oci_core_instance.node.display_name}",
               "node_id": "{{node_id}}",
               "provider": "oci",
+              "provider_id": "${oci_core_instance.node.id}",
               "sudoer": "{{sudoer}}",
               "uid": "{{uid}}",
               "user": "{{user}}",
@@ -1658,6 +1691,7 @@
               "name": "${vultr_instance.node.label}",
               "node_id": "{{node_id}}",
               "provider": "vultr",
+              "provider_id": "${vultr_instance.node.id}",
               "ssh_key_id": "{{ssh_key_id}}",
               "sudoer": "{{sudoer}}",
               "user": "{{user}}",
@@ -1863,6 +1897,7 @@
               "name": "${yandex_compute_instance.node.name}",
               "node_id": "{{node_id}}",
               "provider": "yandex",
+              "provider_id": "${yandex_compute_instance.node.id}",
               "sudoer": "ubuntu",
               "user": "ubuntu",
               "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
@@ -1967,6 +2002,7 @@
               "name": "${yandex_compute_instance.node.name}",
               "node_id": "{{node_id}}",
               "provider": "yandex",
+              "provider_id": "${yandex_compute_instance.node.id}",
               "sudoer": "ubuntu",
               "user": "ubuntu",
               "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"

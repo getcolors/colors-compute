@@ -1,3 +1,4 @@
+import {copy} from './copy.ts';
 import {randomUUID} from 'node:crypto';
 import {coordination,identityValid} from './coordination.ts';
 import {journalGet,journalPut} from './journal.ts';
@@ -37,7 +38,7 @@ export class Coordinator {
   private poisoned=false;
   private runId:string|null=null;
   constructor(opts:Map,options:CoordinatorOptions={}) {
-    const saved=structuredClone(opts);
+    const saved=copy(opts);
     const environment={...(options.environment??process.env)};
     const kind=saved['provider-backend'];
     this.identity={profile:saved.profile,provider:saved['provider-compute'],backend:{kind,bucket:saved[`${kind}-bucket`],region:kind==='r2'?'auto':saved['s3-region'],...(kind==='r2'?{endpoint:saved['r2-endpoint']}:{})}};

@@ -39,7 +39,8 @@
         "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
         "user": "root",
         "sudoer": "root",
-        "ssh_key_id": "{{ssh_key_id}}"
+        "ssh_key_id": "{{ssh_key_id}}",
+        "provider_id": "${digitalocean_droplet.node.id}"
       }
     }
   }

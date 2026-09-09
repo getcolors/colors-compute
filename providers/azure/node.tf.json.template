@@ -82,7 +82,8 @@
         "subnet_id": "{{subnet_id}}",
         "user": "ubuntu",
         "sudoer": "ubuntu",
-        "ssh_key_id": null
+        "ssh_key_id": null,
+        "provider_id": "${azurerm_linux_virtual_machine.node.id}"
       }
     }
   }

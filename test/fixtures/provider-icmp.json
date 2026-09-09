@@ -679,6 +679,7 @@
             "params": {
               "value": {
                 "deployment_tag": "${digitalocean_tag.deployment.name}",
+                "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
                 "firewall_id": "${digitalocean_firewall.network.id}",
                 "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
                 "provider": "digitalocean",
@@ -749,6 +750,18 @@
                 ]
               }
             },
+            "digitalocean_reserved_ip": {
+              "endpoint": {
+                "count": 0,
+                "lifecycle": {
+                  "ignore_changes": [
+                    "droplet_id"
+                  ],
+                  "prevent_destroy": true
+                },
+                "region": "nyc3"
+              }
+            },
             "digitalocean_tag": {
               "deployment": {
                 "lifecycle": {
@@ -771,6 +784,7 @@
       },
       "inputs": {
         "deployment_tag": "colors-compute-example",
+        "endpoint_count": 0,
         "firewall_name": "example-firewall",
         "outbound_rules": [
           {

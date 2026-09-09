@@ -40,7 +40,8 @@
         "vpc_ip": "${vultr_instance.node.internal_ip}",
         "user": "root",
         "sudoer": "root",
-        "ssh_key_id": "00000000-0000-0000-0000-000000000003"
+        "ssh_key_id": "00000000-0000-0000-0000-000000000003",
+        "provider_id": "${vultr_instance.node.id}"
       }
     }
   }

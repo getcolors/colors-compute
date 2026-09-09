@@ -37,6 +37,13 @@
                  (:secrets (entry :backend (:provider-backend opts))))
          (map #(str "COLORS_PAR_" (str/upper-case (str/replace % "-" "_")))) distinct sort vec)))
 
+(defn compute-credential-errors [opts environment]
+  (let [provider (entry :compute (:provider-compute opts))]
+    (when-not provider (fail "invalid compute provider"))
+    (vec (for [variable (sort (map #(str "COLORS_PAR_" (str/upper-case (str/replace % "-" "_"))) (:secrets provider)))
+               :when (or (not (string? (get environment variable))) (missing? (get environment variable)))]
+           (str "required credential is not set: " variable)))))
+
 (defn state-keys [profile node-ids]
   (when-not (safe? profile) (fail ":profile must be a safe identifier"))
   {:shared (str profile "/compute/shared.tfstate")

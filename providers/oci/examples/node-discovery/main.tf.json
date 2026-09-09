@@ -61,7 +61,8 @@
         "metadata": {
           "image_id": "${local.image_id}",
           "availability_domain": "${oci_core_instance.node.availability_domain}"
-        }
+        },
+        "provider_id": "${oci_core_instance.node.id}"
       }
     }
   }

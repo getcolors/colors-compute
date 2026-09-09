@@ -1,0 +1,954 @@
+[
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "aws"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute endpoint capability"
+    },
+    "name": "aws-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "azure-boot-disk-size-gb": 32,
+        "azure-image-offer": "ubuntu-24_04-lts",
+        "azure-image-publisher": "Canonical",
+        "azure-image-sku": "server",
+        "azure-image-version": "latest",
+        "azure-location": "westeurope",
+        "azure-resource-group": "example-compute",
+        "azure-subscription-id": "00000000-0000-0000-0000-000000000001",
+        "azure-vm-size": "Standard_B2s",
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "azure"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute endpoint capability"
+    },
+    "name": "azure-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${digitalocean_ssh_key.machine.id}",
+                "provider": "digitalocean",
+                "scope": "account"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${digitalocean_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "digitalocean_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared.tf.json": {
+          "data": {
+            "digitalocean_vpc": {
+              "network": {
+                "region": "nyc3"
+              }
+            }
+          },
+          "locals": {
+            "private_ingress": {
+              "peer:private": {
+                "port_range": "9093-9094",
+                "protocol": "tcp"
+              }
+            },
+            "public_ingress": {
+              "ssh:192.0.2.1/32": {
+                "port_range": "22",
+                "protocol": "tcp",
+                "source_addresses": [
+                  "192.0.2.1/32"
+                ]
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "deployment_tag": "${digitalocean_tag.deployment.name}",
+                "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+                "firewall_id": "${digitalocean_firewall.network.id}",
+                "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+                "provider": "digitalocean",
+                "vpc_id": "${data.digitalocean_vpc.network.id}",
+                "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_firewall": {
+              "network": {
+                "dynamic": {
+                  "inbound_rule": [
+                    {
+                      "content": {
+                        "port_range": "${try(inbound_rule.value.port_range, null)}",
+                        "protocol": "${inbound_rule.value.protocol}",
+                        "source_addresses": "${inbound_rule.value.source_addresses}"
+                      },
+                      "for_each": "${local.public_ingress}"
+                    },
+                    {
+                      "content": {
+                        "port_range": "${try(inbound_rule.value.port_range, null)}",
+                        "protocol": "${inbound_rule.value.protocol}",
+                        "source_addresses": [
+                          "${data.digitalocean_vpc.network.ip_range}"
+                        ]
+                      },
+                      "for_each": "${local.private_ingress}"
+                    }
+                  ]
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-firewall",
+                "outbound_rule": [
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "port_range": "1-65535",
+                    "protocol": "tcp"
+                  },
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "port_range": "1-65535",
+                    "protocol": "udp"
+                  },
+                  {
+                    "destination_addresses": [
+                      "0.0.0.0/0",
+                      "::/0"
+                    ],
+                    "protocol": "icmp"
+                  }
+                ],
+                "tags": [
+                  "${digitalocean_tag.deployment.name}"
+                ]
+              }
+            },
+            "digitalocean_reserved_ip": {
+              "endpoint": {
+                "count": 1,
+                "lifecycle": {
+                  "ignore_changes": [
+                    "droplet_id"
+                  ],
+                  "prevent_destroy": true
+                },
+                "region": "nyc3"
+              }
+            },
+            "digitalocean_tag": {
+              "deployment": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "colors-compute-example"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "deployment_tag": "colors-compute-example",
+        "endpoint_count": 1,
+        "firewall_name": "example-firewall",
+        "outbound_rules": [
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "port_range": "1-65535",
+            "protocol": "tcp"
+          },
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "port_range": "1-65535",
+            "protocol": "udp"
+          },
+          {
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ],
+            "protocol": "icmp"
+          }
+        ],
+        "prevent_destroy": true,
+        "private_ingress": {
+          "peer:private": {
+            "port_range": "9093-9094",
+            "protocol": "tcp"
+          }
+        },
+        "profile": "example",
+        "public_ingress": {
+          "ssh:192.0.2.1/32": {
+            "port_range": "22",
+            "protocol": "tcp",
+            "source_addresses": [
+              "192.0.2.1/32"
+            ]
+          }
+        },
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "nyc3"
+      },
+      "provider": "digitalocean",
+      "stage": "shared-keygen"
+    },
+    "name": "digitalocean-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "e2-medium",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "example",
+        "provider-compute": "google"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute endpoint capability"
+    },
+    "name": "google-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-compute": "hcloud"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute endpoint capability"
+    },
+    "name": "hcloud-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "oci-availability-domain": "example:EU-FRANKFURT-1-AD-1",
+        "oci-boot-volume-size-in-gbs": 50,
+        "oci-boot-volume-vpus-per-gb": 10,
+        "oci-compartment-id": "ocid1.compartment.oc1..example",
+        "oci-config-file-profile": "DEFAULT",
+        "oci-image-id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "oci-memory-in-gbs": 6,
+        "oci-ocpus": 1,
+        "oci-shape": "VM.Standard.A1.Flex",
+        "oci-subnet-id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "oci-uid": "1001",
+        "profile": "example",
+        "provider-compute": "oci"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute endpoint capability"
+    },
+    "name": "oci-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute endpoint capability"
+    },
+    "name": "vultr-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute endpoint capability"
+    },
+    "name": "yandex-endpoint",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "shared",
+      {
+        "endpoint": null,
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute endpoint request"
+    },
+    "name": "invalid-endpoint-None",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "shared",
+      {
+        "endpoint": {},
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute endpoint request"
+    },
+    "name": "invalid-endpoint-{}",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "node",
+          "kind": "reserved-ip"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute endpoint request"
+    },
+    "name": "invalid-endpoint-{'kind': 'reserved-ip', 'assignment': 'node'}",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-compute": "digitalocean"
+      },
+      "shared",
+      {
+        "endpoint": {
+          "assignment": "application",
+          "kind": "reserved-ip",
+          "secret": "bad"
+        },
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {}
+    ],
+    "expected": {
+      "error": "invalid compute endpoint request"
+    },
+    "name": "invalid-endpoint-{'kind': 'reserved-ip', 'assignment': 'application', 'secret': 'bad'}",
+    "op": "provider_request"
+  }
+]

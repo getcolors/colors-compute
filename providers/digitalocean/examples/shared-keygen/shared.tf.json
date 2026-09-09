@@ -26,7 +26,8 @@
         "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}",
         "firewall_id": "${digitalocean_firewall.network.id}",
         "deployment_tag": "${digitalocean_tag.deployment.name}",
-        "network_cidr": "${data.digitalocean_vpc.network.ip_range}"
+        "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+        "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}"
       }
     }
   },
@@ -138,6 +139,18 @@
         "name": "colors-compute-example",
         "lifecycle": {
           "prevent_destroy": true
+        }
+      }
+    },
+    "digitalocean_reserved_ip": {
+      "endpoint": {
+        "count": 0,
+        "region": "nyc3",
+        "lifecycle": {
+          "prevent_destroy": true,
+          "ignore_changes": [
+            "droplet_id"
+          ]
         }
       }
     }

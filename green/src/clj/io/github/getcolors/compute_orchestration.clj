@@ -24,13 +24,15 @@
              (transition [type fields] (coordinator/transition! @owner type fields))
              (readable [key]
                (let [result (call :read-state (fn [opts key env] (runtime/read-state opts key env runtime/run-command true)) opts key environment)]
-                 (require-valid (and (= "present" (:status result)) (or (= (:provider-compute opts) (get-in result [:params :provider])) (true? (:state_empty result))))) result))
+                 (require-valid (and (= "present" (:status result)) (= (:provider-compute opts) (get-in result [:params :provider])))) result))
              (node-key [id] (if (nil? id) (:shared @keys) (get-in (compute/state-keys (:profile opts) [id]) [:nodes id])))
              (presence-for [key record]
                (let [presence (call :state-presence execution/state-presence opts key environment)]
                  (require-valid (contains? #{{:status "present"} {:status "absent"}} presence))
                  (if (contains? #{"declared" "destroyed"} (:phase record))
-                   (when (= presence {:status "present"}) (require-valid (true? (:state_empty (readable key)))))
+                   (when (= presence {:status "present"})
+                     (let [state (call :read-state (fn [opts key env] (runtime/read-state opts key env runtime/run-command true)) opts key environment)]
+                       (require-valid (and (= "present" (:status state)) (true? (:state_empty state))))))
                    (require-valid (= presence {:status "present"})))
                  (when (= "failed" (:phase record)) (require-valid (= (:provider-compute opts) (get-in (readable key) [:params :provider])))) presence))
              (outcome [id operation-id success?]
@@ -77,13 +79,15 @@
                            (let [shared-read (atom nil)]
                              (doseq [[id record] (cons [nil (:shared doc)] (map (fn [[id record]] [(name id) record]) (:nodes doc)))]
                                (let [key (node-key id) presence (presence-for key record)]
-                                 (when (= presence {:status "present"})
+                                 (when (and (= presence {:status "present"}) (not (contains? #{"declared" "destroyed"} (:phase record))))
                                    (let [result (readable key)] (when (nil? id) (reset! shared-read result))))))
                              (if (= operation "create")
                                (do (doseq [node declarations :when (not (contains? (:nodes doc) (keyword (:node_id node))))]
                                      (presence-for (node-key (:node_id node)) {:phase "declared"}))
                                    (coordinator/declare! @owner topology))
                                (transition "begin-delete" {}))
+                             (let [errors (call :compute-credential-errors compute/compute-credential-errors opts environment)]
+                               (when (seq errors) (throw (ex-info "missing compute credentials" {:compute/credential-errors errors}))))
                              (when (= operation "create")
                                (require-valid (true? (call :validate-deployment planning/validate-deployment opts topology requirements))))
                              (let [doc (snapshot) key-record (:key doc)
@@ -138,7 +142,8 @@
                                      {:status "ready" :cluster (:colors-compute/cluster result) :shared (:outputs shared) :key (select-keys key [:mode :private_key_path :fingerprint])})))))))))))]
        (let [result (try (execute)
                          (catch InterruptedException error (when @owner (coordinator/poison! @owner)) (reset! cancelled error) {:status "error"})
-                         (catch Exception _ {:status "error"}))
+                         (catch Exception error (if-let [errors (:compute/credential-errors (ex-data error))]
+                                                  {:status "error" :errors errors} {:status "error"})))
              result (if @acquired
                       (try (coordinator/release! @owner) result
                            (catch InterruptedException error (reset! cancelled error) {:status "error"})

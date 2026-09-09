@@ -30,7 +30,7 @@ def deployment_requests(opts, topology, requirements, key):
     provider = opts.get('provider-compute')
     if not isinstance(provider, str) or provider not in recipes:
         raise ValueError('compute provider recipe unavailable')
-    if not isinstance(requirements, dict) or set(requirements) - {'security', 'network', 'single_host', 'legacy_state_keys', 'private'} or 'security' not in requirements:
+    if not isinstance(requirements, dict) or set(requirements) - {'security', 'network', 'single_host', 'legacy_state_keys', 'private', 'endpoint'} or 'security' not in requirements:
         raise ValueError('invalid deployment requirements')
     single = requirements.get('single_host', False)
     if type(single) is not bool:
@@ -54,6 +54,8 @@ def deployment_requests(opts, topology, requirements, key):
     # Only fields accepted by the renderer cross this boundary.
     public_key = {field: deepcopy(key[field]) for field in ('mode', 'public_key', 'ids', 'reference') if field in key}
     base = {'key': public_key, 'network': network, 'security': deepcopy(requirements['security'])}
+    if 'endpoint' in requirements:
+        base['endpoint'] = deepcopy(requirements['endpoint'])
     requests = []
     for node in nodes:
         node_name = name if single else name + '-' + node['node_id']

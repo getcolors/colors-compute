@@ -48,7 +48,8 @@
         "user": "{{user}}",
         "sudoer": "{{sudoer}}",
         "ssh_key_id": "{{ssh_key_id}}",
-        "instance_id": "${aws_instance.node.id}"
+        "instance_id": "${aws_instance.node.id}",
+        "provider_id": "${aws_instance.node.id}"
       }
     }
   }

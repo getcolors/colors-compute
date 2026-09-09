@@ -66,6 +66,16 @@ def credential_requirements(opts: dict) -> list[str]:
     })
 
 
+def compute_credential_errors(opts: dict, environment: dict) -> list[str]:
+    providers = registry()
+    selected = opts.get('provider-compute')
+    if not isinstance(selected, str) or selected not in providers['compute']:
+        raise ValueError('invalid compute provider')
+    variables = sorted('COLORS_PAR_' + key.upper().replace('-', '_') for key in providers['compute'][selected]['secrets'])
+    return ['required credential is not set: ' + variable for variable in variables
+            if not isinstance(environment.get(variable), str) or _missing(environment.get(variable))]
+
+
 def state_keys(profile: str, node_ids: list[str]) -> dict:
     if not _safe(profile):
         raise ValueError(":profile must be a safe identifier")

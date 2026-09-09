@@ -10,7 +10,7 @@
 (defn deployment-requests [opts topology requirements key]
   (let [provider (:provider-compute opts) recipe (when (string? provider) (get recipes (keyword provider)))]
     (when-not recipe (fail "compute provider recipe unavailable"))
-    (when-not (and (map? requirements) (contains? requirements :security) (every? #{:security :network :single_host :legacy_state_keys :private} (keys requirements)))
+    (when-not (and (map? requirements) (contains? requirements :security) (every? #{:security :network :single_host :legacy_state_keys :private :endpoint} (keys requirements)))
       (fail "invalid deployment requirements"))
     (let [single (get requirements :single_host false) nodes (compute/expand topology)]
       (when-not (boolean? single) (fail "invalid single-host requirement"))
@@ -20,8 +20,8 @@
             network (get requirements :network {})]
         (when-not (safe? name) (fail "invalid compute name"))
         (when-not (map? network) (fail "invalid compute network request"))
-        (let [base {:key (select-keys key [:mode :public_key :ids :reference])
-                    :network (merge {:mode (:network_mode recipe)} network) :security (:security requirements)}
+        (let [base (cond-> {:key (select-keys key [:mode :public_key :ids :reference])
+                    :network (merge {:mode (:network_mode recipe)} network) :security (:security requirements)} (contains? requirements :endpoint) (assoc :endpoint (:endpoint requirements)))
               requests (mapv (fn [node]
                                (let [node-name (if single name (str name "-" (:node_id node)))]
                                  (when-not (safe? node-name) (fail "invalid derived compute name"))

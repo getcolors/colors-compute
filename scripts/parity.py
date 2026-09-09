@@ -27,6 +27,7 @@ def main():
     cases.extend(json.loads((ROOT / "test/fixtures/deployment-requests.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/planning.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/provider-icmp.json").read_text()))
+    cases.extend(json.loads((ROOT / "test/fixtures/provider-endpoint.json").read_text()))
     for example in json.loads((ROOT / "test/fixtures/provider-plans.json").read_text()):
         directory = ROOT / "providers" / example["provider"] / "examples"
         cases.append({"name": f'packaged {example["provider"]} {example["stage"]}',

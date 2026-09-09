@@ -6,7 +6,7 @@ import os
 
 from blue.workflow import run
 from .backend import read_state
-from .contract import state_keys
+from .contract import state_keys, compute_credential_errors
 from .coordination import _topology
 from .coordinator import Coordinator
 from .execution import state_presence, converge_state
@@ -130,6 +130,9 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         else:
             await coordinator.transition('begin-delete')
         doc = await snapshot()
+        missing_credentials = await call('compute_credential_errors', compute_credential_errors, opts, env)
+        if missing_credentials:
+            return {'status': 'error', 'errors': missing_credentials}
         if operation == 'create':
             require(await call('validate_deployment', validate_deployment, opts, topology, request) is True)
             ownership_registration = (shared_read or {}).get('outputs', {}).get('registration')

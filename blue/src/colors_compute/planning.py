@@ -50,13 +50,15 @@ def plan_deployment(opts, topology, requirements):
         cidr = next((opts[name] for name in recipe['subnet_cidr_options'] + recipe['network_cidr_options'] if opts.get(name)), '10.0.0.0/24')
     network = ipaddress.ip_network(cidr, strict=True)
     shared['params']['network_cidr'] = str(network)
+    if 'endpoint' in requirements:
+        shared['params']['endpoint_ip'] = '198.51.100.10'
     for ordinal, node in enumerate(assembly['nodes']):
         plan = provider_request(opts, 'node', node, shared)
         documents['nodes'][node['node_id']] = plan['documents']
         offset = ordinal + 10
         if offset >= network.num_addresses - 1:
             raise ValueError('build exceeds private network address capacity')
-        params = {'node_id': node['node_id'], 'provider': provider, 'name': node['name'],
+        params = {'provider_id': str(int(recipe['planning_provider_id']) + ordinal) if recipe['planning_provider_id'].isdigit() else recipe['planning_provider_id'] + '-' + node['node_id'], 'node_id': node['node_id'], 'provider': provider, 'name': node['name'],
                   'ip': '192.0.2.' + str(offset), 'vpc_ip': str(network.network_address + offset),
                   'user': entry['user'], 'sudoer': entry['sudoer']}
         if selected['mode'] == 'managed':

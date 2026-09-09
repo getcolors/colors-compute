@@ -7,7 +7,7 @@ const object=(v:any)=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 export function deployment_requests(opts:Map,topology:Map[],requirements:Map,key:Map) {
  const provider=opts['provider-compute'];
  if(typeof provider!=='string'||!Object.hasOwn(recipes,provider))throw Error('compute provider recipe unavailable');
- if(!object(requirements)||!Object.hasOwn(requirements,'security')||Object.keys(requirements).some(k=>!['security','network','single_host','legacy_state_keys','private'].includes(k)))throw Error('invalid deployment requirements');
+ if(!object(requirements)||!Object.hasOwn(requirements,'security')||Object.keys(requirements).some(k=>!['security','network','single_host','legacy_state_keys','private','endpoint'].includes(k)))throw Error('invalid deployment requirements');
  const single=Object.hasOwn(requirements,'single_host')?requirements.single_host:false;
  if(typeof single!=='boolean')throw Error('invalid single-host requirement');
  const nodes=expand(topology);
@@ -18,7 +18,7 @@ export function deployment_requests(opts:Map,topology:Map[],requirements:Map,key
  if(!object(network))throw Error('invalid compute network request');
  if(!Object.hasOwn(network,'mode'))network.mode=(recipes as Map)[provider].network_mode;
  const publicKey:Map={};for(const field of ['mode','public_key','ids','reference'])if(Object.hasOwn(key,field))publicKey[field]=structuredClone(key[field]);
- const base={key:publicKey,network,security:structuredClone(requirements.security)};
+ const base={key:publicKey,network,security:structuredClone(requirements.security),...(Object.hasOwn(requirements,'endpoint')?{endpoint:structuredClone(requirements.endpoint)}:{})};
  return {shared:{...structuredClone(base),node_id:'shared',name},nodes:nodes.map(node=>{
   const nodeName=single?name:name+'-'+node.node_id;if(!safe(nodeName))throw Error('invalid derived compute name');
   return {...structuredClone(base),node_id:node.node_id,name:nodeName};

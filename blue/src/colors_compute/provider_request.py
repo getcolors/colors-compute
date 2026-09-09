@@ -118,13 +118,19 @@ def provider_request(opts, stage, request, shared=None):
     provider = opts.get('provider-compute') if isinstance(opts, dict) else None
     if not isinstance(provider, str) or provider not in recipes:
         _fail('compute provider recipe unavailable')
+    recipe = recipes[provider]
+    endpoint = request.get('endpoint') if isinstance(request, dict) else None
+    if isinstance(request, dict) and 'endpoint' in request:
+        if not _fields(endpoint, ('kind', 'assignment')) or endpoint != {'kind': 'reserved-ip', 'assignment': 'application'}:
+            _fail('invalid compute endpoint request')
+        if not recipe.get('application_reserved_ip'):
+            _fail('unsupported compute endpoint capability')
     if stage not in ('shared', 'node'):
         _fail('unsupported compute request stage')
-    recipe = recipes[provider]
     entry = registry()['compute'][provider]
     if not _safe(opts.get('profile')):
         _fail('invalid compute profile')
-    if not _fields(request, ('node_id', 'key', 'network', 'security'), ('name',)) or not _safe(request['node_id']):
+    if not _fields(request, ('node_id', 'key', 'network', 'security'), ('name', 'endpoint')) or not _safe(request['node_id']):
         _fail('invalid compute request')
     profile = opts['profile']
     name = request.get('name', profile if stage == 'shared' else profile + '-' + request['node_id'])
@@ -197,7 +203,7 @@ def provider_request(opts, stage, request, shared=None):
         _fail('invalid compute key references')
     if stage == 'node' and entry['registration'] and not ids:
         _fail('compute key references required')
-    derived = {'profile': profile, 'name': name, 'node_id': request['node_id'],
+    derived = {'endpoint_count': 1 if endpoint is not None else 0, 'profile': profile, 'name': name, 'node_id': request['node_id'],
         'prevent_destroy': opts.get('compute-prevent-destroy', True), 'public_key': key.get('public_key'),
         'ssh_key_id': primary, 'ssh_key_ids': ids, 'key_name': shared.get('key_name', key.get('reference')),
         'user': entry['user'], 'sudoer': entry['sudoer'], 'network_cidr': cidr, 'subnet_cidr': subnet,

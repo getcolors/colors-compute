@@ -50,7 +50,8 @@
         "user": "ubuntu",
         "sudoer": "ubuntu",
         "ssh_key_id": "example",
-        "instance_id": "${aws_instance.node.id}"
+        "instance_id": "${aws_instance.node.id}",
+        "provider_id": "${aws_instance.node.id}"
       }
     }
   }

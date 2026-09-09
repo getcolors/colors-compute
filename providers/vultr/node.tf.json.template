@@ -36,7 +36,8 @@
         "vpc_ip": "${vultr_instance.node.internal_ip}",
         "user": "{{user}}",
         "sudoer": "{{sudoer}}",
-        "ssh_key_id": "{{ssh_key_id}}"
+        "ssh_key_id": "{{ssh_key_id}}",
+        "provider_id": "${vultr_instance.node.id}"
       }
     }
   }

@@ -54,6 +54,7 @@ class Runtime:
     def dependencies(self):
         return {'coordinator': self.coordinator, 'prepare_keypair': self.prepare, 'cleanup_keypair': self.cleanup,
                 'validate_deployment': lambda *_: True,
+                'compute_credential_errors': lambda *_: [],
                 'registration_preflight': lambda *args, **kwargs: {'status': 'checked'}, 'deployment_requests': self.assemble, 'provider_request': self.render,
                 'state_presence': self.presence, 'read_state': self.read, 'converge_state': self.converge}
     async def run(self, count=2, event='create'):
@@ -189,3 +190,21 @@ async def test_invalid_application_requirements_refuse_before_real_key_generatio
     assert result == {'status': 'error'}
     assert not (tmp_path / '.ssh').exists()
     assert runtime.events == []
+
+
+@pytest.mark.asyncio
+async def test_missing_credentials_follow_ownership_checks_and_precede_key_generation():
+    runtime = Runtime()
+    dependencies = runtime.dependencies()
+    del dependencies['compute_credential_errors']
+    result = await orchestrate(OPTS, [{'count': 1}], {}, {}, dependencies)
+    assert result == {'status': 'error', 'errors': [
+        'required credential is not set: COLORS_PAR_VULTR_API_KEY']}
+    assert runtime.store.calls > 0
+    assert not runtime.prepared and runtime.events == []
+    runtime = Runtime()
+    runtime.states['demo/compute/shared.tfstate'] = {'params': {'provider': 'vultr'}}
+    dependencies = runtime.dependencies()
+    del dependencies['compute_credential_errors']
+    assert await orchestrate(OPTS, [{'count': 1}], {}, {}, dependencies) == {'status': 'error'}
+    assert not runtime.prepared and runtime.events == []

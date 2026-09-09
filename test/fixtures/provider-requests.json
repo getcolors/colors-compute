@@ -326,6 +326,7 @@
                 "name": "${aws_instance.node.tags[\"Name\"]}",
                 "node_id": "0",
                 "provider": "aws",
+                "provider_id": "${aws_instance.node.id}",
                 "ssh_key_id": 12345,
                 "sudoer": "ubuntu",
                 "user": "ubuntu",
@@ -712,6 +713,7 @@
                 "nic_id": "${azurerm_network_interface.node.id}",
                 "node_id": "0",
                 "provider": "azure",
+                "provider_id": "${azurerm_linux_virtual_machine.node.id}",
                 "ssh_key_id": null,
                 "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
                 "sudoer": "ubuntu",
@@ -931,6 +933,7 @@
             "params": {
               "value": {
                 "deployment_tag": "${digitalocean_tag.deployment.name}",
+                "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
                 "firewall_id": "${digitalocean_firewall.network.id}",
                 "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
                 "provider": "digitalocean",
@@ -1001,6 +1004,18 @@
                 ]
               }
             },
+            "digitalocean_reserved_ip": {
+              "endpoint": {
+                "count": 0,
+                "lifecycle": {
+                  "ignore_changes": [
+                    "droplet_id"
+                  ],
+                  "prevent_destroy": true
+                },
+                "region": "nyc3"
+              }
+            },
             "digitalocean_tag": {
               "deployment": {
                 "lifecycle": {
@@ -1023,6 +1038,7 @@
       },
       "inputs": {
         "deployment_tag": "colors-compute-example",
+        "endpoint_count": 0,
         "firewall_name": "example-firewall",
         "outbound_rules": [
           {
@@ -1152,6 +1168,7 @@
                 "name": "${digitalocean_droplet.node.name}",
                 "node_id": "0",
                 "provider": "digitalocean",
+                "provider_id": "${digitalocean_droplet.node.id}",
                 "ssh_key_id": 12345,
                 "sudoer": "root",
                 "user": "root",
@@ -1492,6 +1509,7 @@
                 "name": "${google_compute_instance.node.name}",
                 "node_id": "0",
                 "provider": "google",
+                "provider_id": "${google_compute_instance.node.id}",
                 "sudoer": "ubuntu",
                 "user": "ubuntu",
                 "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
@@ -1815,6 +1833,7 @@
                 "network_attachment_id": "${hcloud_server_network.node.id}",
                 "node_id": "0",
                 "provider": "hcloud",
+                "provider_id": "${hcloud_server.node.id}",
                 "server_id": "${hcloud_server.node.id}",
                 "ssh_key_id": 12345,
                 "sudoer": "root",
@@ -2190,6 +2209,7 @@
                 "name": "${oci_core_instance.node.display_name}",
                 "node_id": "0",
                 "provider": "oci",
+                "provider_id": "${oci_core_instance.node.id}",
                 "sudoer": "ubuntu",
                 "uid": "1001",
                 "user": "ubuntu",
@@ -2536,6 +2556,7 @@
                 "name": "${vultr_instance.node.label}",
                 "node_id": "0",
                 "provider": "vultr",
+                "provider_id": "${vultr_instance.node.id}",
                 "ssh_key_id": 12345,
                 "sudoer": "root",
                 "user": "root",
@@ -2912,6 +2933,7 @@
                 "name": "${yandex_compute_instance.node.name}",
                 "node_id": "0",
                 "provider": "yandex",
+                "provider_id": "${yandex_compute_instance.node.id}",
                 "sudoer": "ubuntu",
                 "user": "ubuntu",
                 "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
@@ -3120,6 +3142,7 @@
                 "name": "${yandex_compute_instance.node.name}",
                 "node_id": "0",
                 "provider": "yandex",
+                "provider_id": "${yandex_compute_instance.node.id}",
                 "sudoer": "ubuntu",
                 "user": "ubuntu",
                 "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
@@ -3555,6 +3578,7 @@
                 "name": "${aws_instance.node.tags[\"Name\"]}",
                 "node_id": "0",
                 "provider": "aws",
+                "provider_id": "${aws_instance.node.id}",
                 "ssh_key_id": 12345,
                 "sudoer": "ubuntu",
                 "user": "ubuntu",

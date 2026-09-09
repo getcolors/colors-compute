@@ -24,3 +24,8 @@
   (doseq [{:keys [name args expected]} (json/parse-string (slurp "../test/fixtures/provider-icmp.json") true)]
     (testing name
       (is (= expected (json/parse-string (json/generate-string (try (apply r/provider-request args) (catch Exception e {:error (.getMessage e)}))) true))))))
+
+(deftest endpoint-provider-fixtures
+  (doseq [{:keys [name args expected]} (json/parse-string (slurp "../test/fixtures/provider-endpoint.json") true)]
+    (testing name
+      (is (= expected (json/parse-string (json/generate-string (try (apply r/provider-request args) (catch Exception e {:error (.getMessage e)}))) true))))))

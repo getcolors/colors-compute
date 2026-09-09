@@ -87,7 +87,8 @@
         "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
         "user": "ubuntu",
         "sudoer": "ubuntu",
-        "ssh_key_id": null
+        "ssh_key_id": null,
+        "provider_id": "${azurerm_linux_virtual_machine.node.id}"
       }
     }
   }

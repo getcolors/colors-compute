@@ -18,11 +18,12 @@
                  (some #(get opts (keyword %)) (concat (:subnet_cidr_options recipe) (:network_cidr_options recipe))) "10.0.0.0/24")
         parsed (request/cidr cidr)
         shared (assoc-in shared [:params :network_cidr] (str (:address parsed) "/" (:prefix parsed)))
+        shared (cond-> shared (contains? requirements :endpoint) (assoc-in [:params :endpoint_ip] "198.51.100.10"))
         resolved (mapv (fn [ordinal node]
                          (let [plan (request/provider-request opts "node" node shared) offset (+ ordinal 10)]
                            (when (>= offset (- (:end parsed) (:start parsed))) (throw (ex-info "build exceeds private network address capacity" {})))
                            {:documents (:documents plan)
-                            :params (cond-> {:node_id (:node_id node) :provider provider :name (:name node) :ip (str "192.0.2." offset)
+                            :params (cond-> {:provider_id (if (re-matches #"[0-9]+" (:planning_provider_id recipe)) (str (+ (Long/parseLong (:planning_provider_id recipe)) ordinal)) (str (:planning_provider_id recipe) "-" (:node_id node))) :node_id (:node_id node) :provider provider :name (:name node) :ip (str "192.0.2." offset)
                                              :vpc_ip (address (+ (:start parsed) offset)) :user (:user entry) :sudoer (:sudoer entry)}
                                       (= "managed" (:mode selected)) (assoc :ssh_identity_file (str "$HOME/.ssh/" (:profile opts)))
                                       (:private_key_path selected) (assoc :ssh_identity_file (:private_key_path selected)))}))

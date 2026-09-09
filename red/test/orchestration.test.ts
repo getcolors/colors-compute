@@ -5,7 +5,7 @@ type Map=Record<string,any>;
 const opts={profile:'demo','provider-compute':'vultr','provider-backend':'s3','s3-bucket':'states','s3-region':'eu-west-1','compute-prevent-destroy':false};
 class Runtime {
  observed:Map={status:'absent'};states:Map={};events:string[]=[];fails=new Set<string>();writes=0;
- deps=()=>({validate_deployment:()=>true,
+ deps=()=>({validate_deployment:()=>true,compute_credential_errors:()=>[],
   coordinator:(o:Map,config:Map)=>new Coordinator(o,{...config,read:async()=>structuredClone(this.observed),write:async(intent:Map)=>{
    if(intent.condition.if_match&&intent.condition.if_match!==this.observed.etag)return {status:'conflict'};
    this.observed={status:'present',etag:'etag-'+(++this.writes),document:structuredClone(intent.document)};return {status:'written',etag:this.observed.etag};
@@ -52,4 +52,15 @@ test('read-only inventory requires idle validated journal and complete node para
  const found=await read_deployment(opts,{HOME:'/example'},deps);expect(found.status).toBe('present');expect(found.cluster!.nodes.map((n:Map)=>n.node_id)).toEqual(['0','1']);expect(found.key!.private_key_path).toBe('/example/.ssh/demo');
  const owner=new Coordinator(opts,{eventPrefix:'lifecycle/',read:async()=>structuredClone(r.observed),write:async(intent:Map)=>{r.observed={status:'present',etag:'held',document:intent.document};return {status:'written',etag:'held'};}});await owner.acquire();
  expect(await read_deployment(opts,{},deps)).toEqual({status:'error'});
+});
+test('SDK callback options survive orchestration and coordinator snapshots',async()=>{
+ const r=new Runtime();
+ expect((await orchestrate({...opts,'red/callback':()=>true},[{count:1}],{},{},r.deps())).status).toBe('ready');
+});
+test('missing compute credentials are named after state ownership checks',async()=>{
+ const r=new Runtime(),deps:any=r.deps();delete deps.compute_credential_errors;
+ expect(await orchestrate(opts,[{count:1}],{},{},deps)).toEqual({status:'error',errors:['required credential is not set: COLORS_PAR_VULTR_API_KEY']});
+ expect(r.writes).toBeGreaterThan(0);expect(r.events).toEqual([]);
+ const s=new Runtime(),other:any=s.deps();delete other.compute_credential_errors;s.states['demo/compute/shared.tfstate']={params:{provider:'vultr'}};
+ expect(await orchestrate(opts,[{count:1}],{},{},other)).toEqual({status:'error'});expect(s.events).toEqual([]);
 });

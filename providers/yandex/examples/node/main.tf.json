@@ -92,7 +92,8 @@
             "enp00000000000000000"
           ],
           "zone": "ru-central1-a"
-        }
+        },
+        "provider_id": "${yandex_compute_instance.node.id}"
       }
     }
   }
