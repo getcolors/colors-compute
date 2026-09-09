@@ -2,6 +2,8 @@
  :deps {io.github.getcolors/colors-compute {:local/root "."}}
  :tasks {test {:requires ([clojure.test :as t]
                          [io.github.getcolors.compute-test]
-                         [io.github.getcolors.compute-workflow-test])
-               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-workflow-test)]
+                         [io.github.getcolors.compute-workflow-test]
+                         [io.github.getcolors.compute-runtime-test]
+                         [io.github.getcolors.compute-coordination-test])
+               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-workflow-test 'io.github.getcolors.compute-runtime-test 'io.github.getcolors.compute-coordination-test)]
                        (System/exit (if (pos? (+ fail error)) 1 0)))}}}

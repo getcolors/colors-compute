@@ -69,3 +69,10 @@ test('join rejects mixed provider requests and normalizes omitted index', () => 
     [{...results[0],node_id:'0',provider:'aws'},{...results[1],node_id:'1'}], '0')).toThrow('provider mismatch: 1');
   expect(collect([{node_id:'0'}], [{...results[0],node_id:'0'}], '0').nodes[0].index).toBeNull();
 });
+test('identifiers and roles reject trailing line terminators',()=>{
+  for (const suffix of ['\n','\r','\r\n','\u2028','\u2029']) {
+    expect(()=>state_keys('demo'+suffix,['0'])).toThrow(':profile must be a safe identifier');
+    expect(()=>state_keys('demo',['0'+suffix])).toThrow('invalid node_id:');
+    expect(()=>expand([{role:'broker'+suffix}])).toThrow('invalid role');
+  }
+});

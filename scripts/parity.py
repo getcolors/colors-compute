@@ -20,6 +20,7 @@ def check_output(color, output, cases):
 
 def main():
     cases = json.loads((ROOT / "test/fixtures/contracts.json").read_text())
+    cases.extend(json.loads((ROOT / "test/fixtures/coordination.json").read_text()))
     for example in json.loads((ROOT / "test/fixtures/provider-plans.json").read_text()):
         directory = ROOT / "providers" / example["provider"] / "examples"
         cases.append({"name": f'packaged {example["provider"]} {example["stage"]}',

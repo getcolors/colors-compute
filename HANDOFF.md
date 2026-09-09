@@ -79,3 +79,58 @@ broker identities and review the planner's state mapping against actual plans.
 Finish cluster packages before beginning single-host package migrations. The
 full version-only provider-adoption proof remains outstanding, because no real
 consumer has migrated yet. Do not mark the five-stage plan complete.
+
+## Read-only runtime progress
+
+The next slice adds native read-only backend sessions in all three colors.
+It resolves R2 credentials from the provided environment into private partial
+backend configuration, isolates the OpenTofu cache, and removes it on exit.
+S3 retains ambient AWS authentication. R2 removes AWS profile selectors only
+from its separate backend child process, preserving parent and compute settings.
+Fixed init/state-pull commands require exit zero; malformed or empty state
+returns a generic error, never absence. Known backend credential echoes are
+rejected, including escaped strings. Params can otherwise contain sensitive
+state outputs and must not be logged.
+
+Tests exercise real child environments, temporary file permissions, cleanup,
+and descendant timeout handling. OpenTofu 1.12.5 local probes establish that
+missing local state can return exit zero with empty stdout. A loopback S3
+endpoint confirms explicit R2 signing ignores ambient AWS session tokens.
+These tests do not establish remote absence or real R2/S3 contention behavior.
+The runtime bypasses existing SDK subprocess helpers because they cannot all
+remove inherited environment controls. The SDK review records further timeout
+and diagnostic issues; those SDKs were not changed by this slice.
+
+Deployment coordination, object-storage transport, mutation lifecycle and all
+consumer migrations remain unfinished. The ownership proposal is in
+`contracts/coordination-design.md`. Cluster packages still precede single-host.
+
+## Coordination transition progress
+
+The pure `coordination` function now plans conditional journal writes in all
+three colors. Strict schemas reject unreviewed fields. Acquisition refuses a
+held lock; declaration records the full topology; node start records an attempt;
+completion/failure retains sibling records; release refuses running attempts.
+It checks identity, ETag, run ownership, write IDs and revision bounds. Results
+are detached from caller input. No returned plan authorizes dispatch until an
+object-store writer confirms its conditional write committed.
+
+The schema intentionally does not yet implement shared key phases, retry,
+scale-down, destruction, recovery takeover or tombstones. Transport and runtime
+coordination remain required. The next concrete step is a protected conditional
+S3/R2 object transport with confirmed NoSuchKey classification, then a coordinator
+that serializes journal writes and handles lost responses before provider work.
+The mutation lifecycle and every cluster/single-host consumer remain pending.
+
+Review also found Red's regex end anchors accepted trailing newlines where the
+other colors refused them. Identifier, role, state-key and template matching now
+require the complete string. These fixes have regression coverage. A deterministic
+mutation audit compared 4,608 malformed/altered coordination inputs across all three colors without a mismatch; explicit common fixtures remain the correctness
+oracle. The audit script is temporary and is not a substitute for shared tests.
+
+Current local checks pass: Blue 130 tests; Green 26 tests / 283 assertions;
+Red 89 tests / 309 assertions and typechecking; 211 explicit parity cases per
+color, including 54 coordination fixtures; registry and packaged template
+consistency. The all-color native OpenTofu loopback probe passes with only
+GET/HEAD requests. CI now runs the local-state and loopback probes. These
+changes have not migrated a package or accessed a live cloud deployment.

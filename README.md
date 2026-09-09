@@ -6,7 +6,8 @@ fan-out by cluster packages.
 
 This repository is under implementation. It currently provides executable
 contracts, SDK cluster workflow composition, pure template/backend planning,
-provider template prototypes, and a read-only AutoMQ migration planner. It
+provider template prototypes, protected read-only backend sessions, and a
+read-only AutoMQ migration planner. It
 does not yet provide a production create/delete lifecycle. No package or live
 deployment has migrated to it.
 
@@ -22,6 +23,12 @@ isolation, backend locking, or safe migration of an existing deployment.
   decisions that refuse mutation when ownership cannot be read.
 - [Rendering and backend plans](contracts/rendering.md): typed JSON templates,
   S3/R2 configuration, and separate R2 backend credential bindings.
+- [Read-only backend sessions](contracts/runtime.md): private credential/cache
+  files, exact subprocess environments, strict state reads and failure refusal.
+- [Coordination transitions](contracts/coordination.md): pure conditional-write
+  plans for ownership and node attempts, with strict schemas and immutable results.
+- [Coordination design](contracts/coordination-design.md): remaining deployment
+  ownership and crash recovery requirements before any provider mutation.
 - [Migration review](migration/README.md): an AutoMQ state-address inventory
   that emits no resource attributes and cannot execute a state transfer.
 - [Handoff](HANDOFF.md): current evidence and unfinished work.
@@ -67,6 +74,17 @@ uv run --directory blue pytest -q
 cd green && bb test
 cd ../red && bun install --frozen-lockfile && bun test && bun run typecheck
 ```
+
+The native backend probes use OpenTofu 1.12.5 and synthetic credentials only:
+
+```sh
+python3 scripts/backend_probe.py --tofu /path/to/tofu --blue-runner
+python3 scripts/backend_http_probe.py --tofu /path/to/tofu --bb /path/to/bb --bun /path/to/bun
+```
+
+The second probe starts a loopback-only S3 server, refuses writes, and exercises
+each native reader. It verifies R2 credential selection even when ambient AWS
+keys, session tokens and invalid profile selectors are present.
 
 Run the commands from the repository root except the explicit directory changes.
 `BUN`, `BB`, and `PYTHON` may select executables for parity. Provider-specific

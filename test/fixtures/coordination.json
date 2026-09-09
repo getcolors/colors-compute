@@ -1,0 +1,3043 @@
+[
+  {
+    "name": "acquire confirmed absence",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_none_match": "*"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 1,
+        "write_id": "write-1",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": false,
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "read error is never absence",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "error"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination read failed"
+    }
+  },
+  {
+    "name": "unknown observation field rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent",
+        "token": "secret"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination observation"
+    }
+  },
+  {
+    "name": "held owner cannot reattach",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination lock held"
+    }
+  },
+  {
+    "name": "competing acquisition refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-2",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination lock held"
+    }
+  },
+  {
+    "name": "acquire idle journal",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-2",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-2"
+        },
+        "topology_declared": false,
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "stale etag refuses intent",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-old"
+      }
+    ],
+    "expected": {
+      "error": "stale coordination observation"
+    }
+  },
+  {
+    "name": "fresh write id required",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination write_id reused"
+    }
+  },
+  {
+    "name": "revision cannot overflow",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 9007199254740991,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination revision exhausted"
+    }
+  },
+  {
+    "name": "backend identity mismatch",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "other",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination identity mismatch"
+    }
+  },
+  {
+    "name": "unknown identity fields rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        },
+        "token": "secret"
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination identity"
+    }
+  },
+  {
+    "name": "invalid provider rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "no-infra",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination identity"
+    }
+  },
+  {
+    "name": "unknown event field rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "timestamp": "old"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination event"
+    }
+  },
+  {
+    "name": "unsupported schema rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "journal metadata not allowed",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {},
+          "metadata": {
+            "token": "secret"
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "wrong owner cannot update",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-2",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination owner mismatch"
+    }
+  },
+  {
+    "name": "idle cannot update",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination lock not held"
+    }
+  },
+  {
+    "name": "absence cannot release",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "error": "coordination object absent"
+    }
+  },
+  {
+    "name": "declare complete intended node set",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 2
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": true,
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "phase": "declared",
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "phase": "declared",
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "no dispatch before declaration",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination topology not declared"
+    }
+  },
+  {
+    "name": "topology immutable after declaration",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "declared",
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "error": "coordination topology already declared"
+    }
+  },
+  {
+    "name": "unknown node cannot dispatch",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "declared",
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-2",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination node undeclared"
+    }
+  },
+  {
+    "name": "bool count rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "count": true
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination event"
+    }
+  },
+  {
+    "name": "oversized topology rejected",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "count": 1001
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination event"
+    }
+  },
+  {
+    "name": "start records attempt before dispatch",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "declared",
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": true,
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "phase": "running",
+            "operation_id": "op-1"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "phase": "declared",
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "running attempt cannot start twice",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "running",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-2"
+      }
+    ],
+    "expected": {
+      "error": "coordination node not startable"
+    }
+  },
+  {
+    "name": "attempt id cannot name two nodes",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "running",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-1",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination operation_id reused"
+    }
+  },
+  {
+    "name": "release refuses outstanding operations",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "running",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination operations outstanding"
+    }
+  },
+  {
+    "name": "completion must match attempt",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "running",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "complete",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "wrong"
+      }
+    ],
+    "expected": {
+      "error": "coordination operation mismatch"
+    }
+  },
+  {
+    "name": "completion retains unstarted sibling",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "running",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "complete",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": true,
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "phase": "ready",
+            "operation_id": "op-1"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "phase": "declared",
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "failure retains uncertain attempt",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "running",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "fail",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": true,
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "phase": "failed",
+            "operation_id": "op-1"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "phase": "declared",
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "release retains failures and unstarted nodes",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "failed",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "idle",
+          "run_id": null
+        },
+        "topology_declared": true,
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "phase": "failed",
+            "operation_id": "op-1"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "phase": "declared",
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "failed attempt cannot be silently retried",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "failed",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-2"
+      }
+    ],
+    "expected": {
+      "error": "coordination node not startable"
+    }
+  },
+  {
+    "name": "unstarted cannot complete",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "declared",
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "complete",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "error": "coordination node not running"
+    }
+  },
+  {
+    "name": "arbitrary node state path refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "other/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "declared",
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "node extension fields refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "declared",
+              "operation_id": null,
+              "metadata": {
+                "password": "secret"
+              }
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "journal node index gaps refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "R2 identity acquisition",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "r2",
+          "bucket": "states",
+          "region": "auto",
+          "endpoint": "https://example.r2.cloudflarestorage.com"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_none_match": "*"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "r2",
+            "bucket": "states",
+            "region": "auto",
+            "endpoint": "https://example.r2.cloudflarestorage.com"
+          }
+        },
+        "revision": 1,
+        "write_id": "write-1",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": false,
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "endpoint cannot contain credentials",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "r2",
+          "bucket": "states",
+          "region": "auto",
+          "endpoint": "https://secret@example.invalid"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination identity"
+    }
+  },
+  {
+    "name": "absent observation must match null etag",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": "prior-etag"
+      }
+    ],
+    "expected": {
+      "error": "stale coordination observation"
+    }
+  },
+  {
+    "name": "identity provider array refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": [
+          "vultr"
+        ],
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination identity"
+    }
+  },
+  {
+    "name": "identity backend extra secret refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1",
+          "secret": "must-not-echo"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination identity"
+    }
+  },
+  {
+    "name": "event missing run id refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination event"
+    }
+  },
+  {
+    "name": "null observation refused",
+    "op": "coordination",
+    "args": [
+      null,
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination observation"
+    }
+  },
+  {
+    "name": "journal lock extension refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "idle",
+            "run_id": null,
+            "password": "must-not-echo"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-2",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "journal revision boolean refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": true,
+          "write_id": "write-1",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-2",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "journal revision fraction refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1.5,
+          "write_id": "write-1",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-2",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  },
+  {
+    "name": "journal integral numbers accepted",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1.0,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1.0,
+          "write_id": "write-1",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-2",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-2"
+        },
+        "topology_declared": false,
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "integral topology counts accepted",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 2.0
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": true,
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "phase": "declared",
+            "operation_id": null
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "phase": "declared",
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "fractional topology count refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 1.5
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination event"
+    }
+  },
+  {
+    "name": "topology extension secret refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 2,
+            "password": "must-not-echo"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination event"
+    }
+  },
+  {
+    "name": "duplicate topology role refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "declare",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "topology": [
+          {
+            "role": "broker",
+            "count": 2
+          },
+          {
+            "role": "broker",
+            "count": 2
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination event"
+    }
+  },
+  {
+    "name": "integral node indices accepted",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0.0,
+              "phase": "declared",
+              "operation_id": null
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1.0,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "start",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1",
+        "node_id": "broker-0",
+        "operation_id": "op-1"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-2",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": true,
+        "nodes": {
+          "broker-0": {
+            "state_key": "demo/compute/nodes/broker-0.tfstate",
+            "role": "broker",
+            "index": 0,
+            "phase": "running",
+            "operation_id": "op-1"
+          },
+          "broker-1": {
+            "state_key": "demo/compute/nodes/broker-1.tfstate",
+            "role": "broker",
+            "index": 1,
+            "phase": "declared",
+            "operation_id": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "idle journal with running node refused",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "topology_declared": true,
+          "nodes": {
+            "broker-0": {
+              "state_key": "demo/compute/nodes/broker-0.tfstate",
+              "role": "broker",
+              "index": 0,
+              "phase": "running",
+              "operation_id": "op-1"
+            },
+            "broker-1": {
+              "state_key": "demo/compute/nodes/broker-1.tfstate",
+              "role": "broker",
+              "index": 1,
+              "phase": "declared",
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "release",
+        "run_id": "run-1",
+        "write_id": "write-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "expected": {
+      "error": "invalid coordination document"
+    }
+  }
+]

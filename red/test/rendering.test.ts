@@ -43,3 +43,9 @@ test('backend validates selection then sorted requirements then state key', () =
   }
   expect(backend_plan(s3, 'a/b_0.tfstate').config.terraform.backend.s3.key).toBe('a/b_0.tfstate');
 });
+test('state paths and whole placeholders reject trailing line terminators',()=>{
+  for (const suffix of ['\n','\r','\r\n','\u2028','\u2029']) {
+    expect(()=>backend_plan(s3,'demo/state'+suffix)).toThrow('invalid state key');
+    expect(()=>render_template('{{name}}'+suffix,{name:'example'})).toThrow('template placeholders must occupy the entire string');
+  }
+});

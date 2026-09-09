@@ -2465,5 +2465,819 @@
     "expected": {
       "error": "unsupported compute stage: [\"node\"]"
     }
+  },
+  {
+    "name": "backend read valid",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "present",
+      "params": {
+        "provider": "vultr",
+        "ip": "192.0.2.1",
+        "metadata": {
+          "keep": true
+        }
+      }
+    }
+  },
+  {
+    "name": "backend read empty successful pull",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read malformed",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read init exit -1",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": -1,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read pull exit -1",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": -1,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read init exit 1",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 1,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read pull exit 1",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 1,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read init exit 127",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 127,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read pull exit 127",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 127,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read invalid version True",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": true, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read invalid version 3",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 3, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read invalid serial -1",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": -1, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read invalid serial 9007199254740992",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 9007199254740992, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read invalid lineage  ",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \" \", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read invalid outputs []",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": [], \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read invalid resources {}",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": {}}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read missing params",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "present",
+      "params": {}
+    }
+  },
+  {
+    "name": "backend read invalid params",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": null}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read credential echo",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"secret\": \"fixture-secret-unique\"}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read escaped credential echo",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "quote\"slash\\newline\nsecret",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"secret\": \"quote\\\"slash\\\\newline\\nsecret\"}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read missing credentials",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {},
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "backend read s3 ambient",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "s3",
+        "s3-bucket": "test",
+        "s3-region": "us-east-1"
+      },
+      "fixture/compute/shared.tfstate",
+      {},
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "present",
+      "params": {
+        "provider": "vultr",
+        "ip": "192.0.2.1",
+        "metadata": {
+          "keep": true
+        }
+      }
+    }
+  },
+  {
+    "name": "backend read integral JSON decimals",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4.0, \"serial\": 0.0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "present",
+      "params": {
+        "provider": "vultr",
+        "ip": "192.0.2.1",
+        "metadata": {
+          "keep": true
+        }
+      }
+    }
+  },
+  {
+    "name": "backend read fractional serial",
+    "op": "read_state_case",
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
+        "AWS_ACCESS_KEY_ID": "ambient"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0.5, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
+          "err": "diagnostic-must-not-escape"
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "profile cannot end in newline",
+    "op": "state_keys",
+    "args": [
+      "demo\n",
+      [
+        "0"
+      ]
+    ],
+    "expected": {
+      "error": ":profile must be a safe identifier"
+    }
+  },
+  {
+    "name": "node id cannot end in newline",
+    "op": "state_keys",
+    "args": [
+      "demo",
+      [
+        "0\n"
+      ]
+    ],
+    "expected": {
+      "error": "invalid node_id: 0\n"
+    }
+  },
+  {
+    "name": "role cannot end in newline",
+    "op": "expand",
+    "args": [
+      [
+        {
+          "role": "broker\n",
+          "count": 1
+        }
+      ]
+    ],
+    "expected": {
+      "error": "invalid role"
+    }
+  },
+  {
+    "name": "state key cannot end in newline",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "s3",
+        "s3-bucket": "test",
+        "s3-region": "us-east-1"
+      },
+      "demo/state\n"
+    ],
+    "expected": {
+      "error": "invalid state key"
+    }
   }
 ]

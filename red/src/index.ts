@@ -9,7 +9,7 @@ function deepFreeze<T>(value: T): T {
 }
 export const registry = deepFreeze(registryData);
 type Map = Record<string, any>;
-const safe = (x: unknown): x is string => typeof x === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$/.test(x);
+const safe = (x: unknown): x is string => typeof x === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$/.exec(x)?.[0] === x;
 const missing = (x: unknown) => x == null || (typeof x === 'string' && (!x.trim() || x.trim().toUpperCase() === 'REPLACE_ME'));
 const nonblank = (x: unknown) => typeof x === 'string' && !!x.trim();
 function fail(message: string): never { throw new Error(message); }
@@ -56,7 +56,7 @@ export function expand(topology: Map[]) {
   const nodes: Map[] = [];
   for (const declaration of topology) {
     const role = declaration.role ?? null;
-    if (role !== null && (typeof role !== 'string' || !/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(role))) fail('invalid role');
+    if (role !== null && (typeof role !== 'string' || /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.exec(role)?.[0] !== role)) fail('invalid role');
     if (roles.has(role)) fail('duplicate role');
     roles.add(role);
     if (role === null && topology.length !== 1) fail('a null role must be the only role');
@@ -115,3 +115,5 @@ export function state_decision(read: Map, selected: string) {
 export {clusterWorkflow} from './workflow.ts';
 export {render_template, backend_plan} from './rendering.ts';
 export {provider_plan} from './providers.ts';
+export {readState, type BackendRunner, type StateRead} from './backend.ts';
+export {coordination} from './coordination.ts';

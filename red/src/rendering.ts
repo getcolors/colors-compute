@@ -5,7 +5,7 @@ type Json = null | boolean | number | string | Json[] | {[key: string]: Json};
 export function render_template(value: Json, inputs: Record<string, Json>): Json {
   if (typeof value === 'string') {
     const match = /^\{\{([a-z_]+)\}\}$/.exec(value);
-    if (match) {
+    if (match && match[0] === value) {
       const key = match[1];
       if (!Object.hasOwn(inputs, key)) throw new Error(`missing template input: ${key}`);
       return structuredClone(inputs[key]);
@@ -30,7 +30,7 @@ export function backend_plan(opts: Record<string, any>, state_key: string) {
       throw new Error(`:${key} is required`);
     }
   }
-  if (typeof state_key !== 'string' || !state_key.split('/').every(part => /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(part))) {
+  if (typeof state_key !== 'string' || !state_key.split('/').every(part => /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.exec(part)?.[0] === part)) {
     throw new Error('invalid state key');
   }
   const settings: Record<string, any> = {
