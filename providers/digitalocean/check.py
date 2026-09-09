@@ -61,6 +61,16 @@ def check():
             raise AssertionError('missing/partial token accepted')
 
 
+def created_role_examples():
+    fixtures = json.loads((ROOT.parents[1] / 'test/fixtures/provider-network-created.json').read_text())
+    case = next(case for case in fixtures if case['name'] == 'digitalocean-created-role-plan')
+    documents = case['expected']['documents']
+    stages = {'shared-created-roles': documents['shared']}
+    stages.update({'node-' + name: value for name, value in documents['nodes'].items()})
+    return {stage: {name: doc for name, doc in docs.items() if name != 'backend.tf.json'}
+            for stage, docs in stages.items()}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tofu', type=Path, help='also initialize and validate all examples with this binary')
@@ -78,6 +88,14 @@ def main():
                 for command in (('fmt', '-check'), ('init', '-backend=false', '-input=false', '-no-color'), ('validate', '-no-color')):
                     subprocess.run([str(args.tofu.resolve()), f'-chdir={directory}', *command], env=env, check=True)
                 print(f'Provider schema {mode}: passed', flush=True)
+        for mode, documents in created_role_examples().items():
+            with tempfile.TemporaryDirectory(prefix='colors-compute-digitalocean-roles-') as directory:
+                for name, document in documents.items():
+                    (Path(directory) / name).write_text(json.dumps(document, indent=2) + '\n')
+                for command in (('init', '-backend=false', '-input=false', '-no-color'), ('validate', '-no-color')):
+                    subprocess.run([str(args.tofu.resolve()), f'-chdir={directory}', *command], env=env, check=True)
+                print(f'Provider schema {mode}: passed', flush=True)
+
 
 
 if __name__ == '__main__':
