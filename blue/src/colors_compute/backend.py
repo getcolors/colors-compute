@@ -71,7 +71,7 @@ def _outputs(output):
     return result
 
 
-async def read_state(opts, state_key, environment=None, runner=None, include_outputs=False):
+async def _read_state(opts, state_key, environment=None, runner=None, include_outputs=False, decoder=None):
     """Return present params or a generic error; callers must not log params.
 
     Runner receives (argv, cwd, exact_environment, timeout_ms). No mutations are
@@ -108,7 +108,7 @@ async def read_state(opts, state_key, environment=None, runner=None, include_out
             if pull.exit != 0:
                 return {"status": "error"}
             params = _params(pull.out)
-            outputs = _outputs(pull.out) if include_outputs else None
+            outputs = (decoder(pull.out) if decoder else _outputs(pull.out)) if include_outputs else None
             encoded = json.dumps(outputs if include_outputs else params, ensure_ascii=False)
             if any(secret in encoded or json.dumps(secret, ensure_ascii=False)[1:-1] in encoded
                    for secret in credentials.values()):
@@ -118,3 +118,7 @@ async def read_state(opts, state_key, environment=None, runner=None, include_out
     except Exception:
         # Diagnostics can contain backend secrets and raw state. Never forward.
         return {"status": "error"}
+
+
+async def read_state(opts, state_key, environment=None, runner=None, include_outputs=False):
+    return await _read_state(opts, state_key, environment, runner, include_outputs)

@@ -44,12 +44,13 @@ export function stateOutputs(output:string):Record<string,unknown> {
 /** Read an existing remote state using an isolated, protected backend context.
  * This operation never interprets failure as absence and never mutates compute.
  */
-export async function readState(
+export async function readStateDecoded(
   opts: Record<string, any>,
   stateKey: string,
   environment: Record<string, string | undefined> = process.env,
   runner: BackendRunner = executeBackendCommand,
   includeOutputs = false,
+  decoder?: (output:string)=>Record<string,unknown>,
 ): Promise<StateRead> {
   let directory: string | undefined;
   try {
@@ -80,7 +81,7 @@ export async function readState(
     const state = await runner(['tofu','state','pull'],options);
     if (state.exit !== 0 || !state.out.trim()) return {status:'error'};
     const {params}=parseStateEnvelope(state.out);
-    const outputs=includeOutputs?stateOutputs(state.out):undefined;
+    const outputs=includeOutputs?(decoder?decoder(state.out):stateOutputs(state.out)):undefined;
     const serialized = JSON.stringify(includeOutputs?outputs:params);
     if (Object.values(settings).some(value => serialized.includes(value) || serialized.includes(JSON.stringify(value).slice(1,-1)))) return {status:'error'};
     return {status:'present',params,...(includeOutputs?{outputs,state_empty:parseStateEnvelope(state.out).document.resources.length===0&&Object.keys(outputs!).length===0}:{})};
@@ -94,3 +95,5 @@ export async function readState(
     }
   }
 }
+
+export async function readState(opts:Record<string,any>,stateKey:string,environment:Record<string,string|undefined>=process.env,runner:BackendRunner=executeBackendCommand,includeOutputs=false):Promise<StateRead>{return readStateDecoded(opts,stateKey,environment,runner,includeOutputs);}

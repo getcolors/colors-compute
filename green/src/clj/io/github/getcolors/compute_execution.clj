@@ -15,6 +15,7 @@
 (defn- state-key? [opts key]
   (and (safe? (:profile opts)) (string? key)
        (or (= key (str (:profile opts) "/compute/shared.tfstate"))
+           (= key (str (:profile opts) "/compute/managed-kubernetes.tfstate"))
            (let [prefix (str (:profile opts) "/compute/nodes/")]
              (and (str/starts-with? key prefix) (str/ends-with? key ".tfstate")
                   (safe? (subs key (count prefix) (- (count key) 8))))))))
@@ -75,7 +76,7 @@
                           (every? (fn [kind] (and (map? (get doc kind {})) (every? (get resource-types kind) (keys (get doc kind {}))))) [:resource :data])
                           (not-any? #(str/includes? text %) ["-----BEGIN " "\"private_key\"" "\"provisioner\""])))) documents))))
 (def ^:private execution-policy (json/parse-string (slurp (io/resource "colors_compute/execution-policy.json")) true))
-(defn- converge* [opts key documents operation presence environment runner sleeper]
+(defn- converge* [opts key documents operation presence environment runner sleeper decoder]
   (require-valid (and (map? opts) (state-key? opts key) (contains? #{"create" "delete" "check"} operation)
                       (map? presence) (= #{:status} (set (keys presence))) (contains? #{"present" "absent"} (:status presence))))
   (require-valid (or (not= operation "check") (= presence {:status "present"})))
@@ -138,7 +139,7 @@
                               (let [{:keys [document params]} (state after)]
                                 (if (= operation "delete")
                                   (do (require-valid (empty-state? document)) {:status "destroyed"})
-                                  (let [outputs (runtime/flatten-outputs document)]
+                                  (let [outputs (if decoder (decoder after) (runtime/flatten-outputs document))]
                                     (require-valid (and (= provider (:provider params)) (not (journal/bound-secret? outputs secrets))))
                                     {:status "ready" :params params :outputs outputs}))))))))))
               (finally (journal/cleanup! directory))))))))
@@ -148,7 +149,9 @@
   ([opts key documents operation presence environment runner]
    (converge-state opts key documents operation presence environment runner #(Thread/sleep %)))
   ([opts key documents operation presence environment runner sleeper]
-   (try (converge* opts key documents operation presence environment runner sleeper)
+   (converge-state opts key documents operation presence environment runner sleeper nil))
+  ([opts key documents operation presence environment runner sleeper decoder]
+   (try (converge* opts key documents operation presence environment runner sleeper decoder)
         (catch InterruptedException error (throw error))
         (catch Exception _ {:status "error"}))))
 

@@ -29,5 +29,8 @@
   "shared-created-roles-keygen": [
     "shared-created-roles.tf.json",
     "shared-keygen.tf.json"
+  ],
+  "managed-kubernetes": [
+    "managed-kubernetes.tf.json"
   ]
 }

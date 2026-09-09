@@ -1,0 +1,422 @@
+[
+  {
+    "name": "managed digitalocean s3",
+    "op": "plan_managed_kubernetes",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true
+      },
+      {}
+    ],
+    "expected": {
+      "status": "planned",
+      "params": {
+        "provider": "digitalocean",
+        "kind": "managed-kubernetes",
+        "name": "managed-fixture",
+        "cluster_id": "planned-cluster",
+        "endpoint": "https://192.0.2.10",
+        "pod_cidr": "10.244.0.0/16",
+        "service_cidr": "10.245.0.0/16"
+      },
+      "state_key": "managed-fixture/compute/managed-kubernetes.tfstate",
+      "documents": {
+        "managed-kubernetes.tf.json": {
+          "output": {
+            "kubeconfig_b64": {
+              "sensitive": true,
+              "value": "${base64encode(digitalocean_kubernetes_cluster.cluster.kube_config[0].raw_config)}"
+            },
+            "params": {
+              "value": {
+                "cluster_id": "${digitalocean_kubernetes_cluster.cluster.id}",
+                "endpoint": "${digitalocean_kubernetes_cluster.cluster.endpoint}",
+                "kind": "managed-kubernetes",
+                "name": "managed-fixture",
+                "pod_cidr": "${digitalocean_kubernetes_cluster.cluster.cluster_subnet}",
+                "provider": "digitalocean",
+                "service_cidr": "${digitalocean_kubernetes_cluster.cluster.service_subnet}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_kubernetes_cluster": {
+              "cluster": {
+                "ha": false,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "managed-fixture",
+                "node_pool": [
+                  {
+                    "name": "managed-fixture",
+                    "node_count": 2,
+                    "size": "s-2vcpu-4gb"
+                  }
+                ],
+                "region": "ams3",
+                "version": "1.35.1-do.1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            }
+          }
+        },
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "states",
+                "key": "managed-fixture/compute/managed-kubernetes.tfstate",
+                "region": "us-east-1",
+                "use_lockfile": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "managed digitalocean r2",
+    "op": "plan_managed_kubernetes",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "r2",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true
+      },
+      {}
+    ],
+    "expected": {
+      "status": "planned",
+      "params": {
+        "provider": "digitalocean",
+        "kind": "managed-kubernetes",
+        "name": "managed-fixture",
+        "cluster_id": "planned-cluster",
+        "endpoint": "https://192.0.2.10",
+        "pod_cidr": "10.244.0.0/16",
+        "service_cidr": "10.245.0.0/16"
+      },
+      "state_key": "managed-fixture/compute/managed-kubernetes.tfstate",
+      "documents": {
+        "managed-kubernetes.tf.json": {
+          "output": {
+            "kubeconfig_b64": {
+              "sensitive": true,
+              "value": "${base64encode(digitalocean_kubernetes_cluster.cluster.kube_config[0].raw_config)}"
+            },
+            "params": {
+              "value": {
+                "cluster_id": "${digitalocean_kubernetes_cluster.cluster.id}",
+                "endpoint": "${digitalocean_kubernetes_cluster.cluster.endpoint}",
+                "kind": "managed-kubernetes",
+                "name": "managed-fixture",
+                "pod_cidr": "${digitalocean_kubernetes_cluster.cluster.cluster_subnet}",
+                "provider": "digitalocean",
+                "service_cidr": "${digitalocean_kubernetes_cluster.cluster.service_subnet}"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_kubernetes_cluster": {
+              "cluster": {
+                "ha": false,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "managed-fixture",
+                "node_pool": [
+                  {
+                    "name": "managed-fixture",
+                    "node_count": 2,
+                    "size": "s-2vcpu-4gb"
+                  }
+                ],
+                "region": "ams3",
+                "version": "1.35.1-do.1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            }
+          }
+        },
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "states",
+                "key": "managed-fixture/compute/managed-kubernetes.tfstate",
+                "region": "auto",
+                "use_lockfile": true,
+                "endpoints": {
+                  "s3": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com"
+                },
+                "use_path_style": false,
+                "skip_credentials_validation": true,
+                "skip_metadata_api_check": true,
+                "skip_region_validation": true,
+                "skip_requesting_account_id": true,
+                "skip_s3_checksum": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "managed vultr s3",
+    "op": "plan_managed_kubernetes",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true
+      },
+      {}
+    ],
+    "expected": {
+      "status": "planned",
+      "params": {
+        "provider": "vultr",
+        "kind": "managed-kubernetes",
+        "name": "managed-fixture",
+        "cluster_id": "planned-cluster",
+        "endpoint": "https://192.0.2.10"
+      },
+      "state_key": "managed-fixture/compute/managed-kubernetes.tfstate",
+      "documents": {
+        "managed-kubernetes.tf.json": {
+          "output": {
+            "kubeconfig_b64": {
+              "sensitive": true,
+              "value": "${vultr_kubernetes.cluster.kube_config}"
+            },
+            "params": {
+              "value": {
+                "cluster_id": "${vultr_kubernetes.cluster.id}",
+                "endpoint": "${vultr_kubernetes.cluster.endpoint}",
+                "kind": "managed-kubernetes",
+                "name": "managed-fixture",
+                "provider": "vultr"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_kubernetes": {
+              "cluster": {
+                "label": "managed-fixture",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "node_pools": [
+                  {
+                    "label": "managed-fixture",
+                    "node_quantity": 2,
+                    "plan": "vc2-2c-4gb"
+                  }
+                ],
+                "region": "ams",
+                "version": "v1.35.1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        },
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "states",
+                "key": "managed-fixture/compute/managed-kubernetes.tfstate",
+                "region": "us-east-1",
+                "use_lockfile": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "managed vultr r2",
+    "op": "plan_managed_kubernetes",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "r2",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true
+      },
+      {}
+    ],
+    "expected": {
+      "status": "planned",
+      "params": {
+        "provider": "vultr",
+        "kind": "managed-kubernetes",
+        "name": "managed-fixture",
+        "cluster_id": "planned-cluster",
+        "endpoint": "https://192.0.2.10"
+      },
+      "state_key": "managed-fixture/compute/managed-kubernetes.tfstate",
+      "documents": {
+        "managed-kubernetes.tf.json": {
+          "output": {
+            "kubeconfig_b64": {
+              "sensitive": true,
+              "value": "${vultr_kubernetes.cluster.kube_config}"
+            },
+            "params": {
+              "value": {
+                "cluster_id": "${vultr_kubernetes.cluster.id}",
+                "endpoint": "${vultr_kubernetes.cluster.endpoint}",
+                "kind": "managed-kubernetes",
+                "name": "managed-fixture",
+                "provider": "vultr"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_kubernetes": {
+              "cluster": {
+                "label": "managed-fixture",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "node_pools": [
+                  {
+                    "label": "managed-fixture",
+                    "node_quantity": 2,
+                    "plan": "vc2-2c-4gb"
+                  }
+                ],
+                "region": "ams",
+                "version": "v1.35.1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        },
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "states",
+                "key": "managed-fixture/compute/managed-kubernetes.tfstate",
+                "region": "auto",
+                "use_lockfile": true,
+                "endpoints": {
+                  "s3": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com"
+                },
+                "use_path_style": false,
+                "skip_credentials_validation": true,
+                "skip_metadata_api_check": true,
+                "skip_region_validation": true,
+                "skip_requesting_account_id": true,
+                "skip_s3_checksum": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

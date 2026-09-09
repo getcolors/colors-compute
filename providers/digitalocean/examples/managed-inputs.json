@@ -1,0 +1,8 @@
+{
+  "region": "ams3",
+  "version": "1.35.1-do.1",
+  "size": "s-2vcpu-4gb",
+  "count": 2,
+  "name": "managed-fixture",
+  "prevent_destroy": true
+}

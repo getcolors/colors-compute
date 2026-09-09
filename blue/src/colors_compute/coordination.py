@@ -128,6 +128,9 @@ def _document_v1(value):
 
 
 def _document(value):
+    if isinstance(value, dict) and value.get("schema_version") == 3:
+        from .managed_journal import managed_document_valid
+        return managed_document_valid(value)
     if isinstance(value, dict) and value.get('schema_version') == 2:
         from .lifecycle import lifecycle_document_valid
         return lifecycle_document_valid(value)
@@ -139,6 +142,9 @@ def coordination(observation, identity, event):
     if isinstance(event, dict) and isinstance(event.get('type'), str) and event['type'].startswith('lifecycle/'):
         from .lifecycle import lifecycle
         return lifecycle(observation, identity, event)
+    if isinstance(event, dict) and isinstance(event.get("type"), str) and event["type"].startswith("managed/"):
+        from .managed_journal import managed_coordination
+        return managed_coordination(observation, identity, event)
     def fail(message):
         raise ValueError(message)
     if not _identity(identity):

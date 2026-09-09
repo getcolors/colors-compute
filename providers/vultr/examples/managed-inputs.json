@@ -1,0 +1,8 @@
+{
+  "region": "ams",
+  "version": "v1.35.1",
+  "size": "vc2-2c-4gb",
+  "count": 2,
+  "name": "managed-fixture",
+  "prevent_destroy": true
+}

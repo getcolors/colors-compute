@@ -17,7 +17,7 @@ def _state_key(opts, key):
     profile = opts.get('profile')
     if not _safe(profile) or not isinstance(key, str):
         return False
-    if key == profile + '/compute/shared.tfstate':
+    if key in (profile + '/compute/shared.tfstate', profile + '/compute/managed-kubernetes.tfstate'):
         return True
     prefix = profile + '/compute/nodes/'
     return key.startswith(prefix) and key.endswith('.tfstate') and _safe(key[len(prefix):-8])
@@ -117,7 +117,7 @@ def _documents(documents, provider):
     return True
 
 
-async def converge_state(opts, state_key, documents, operation, presence, environment=None, runner=None, sleeper=None):
+async def _converge_state(opts, state_key, documents, operation, presence, environment=None, runner=None, sleeper=None, decoder=None):
     """Execute one approved plan; caller must hold committed coordinator intent."""
     try:
         if not _state_key(opts, state_key) or operation not in ('create', 'delete', 'check') or presence not in ({'status': 'present'}, {'status': 'absent'}):
@@ -215,7 +215,7 @@ async def converge_state(opts, state_key, documents, operation, presence, enviro
             state, params = _state(after)
             if operation == 'delete':
                 return {'status': 'destroyed'} if _empty(state) else {'status': 'error'}
-            outputs = _outputs(after)
+            outputs = decoder(after) if decoder else _outputs(after)
             if params.get('provider') != provider or _contains_secret(outputs, secrets):
                 return {'status': 'error'}
             return {'status': 'ready', 'params': params, 'outputs': outputs}
@@ -226,3 +226,7 @@ async def converge_state(opts, state_key, documents, operation, presence, enviro
 async def check_state(opts, state_key, documents, environment=None, runner=None):
     """Caller holds deployment journal; zero-change plan only, never apply."""
     return await converge_state(opts, state_key, documents, 'check', {'status': 'present'}, environment, runner)
+
+
+async def converge_state(opts, state_key, documents, operation, presence, environment=None, runner=None, sleeper=None):
+    return await _converge_state(opts, state_key, documents, operation, presence, environment, runner, sleeper)

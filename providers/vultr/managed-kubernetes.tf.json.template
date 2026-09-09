@@ -1,0 +1,47 @@
+{
+  "terraform": {
+    "required_providers": {
+      "vultr": {
+        "source": "vultr/vultr",
+        "version": "2.32.0"
+      }
+    }
+  },
+  "provider": {
+    "vultr": {}
+  },
+  "resource": {
+    "vultr_kubernetes": {
+      "cluster": {
+        "region": "{{region}}",
+        "version": "{{version}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        },
+        "label": "{{name}}",
+        "node_pools": [
+          {
+            "node_quantity": "{{count}}",
+            "plan": "{{size}}",
+            "label": "{{name}}"
+          }
+        ]
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "vultr",
+        "kind": "managed-kubernetes",
+        "name": "{{name}}",
+        "cluster_id": "${vultr_kubernetes.cluster.id}",
+        "endpoint": "${vultr_kubernetes.cluster.endpoint}"
+      }
+    },
+    "kubeconfig_b64": {
+      "value": "${vultr_kubernetes.cluster.kube_config}",
+      "sensitive": true
+    }
+  }
+}

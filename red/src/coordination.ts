@@ -1,3 +1,4 @@
+import {managedCoordination,managedDocumentValid} from './managed-journal.ts';
 import {lifecycle,lifecycleDocumentValid} from './lifecycle.ts';
 import {registry, expand, state_keys} from './index.ts';
 type Map = Record<string, any>;
@@ -43,6 +44,7 @@ function observationValid(value: unknown): value is Map {
   return value.status === 'present' && fields(value,['status','etag','document']) && nonblank(value.etag);
 }
 export function documentValid(value: unknown): value is Map {
+  if(object(value)&&value.schema_version===3)return managedDocumentValid(value);
   if(object(value)&&value.schema_version===2)return lifecycleDocumentValid(value);
   if (!fields(value,['schema_version','identity','revision','write_id','lock','topology_declared','nodes']) || value.schema_version !== 1 || !identityValid(value.identity) || !integer(value.revision,1,Number.MAX_SAFE_INTEGER) || !safe(value.write_id)) return false;
   if (!fields(value.lock,['state','run_id']) || !((value.lock.state === 'held' && safe(value.lock.run_id)) || (value.lock.state === 'idle' && value.lock.run_id === null))) return false;
@@ -72,6 +74,7 @@ function fail(message: string): never {throw new Error(message);}
 
 /** Plan one journal CAS. A returned plan does not authorize provider dispatch. */
 export function coordination(observation: unknown, identity: unknown, event: unknown) {
+  if(object(event)&&typeof event.type==='string'&&event.type.startsWith('managed/'))return managedCoordination(observation,identity,event);
   if(object(event)&&typeof event.type==='string'&&event.type.startsWith('lifecycle/'))return lifecycle(observation,identity,event);
   if(!identityValid(identity)) fail('invalid coordination identity');
   if(!eventValid(event)) fail('invalid coordination event');

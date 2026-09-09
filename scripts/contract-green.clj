@@ -1,12 +1,14 @@
 #!/usr/bin/env bb
-(require '[babashka.classpath :as cp] '[clojure.java.io :as io])
+(require '[babashka.classpath :as cp] '[babashka.deps :as deps] '[clojure.java.io :as io])
 (let [root (.getParentFile (.getParentFile (.getCanonicalFile (io/file *file*))))]
+  (deps/add-deps {:deps {'io.github.getcolors/colors-compute {:local/root (str (io/file root "green"))}}})
   (cp/add-classpath (str (io/file root "green/src/clj") ":" (io/file root "green/src/resources"))))
 (require '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
          '[io.github.getcolors.compute-runtime :as runtime]
          '[io.github.getcolors.compute-request :as request]
          '[io.github.getcolors.compute-deployment-request :as deployment]
          '[io.github.getcolors.compute-controller :as controller]
+         '[io.github.getcolors.compute-managed :as managed]
          '[io.github.getcolors.compute-planning :as planning]
          '[io.github.getcolors.compute-lifecycle :as lifecycle]
          '[io.github.getcolors.compute-coordination :as coordination]
@@ -32,7 +34,8 @@
      (if (nil? intent) (journal/journal-get opts env runner)
          (journal/journal-put opts intent env runner)))))
 (def operations
-  {"controller_artifact" controller/controller-artifact
+  {"plan_managed_kubernetes" managed/plan-managed-kubernetes
+   "controller_artifact" controller/controller-artifact
    "deployment_requests" deployment/deployment-requests
    "plan_deployment" planning/plan-deployment
    "lifecycle" lifecycle/lifecycle

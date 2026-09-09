@@ -121,6 +121,8 @@
   ([opts state-key environment] (read-state opts state-key environment run-command))
   ([opts state-key environment runner] (read-state opts state-key environment runner false))
   ([opts state-key environment runner include-outputs]
+   (read-state opts state-key environment runner include-outputs nil))
+  ([opts state-key environment runner include-outputs decoder]
    (try
      (let [plan (compute/backend-plan opts state-key)
            credentials (into {} (map (fn [[variable option]]
@@ -148,7 +150,7 @@
                  (let [documents (vec (json/parsed-seq (java.io.StringReader. (:out pulled)) true))
                        state (when (= 1 (count documents)) (first documents))
                        output (get-in state [:outputs :params])
-                       outputs (when include-outputs (flatten-outputs state))
+                       outputs (when include-outputs (if (and decoder (not (and (empty? (:resources state)) (empty? (:outputs state))))) (decoder (:out pulled)) (flatten-outputs state)))
                        params (if (contains? (:outputs state) :params)
                                 (when (map? output) (:value output)) {})]
                    (if (and (valid-state? state) (map? params)

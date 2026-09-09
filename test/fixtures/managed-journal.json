@@ -1,0 +1,1522 @@
+[
+  {
+    "name": "managed first acquire",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/acquire",
+        "run_id": "run-a",
+        "write_id": "w-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_none_match": "*"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 1,
+        "write_id": "w-1",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed second owner refused",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "w-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/acquire",
+        "run_id": "run-a",
+        "write_id": "w-2",
+        "target_etag": "etag-1"
+      }
+    ],
+    "error": "coordination lock held",
+    "op": "coordination",
+    "expected": {
+      "error": "coordination lock held"
+    }
+  },
+  {
+    "name": "managed create intent",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-1",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "w-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-start",
+        "run_id": "run-a",
+        "write_id": "w-3",
+        "target_etag": "etag-1",
+        "operation_id": "create-a"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-1"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "w-3",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "running",
+          "operation": "create",
+          "operation_id": "create-a"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed running release refused",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-3",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 2,
+          "write_id": "w-3",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "create-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/release",
+        "run_id": "run-a",
+        "write_id": "w-4",
+        "target_etag": "etag-3"
+      }
+    ],
+    "error": "coordination operations outstanding",
+    "op": "coordination",
+    "expected": {
+      "error": "coordination operations outstanding"
+    }
+  },
+  {
+    "name": "managed duplicate start refused",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-3",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 2,
+          "write_id": "w-3",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "create-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-start",
+        "run_id": "run-a",
+        "write_id": "w-5",
+        "target_etag": "etag-3",
+        "operation_id": "create-b"
+      }
+    ],
+    "error": "managed transition refused",
+    "op": "coordination",
+    "expected": {
+      "error": "managed transition refused"
+    }
+  },
+  {
+    "name": "managed wrong completion refused",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-3",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 2,
+          "write_id": "w-3",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "create-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-complete",
+        "run_id": "run-a",
+        "write_id": "w-6",
+        "target_etag": "etag-3",
+        "operation_id": "wrong"
+      }
+    ],
+    "error": "managed transition refused",
+    "op": "coordination",
+    "expected": {
+      "error": "managed transition refused"
+    }
+  },
+  {
+    "name": "managed failure recorded",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-3",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 2,
+          "write_id": "w-3",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "create-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-fail",
+        "run_id": "run-a",
+        "write_id": "w-7",
+        "target_etag": "etag-3",
+        "operation_id": "create-a"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-3"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 3,
+        "write_id": "w-7",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "failed",
+          "operation": "create",
+          "operation_id": "create-a"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed blind create retry refused",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-7",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 3,
+          "write_id": "w-7",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "failed",
+            "operation": "create",
+            "operation_id": "create-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-start",
+        "run_id": "run-a",
+        "write_id": "w-8",
+        "target_etag": "etag-7",
+        "operation_id": "create-b"
+      }
+    ],
+    "error": "managed transition refused",
+    "op": "coordination",
+    "expected": {
+      "error": "managed transition refused"
+    }
+  },
+  {
+    "name": "managed readable retry",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-7",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 3,
+          "write_id": "w-7",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "failed",
+            "operation": "create",
+            "operation_id": "create-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-retry",
+        "run_id": "run-a",
+        "write_id": "w-9",
+        "target_etag": "etag-7",
+        "evidence": "readable-state"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-7"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 4,
+        "write_id": "w-9",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed retry intent",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-9",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 4,
+          "write_id": "w-9",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-start",
+        "run_id": "run-a",
+        "write_id": "w-10",
+        "target_etag": "etag-9",
+        "operation_id": "create-b"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-9"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 5,
+        "write_id": "w-10",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "running",
+          "operation": "create",
+          "operation_id": "create-b"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed ready",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-10",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 5,
+          "write_id": "w-10",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "running",
+            "operation": "create",
+            "operation_id": "create-b"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-complete",
+        "run_id": "run-a",
+        "write_id": "w-11",
+        "target_etag": "etag-10",
+        "operation_id": "create-b"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-10"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 6,
+        "write_id": "w-11",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "create-b"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed release ready",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-11",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 6,
+          "write_id": "w-11",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "create-b"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/release",
+        "run_id": "run-a",
+        "write_id": "w-12",
+        "target_etag": "etag-11"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-11"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 7,
+        "write_id": "w-12",
+        "lock": {
+          "state": "idle",
+          "run_id": null
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "create-b"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed reacquire",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-12",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 7,
+          "write_id": "w-12",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "create-b"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/acquire",
+        "run_id": "run-a",
+        "write_id": "w-13",
+        "target_etag": "etag-12"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-12"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 8,
+        "write_id": "w-13",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "ready",
+          "operation": "create",
+          "operation_id": "create-b"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed reused attempt refused",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-13",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 8,
+          "write_id": "w-13",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "create-b"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-start",
+        "run_id": "run-a",
+        "write_id": "w-14",
+        "target_etag": "etag-13",
+        "operation_id": "create-b"
+      }
+    ],
+    "error": "managed transition refused",
+    "op": "coordination",
+    "expected": {
+      "error": "managed transition refused"
+    }
+  },
+  {
+    "name": "managed destroy intent",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-13",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 8,
+          "write_id": "w-13",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "create-b"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-destroy",
+        "run_id": "run-a",
+        "write_id": "w-15",
+        "target_etag": "etag-13",
+        "operation_id": "destroy-a"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-13"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 9,
+        "write_id": "w-15",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "active",
+        "shared": {
+          "phase": "running",
+          "operation": "destroy",
+          "operation_id": "destroy-a"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed retired",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-15",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 9,
+          "write_id": "w-15",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "active",
+          "shared": {
+            "phase": "running",
+            "operation": "destroy",
+            "operation_id": "destroy-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-complete",
+        "run_id": "run-a",
+        "write_id": "w-16",
+        "target_etag": "etag-15",
+        "operation_id": "destroy-a"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-15"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 10,
+        "write_id": "w-16",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 1,
+        "status": "retired",
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-a"
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed retired create refused",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-16",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 10,
+          "write_id": "w-16",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "retired",
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/shared-start",
+        "run_id": "run-a",
+        "write_id": "w-17",
+        "target_etag": "etag-16",
+        "operation_id": "create-c"
+      }
+    ],
+    "error": "managed transition refused",
+    "op": "coordination",
+    "expected": {
+      "error": "managed transition refused"
+    }
+  },
+  {
+    "name": "managed recreate",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-16",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 10,
+          "write_id": "w-16",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 1,
+          "status": "retired",
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-a"
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/recreate",
+        "run_id": "run-a",
+        "write_id": "w-18",
+        "target_etag": "etag-16"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-16"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 11,
+        "write_id": "w-18",
+        "lock": {
+          "state": "held",
+          "run_id": "run-a"
+        },
+        "generation": 2,
+        "status": "active",
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed release declared",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-18",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 11,
+          "write_id": "w-18",
+          "lock": {
+            "state": "held",
+            "run_id": "run-a"
+          },
+          "generation": 2,
+          "status": "active",
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/release",
+        "run_id": "run-a",
+        "write_id": "w-19",
+        "target_etag": "etag-18"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-18"
+      },
+      "document": {
+        "schema_version": 3,
+        "kind": "managed-kubernetes",
+        "identity": {
+          "profile": "managed-demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "us-east-1"
+          }
+        },
+        "revision": 12,
+        "write_id": "w-19",
+        "lock": {
+          "state": "idle",
+          "run_id": null
+        },
+        "generation": 2,
+        "status": "active",
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        }
+      }
+    },
+    "op": "coordination"
+  },
+  {
+    "name": "managed rejects VM schema",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-19",
+        "document": {
+          "schema_version": 2,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 12,
+          "write_id": "w-19",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "generation": 2,
+          "status": "active",
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/acquire",
+        "run_id": "run-a",
+        "write_id": "w-20",
+        "target_etag": "etag-19"
+      }
+    ],
+    "error": "invalid managed document",
+    "op": "coordination",
+    "expected": {
+      "error": "invalid managed document"
+    }
+  },
+  {
+    "name": "managed rejects extra secret field",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-19",
+        "document": {
+          "schema_version": 3,
+          "kind": "managed-kubernetes",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 12,
+          "write_id": "w-19",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "generation": 2,
+          "status": "active",
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "secret": "no"
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/acquire",
+        "run_id": "run-a",
+        "write_id": "w-21",
+        "target_etag": "etag-19"
+      }
+    ],
+    "error": "invalid managed document",
+    "op": "coordination",
+    "expected": {
+      "error": "invalid managed document"
+    }
+  },
+  {
+    "name": "managed immutable kind",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-19",
+        "document": {
+          "schema_version": 3,
+          "kind": "vm",
+          "identity": {
+            "profile": "managed-demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "us-east-1"
+            }
+          },
+          "revision": 12,
+          "write_id": "w-19",
+          "lock": {
+            "state": "idle",
+            "run_id": null
+          },
+          "generation": 2,
+          "status": "active",
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          }
+        }
+      },
+      {
+        "profile": "managed-demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "us-east-1"
+        }
+      },
+      {
+        "type": "managed/acquire",
+        "run_id": "run-a",
+        "write_id": "w-22",
+        "target_etag": "etag-19"
+      }
+    ],
+    "error": "invalid managed document",
+    "op": "coordination",
+    "expected": {
+      "error": "invalid managed document"
+    }
+  }
+]

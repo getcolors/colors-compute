@@ -7,7 +7,7 @@ fan-out by cluster packages.
 The library implements shared and per-node create/delete operations, conditional
 deployment ownership, SSH lifecycle, remote state access, and credential-free
 planning in all three colors. Cluster operations use native Colors fan-out and
-join. Package migrations are underway, starting with AutoMQ. Existing deployments
+join. Eight VM cluster packages now consume the library. Existing deployments
 still require explicit state migration; the address planner cannot transfer them.
 
 All eight provider template sets have passed OpenTofu 1.12.5 schema validation.
@@ -40,6 +40,8 @@ isolation, backend locking, or safe migration of an existing deployment.
   failed sibling settlement, and complete inventories.
 - [OpenTofu execution](contracts/tofu-runtime.md): private saved plans, replacement
   refusal, and post-apply state checks.
+- [Managed Kubernetes](contracts/managed-kubernetes.md): Vultr and DigitalOcean
+  control planes, separate ownership, and private validated kubeconfig files.
 - [Migration review](migration/README.md): an AutoMQ state-address inventory
   that emits no resource attributes and cannot execute a state transfer.
 
@@ -87,7 +89,7 @@ provider schema checks, which use temporary directories and no credentials.
 python3 scripts/registry.py
 python3 scripts/provider_resources.py
 python3 scripts/provider_recipes.py
-python3 scripts/parity.py
+uv run --project blue python scripts/parity.py
 uv run --directory blue pytest -q
 cd green && bb test
 cd ../red && bun install --frozen-lockfile && bun test && bun run typecheck

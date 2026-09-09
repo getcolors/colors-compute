@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,6 +22,7 @@ def check_output(color, output, cases):
 def main():
     cases = json.loads((ROOT / "test/fixtures/contracts.json").read_text())
     cases.extend(json.loads((ROOT / "test/fixtures/coordination.json").read_text()))
+    cases.extend(json.loads((ROOT / "test/fixtures/managed-journal.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/journal.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/provider-requests.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/lifecycle.json").read_text()))
@@ -38,11 +40,12 @@ def main():
                       "args": [example["provider"], example["stage"], json.loads((directory / "inputs.json").read_text())],
                       "expected": {name: json.loads((directory / source).read_text())
                                    for name, source in example["files"].items()}})
+    cases.extend(json.loads((ROOT / "test/fixtures/managed-plans.json").read_text()))
     fixture = "".join(json.dumps({"op": case["op"], "args": case["args"]}) + "\n" for case in cases)
     for color, command in {
         "green": [os.environ.get("BB", "bb"), "scripts/contract-green.clj"],
         "red": [os.environ.get("BUN", "bun"), "scripts/contract-red.ts"],
-        "blue": [os.environ.get("PYTHON", "python3"), "scripts/contract-blue.py"],
+        "blue": [os.environ.get("PYTHON", sys.executable), "scripts/contract-blue.py"],
     }.items():
         result = subprocess.run(command, input=fixture, text=True, capture_output=True, cwd=ROOT, check=True)
         check_output(color, result.stdout, cases)

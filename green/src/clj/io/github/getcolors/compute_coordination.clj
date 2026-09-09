@@ -148,9 +148,12 @@
 (defn valid-document?
   "Validate an untrusted complete journal without exposing field contents."
   [document]
-  (try (boolean (document? document)) (catch Exception _ false)))
+  (try (boolean (if (= 3 (:schema_version document)) ((requiring-resolve 'io.github.getcolors.compute-managed-journal/managed-document-valid?) document) (document? document))) (catch Exception _ false)))
 
 (defn coordination [observation identity event]
-  (if (and (string? (:type event)) (str/starts-with? (:type event) "lifecycle/"))
+  (cond
+    (and (string? (:type event)) (str/starts-with? (:type event) "managed/"))
+    ((requiring-resolve 'io.github.getcolors.compute-managed-journal/managed-coordination) observation identity event)
+    (and (string? (:type event)) (str/starts-with? (:type event) "lifecycle/"))
     ((requiring-resolve 'io.github.getcolors.compute-lifecycle/lifecycle) observation identity event)
-    (schema-one-coordination observation identity event)))
+    :else (schema-one-coordination observation identity event)))

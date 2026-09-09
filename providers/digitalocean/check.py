@@ -48,6 +48,10 @@ def check():
     assert 'digitalocean_vpc' not in shared['resource']
     node = json.loads((ROOT / 'examples/node/node.tf.json').read_text())
     assert inputs['deployment_tag'] in node['resource']['digitalocean_droplet']['node']['tags']
+    managed_inputs = json.loads((ROOT / 'examples/managed-inputs.json').read_text())
+    managed_template = json.loads((ROOT / 'managed-kubernetes.tf.json.template').read_text())
+    managed_expected = json.loads((ROOT / 'examples/managed-kubernetes/managed-kubernetes.tf.json').read_text())
+    assert render(managed_template, managed_inputs) == managed_expected, 'managed Kubernetes render drift'
     assert render('{{value}}', {'value': True}) is True
     assert render('{{value}}', {'value': 24}) == 24
     assert render('{{value}}', {'value': ['a']}) == ['a']
@@ -81,7 +85,7 @@ def main():
         # Schema checks need registry access but no ambient provider/backend credentials.
         env = {key: value for key, value in os.environ.items()
                if key in ('PATH', 'HOME', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NIX_SSL_CERT_FILE', 'LANG')}
-        for mode in ('shared-keygen', 'shared-optout', 'node'):
+        for mode in ('shared-keygen', 'shared-optout', 'node', 'managed-kubernetes'):
             with tempfile.TemporaryDirectory(prefix='colors-compute-digitalocean-') as directory:
                 for source in (ROOT / 'examples' / mode).glob('*.tf.json'):
                     (Path(directory) / source.name).write_bytes(source.read_bytes())

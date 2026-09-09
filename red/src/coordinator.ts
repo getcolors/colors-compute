@@ -8,7 +8,7 @@ export interface CoordinatorOptions {
   read?:()=>Promise<unknown>;
   write?:(intention:Map)=>Promise<unknown>;
   idFactory?:()=>string;
-  eventPrefix?: '' | 'lifecycle/';
+  eventPrefix?: '' | 'lifecycle/' | 'managed/';
   reducer?: typeof coordination;
 }
 const object=(value:unknown):value is Map=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -47,7 +47,7 @@ export class Coordinator {
     this.write=options.write??(intention=>journalPut(saved,intention,environment));
     this.idFactory=options.idFactory??randomUUID;
     this.eventPrefix=options.eventPrefix??'';
-    if(this.eventPrefix!==''&&this.eventPrefix!=='lifecycle/')throw new Error('invalid coordination event prefix');
+    if(this.eventPrefix!==''&&this.eventPrefix!=='lifecycle/'&&this.eventPrefix!=='managed/')throw new Error('invalid coordination event prefix');
     this.reducer=options.reducer??coordination;
   }
   private serial<T>(operation:()=>Promise<T>|T):Promise<T> {

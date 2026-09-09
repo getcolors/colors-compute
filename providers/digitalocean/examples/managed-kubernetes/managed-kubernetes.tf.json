@@ -1,0 +1,50 @@
+{
+  "output": {
+    "kubeconfig_b64": {
+      "sensitive": true,
+      "value": "${base64encode(digitalocean_kubernetes_cluster.cluster.kube_config[0].raw_config)}"
+    },
+    "params": {
+      "value": {
+        "cluster_id": "${digitalocean_kubernetes_cluster.cluster.id}",
+        "endpoint": "${digitalocean_kubernetes_cluster.cluster.endpoint}",
+        "kind": "managed-kubernetes",
+        "name": "managed-fixture",
+        "pod_cidr": "${digitalocean_kubernetes_cluster.cluster.cluster_subnet}",
+        "provider": "digitalocean",
+        "service_cidr": "${digitalocean_kubernetes_cluster.cluster.service_subnet}"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "resource": {
+    "digitalocean_kubernetes_cluster": {
+      "cluster": {
+        "ha": false,
+        "lifecycle": {
+          "prevent_destroy": true
+        },
+        "name": "managed-fixture",
+        "node_pool": [
+          {
+            "name": "managed-fixture",
+            "node_count": 2,
+            "size": "s-2vcpu-4gb"
+          }
+        ],
+        "region": "ams3",
+        "version": "1.35.1-do.1"
+      }
+    }
+  },
+  "terraform": {
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "digitalocean": {
+    "options": {
+      "region": "digitalocean-region",
+      "version": "doks-version",
+      "size": "digitalocean-node-size",
+      "count": "digitalocean-node-count"
+    },
+    "planning_params": {
+      "pod_cidr": "10.244.0.0/16",
+      "service_cidr": "10.245.0.0/16"
+    },
+    "traits": {
+      "storage_class": null,
+      "pod_cidr_source": "observed",
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/do-loadbalancer-name": "{{name}}",
+        "service.beta.kubernetes.io/do-loadbalancer-type": "REGIONAL",
+        "service.beta.kubernetes.io/do-loadbalancer-protocol": "tcp"
+      }
+    },
+    "versions": {
+      "url": "https://api.digitalocean.com/v2/kubernetes/options",
+      "path": [
+        "options",
+        "versions"
+      ],
+      "value": "slug",
+      "credential": "COLORS_PAR_DO_TOKEN"
+    },
+    "version_pattern": "\\d+\\.\\d+\\.\\d+-do\\.\\d+"
+  },
+  "vultr": {
+    "options": {
+      "region": "vultr-region",
+      "version": "vultr-vke-version",
+      "size": "vultr-node-plan",
+      "count": "vultr-node-count"
+    },
+    "planning_params": {},
+    "traits": {
+      "storage_class": null,
+      "pod_cidr_source": "configured",
+      "pod_cidr_option": "vke-pod-cidr",
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/vultr-loadbalancer-protocol": "tcp"
+      }
+    },
+    "versions": {
+      "url": "https://api.vultr.com/v2/kubernetes/versions",
+      "path": [
+        "versions"
+      ],
+      "value": null,
+      "credential": "COLORS_PAR_VULTR_API_KEY"
+    },
+    "version_pattern": "v\\d+\\.\\d+\\.\\d+(?:\\+\\d+)?"
+  }
+}

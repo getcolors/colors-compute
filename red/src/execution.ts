@@ -15,7 +15,7 @@ const cancelled=(error:unknown)=>error instanceof Error&&error.name==='AbortErro
 const equal=(a:any,b:any):boolean=>a===b||(object(a)&&object(b)&&Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(key=>Object.hasOwn(b,key)&&equal(a[key],b[key])));
 function stateKey(opts:Map,key:unknown):boolean {
   if(!safe(opts.profile)||typeof key!=='string')return false;
-  if(key===`${opts.profile}/compute/shared.tfstate`)return true;
+  if((key===`${opts.profile}/compute/shared.tfstate`||key===`${opts.profile}/compute/managed-kubernetes.tfstate`))return true;
   const prefix=`${opts.profile}/compute/nodes/`;
   return key.startsWith(prefix)&&key.endsWith('.tfstate')&&safe(key.slice(prefix.length,-8));
 }
@@ -69,7 +69,7 @@ function validDocuments(documents:unknown,provider:string):documents is Map {
   return true;
 }
 /** Internal lifecycle primitive: requires a confirmed schema-2 attempt and ownership. */
-export async function convergeState(opts:Map,key:string,documents:unknown,operation:string,presence:unknown,environment:Env=process.env,runner:BackendRunner=executeBackendCommand,sleeper:(milliseconds:number)=>Promise<unknown>=Bun.sleep):Promise<Map> {
+export async function convergeStateDecoded(opts:Map,key:string,documents:unknown,operation:string,presence:unknown,environment:Env=process.env,runner:BackendRunner=executeBackendCommand,sleeper:(milliseconds:number)=>Promise<unknown>=Bun.sleep,decoder?:(output:string)=>Map):Promise<Map> {
   let directory:string|undefined;
   try {
     if(!object(opts)||!stateKey(opts,key)||!['create','delete','check'].includes(operation)||!object(presence)||Object.keys(presence).length!==1||!['present','absent'].includes(presence.status))return {status:'error'};
@@ -114,7 +114,7 @@ export async function convergeState(opts:Map,key:string,documents:unknown,operat
     const after=await execute(['state','pull']);if(operation==='delete'&&!after.trim())return {status:'destroyed'};
     const final=state(after);
     if(operation==='delete')return {status:empty(final.document)?'destroyed':'error'};
-    const outputs=stateOutputs(after);
+    const outputs=decoder?decoder(after):stateOutputs(after);
     if(final.params.provider!==provider||containsSecret(JSON.stringify(outputs),secrets))return {status:'error'};
     return {status:'ready',params:final.params,outputs};
   }catch(error){if(cancelled(error))throw error;return {status:'error'};}
@@ -122,3 +122,5 @@ export async function convergeState(opts:Map,key:string,documents:unknown,operat
 }
 
 export async function checkState(opts:Map,key:string,documents:unknown,environment:Env=process.env,runner:BackendRunner=executeBackendCommand):Promise<Map>{return convergeState(opts,key,documents,'check',{status:'present'},environment,runner);}
+
+export async function convergeState(opts:Map,key:string,documents:unknown,operation:string,presence:unknown,environment:Env=process.env,runner:BackendRunner=executeBackendCommand,sleeper:(milliseconds:number)=>Promise<unknown>=Bun.sleep):Promise<Map>{return convergeStateDecoded(opts,key,documents,operation,presence,environment,runner,sleeper);}

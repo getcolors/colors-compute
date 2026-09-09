@@ -48,7 +48,7 @@ jobs:
       - run: python3 scripts/endpoint_resources.py
       - run: python3 scripts/controller_resources.py
       - run: python3 scripts/execution_resources.py
-      - run: python3 scripts/parity.py
+      - run: uv run --project blue python scripts/parity.py
       - name: Check native backend readers against local synthetic state
         run: |
           python3 scripts/backend_probe.py --tofu "$(command -v tofu)" --blue-runner

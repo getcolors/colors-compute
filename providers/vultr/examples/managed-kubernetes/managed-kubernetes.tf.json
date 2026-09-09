@@ -1,0 +1,47 @@
+{
+  "output": {
+    "kubeconfig_b64": {
+      "sensitive": true,
+      "value": "${vultr_kubernetes.cluster.kube_config}"
+    },
+    "params": {
+      "value": {
+        "cluster_id": "${vultr_kubernetes.cluster.id}",
+        "endpoint": "${vultr_kubernetes.cluster.endpoint}",
+        "kind": "managed-kubernetes",
+        "name": "managed-fixture",
+        "provider": "vultr"
+      }
+    }
+  },
+  "provider": {
+    "vultr": {}
+  },
+  "resource": {
+    "vultr_kubernetes": {
+      "cluster": {
+        "label": "managed-fixture",
+        "lifecycle": {
+          "prevent_destroy": true
+        },
+        "node_pools": [
+          {
+            "label": "managed-fixture",
+            "node_quantity": 2,
+            "plan": "vc2-2c-4gb"
+          }
+        ],
+        "region": "ams",
+        "version": "v1.35.1"
+      }
+    }
+  },
+  "terraform": {
+    "required_providers": {
+      "vultr": {
+        "source": "vultr/vultr",
+        "version": "2.32.0"
+      }
+    }
+  }
+}
