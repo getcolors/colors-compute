@@ -34,7 +34,8 @@
      (if (nil? intent) (journal/journal-get opts env runner)
          (journal/journal-put opts intent env runner)))))
 (def operations
-  {"plan_managed_kubernetes" managed/plan-managed-kubernetes
+  {"managed_application_settings" managed/managed-application-settings
+   "plan_managed_kubernetes" managed/plan-managed-kubernetes
    "controller_artifact" controller/controller-artifact
    "deployment_requests" deployment/deployment-requests
    "plan_deployment" planning/plan-deployment

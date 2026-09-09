@@ -17,3 +17,13 @@ export async function managed_kubernetes(opts:Map,request:Map={},environment:Env
 export async function managed_version_preflight(opts:Map,environment:Env,http:((url:string,headers:Record<string,string>)=>Promise<Uint8Array>)=managedHTTP):Promise<boolean>{try{const recipe=(recipesData as Map)[opts["provider-compute"]],descriptor=recipe.versions,token=environment[descriptor.credential];if(missing(token)||/[\r\n]/.test(token!))return false;const raw=await http(descriptor.url,{Authorization:"Bearer "+token,Accept:"application/json"});if(raw.byteLength>2097152)return false;let value=JSON.parse(new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(raw));for(const field of descriptor.path)value=value[field];if(!Array.isArray(value)||!value.length)return false;const versions=descriptor.value?value.map(v=>v[descriptor.value]):value;return versions.every(v=>typeof v==="string")&&versions.includes(opts[recipe.options.version]);}catch{return false;}}
 
 function managedHTTP(url:string,headers:Record<string,string>):Promise<Uint8Array>{return new Promise((resolve,reject)=>{let request:ReturnType<typeof get>;const timer=setTimeout(()=>request.destroy(Error("request timeout")),30000);request=get(url,{headers},response=>{if(response.statusCode!==200){response.destroy();request.destroy(Error("request failed"));return;}const chunks:Buffer[]=[];let size=0;response.on("data",chunk=>{size+=chunk.length;if(size>2097152)request.destroy(Error("response too large"));else chunks.push(Buffer.from(chunk));});response.on("error",reject);response.on("end",()=>{clearTimeout(timer);resolve(Buffer.concat(chunks));});});request.on("error",error=>{clearTimeout(timer);reject(error);});});}
+
+export function managed_application_settings(opts:Map,params?:Map):Map {
+ const {provider}=resolveRequest(opts,{});
+ const observed=params===undefined?plan_managed_kubernetes(opts).params:publicParams(params,provider);
+ const traits=(recipesData as Map)[provider].traits;
+ const result:Map={load_balancer_annotations:Object.fromEntries(Object.entries(traits.load_balancer_annotations).map(([key,value])=>[key,String(value).replaceAll('{{name}}',observed.name)])),storage_class:traits.storage_class};
+ const podCIDR=traits.pod_cidr_source==='observed'?observed.pod_cidr:opts[traits.pod_cidr_option];
+ if(podCIDR!==undefined&&podCIDR!==null){publicParams({...observed,pod_cidr:podCIDR},provider);result.pod_cidr=podCIDR;}
+ return result;
+}

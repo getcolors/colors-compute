@@ -418,5 +418,141 @@
         }
       }
     }
+  },
+  {
+    "name": "managed digitalocean s3 application settings",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16"
+      }
+    ],
+    "expected": {
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/do-loadbalancer-name": "managed-fixture",
+        "service.beta.kubernetes.io/do-loadbalancer-type": "REGIONAL",
+        "service.beta.kubernetes.io/do-loadbalancer-protocol": "tcp"
+      },
+      "storage_class": null,
+      "pod_cidr": "10.244.0.0/16"
+    }
+  },
+  {
+    "name": "managed digitalocean r2 application settings",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "r2",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16"
+      }
+    ],
+    "expected": {
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/do-loadbalancer-name": "managed-fixture",
+        "service.beta.kubernetes.io/do-loadbalancer-type": "REGIONAL",
+        "service.beta.kubernetes.io/do-loadbalancer-protocol": "tcp"
+      },
+      "storage_class": null,
+      "pod_cidr": "10.244.0.0/16"
+    }
+  },
+  {
+    "name": "managed vultr s3 application settings",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16"
+      }
+    ],
+    "expected": {
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/vultr-loadbalancer-protocol": "tcp"
+      },
+      "storage_class": null,
+      "pod_cidr": "10.244.0.0/16"
+    }
+  },
+  {
+    "name": "managed vultr r2 application settings",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "r2",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16"
+      }
+    ],
+    "expected": {
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/vultr-loadbalancer-protocol": "tcp"
+      },
+      "storage_class": null,
+      "pod_cidr": "10.244.0.0/16"
+    }
   }
 ]

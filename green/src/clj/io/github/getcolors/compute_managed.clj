@@ -41,6 +41,19 @@
      {:status "planned" :params (merge {:provider provider :kind "managed-kubernetes" :name (:name inputs) :cluster_id "planned-cluster" :endpoint "https://192.0.2.10"}
                                        (get-in recipes [(keyword provider) :planning_params]))
       :state_key state-key :documents (assoc (compute/provider-plan provider "managed-kubernetes" inputs) "backend.tf.json" (:config (compute/backend-plan opts state-key)))})))
+(defn managed-application-settings
+  "Provider details consumed by application Kubernetes manifests."
+  ([opts] (managed-application-settings opts nil))
+  ([opts params]
+   (let [{:keys [provider]} (resolve-request opts {})
+         observed (if (nil? params) (:params (plan-managed-kubernetes opts)) (access/public-params params provider))
+         traits (get-in recipes [(keyword provider) :traits])
+         pod-cidr (if (= "observed" (:pod_cidr_source traits)) (:pod_cidr observed) (get opts (keyword (:pod_cidr_option traits))))]
+     (when (some? pod-cidr) (access/public-params (assoc observed :pod_cidr pod-cidr) provider))
+     (cond-> {:load_balancer_annotations (into {} (map (fn [[key value]] [key (str/replace value "{{name}}" (:name observed))]) (:load_balancer_annotations traits)))
+              :storage_class (:storage_class traits)}
+       (some? pod-cidr) (assoc :pod_cidr pod-cidr)))))
+
 (defn ^:no-doc read-managed-state
   ([opts key environment] (read-managed-state opts key environment false runtime/run-command))
   ([opts key environment write] (read-managed-state opts key environment write runtime/run-command))

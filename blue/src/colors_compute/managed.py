@@ -84,6 +84,22 @@ def plan_managed_kubernetes(opts, request=None):
             'documents': {**provider_plan(provider, 'managed-kubernetes', inputs), 'backend.tf.json': backend_plan(opts, key)['config']}}
 
 
+def managed_application_settings(opts, params=None):
+    """Return provider details needed by application Kubernetes manifests."""
+    provider, _, _ = _resolve(opts, {})
+    params = plan_managed_kubernetes(opts)['params'] if params is None else public_params(params, provider)
+    traits = _recipes()[provider]['traits']
+    result = {'load_balancer_annotations': {
+        key: value.replace('{{name}}', params['name'])
+        for key, value in traits['load_balancer_annotations'].items()},
+        'storage_class': traits['storage_class']}
+    pod_cidr = params.get('pod_cidr') if traits['pod_cidr_source'] == 'observed' else opts.get(traits['pod_cidr_option'])
+    if pod_cidr is not None:
+        public_params({**params, 'pod_cidr': pod_cidr}, provider)
+        result['pod_cidr'] = pod_cidr
+    return result
+
+
 async def _read_managed_state(opts, key, environment=None, runner=None, write=False):
     decoder = AccessDecoder(opts, environment)
     result = await _read_state(opts, key, environment, runner, True, decoder)

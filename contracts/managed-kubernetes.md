@@ -25,6 +25,11 @@ params, stdout, an exception, argv, a build artifact, or generated template inpu
 The return value may name the kubeconfig path. State and temporary directories
 retain the existing secret handling requirements.
 
+`managed_application_settings` returns provider-selected load-balancer annotations,
+the storage-class override, and the pod CIDR used by application manifests.
+Vultr retains its configured pod range; DigitalOcean uses the observed range.
+These mappings belong in the library's managed provider descriptor.
+
 ## Ownership
 
 The journal uses the same `<profile>/compute/coordination.json` key as VM
