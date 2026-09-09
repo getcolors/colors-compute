@@ -25,12 +25,14 @@
   (let [provider (:provider-compute opts)
         entry (when (string? provider) (get-in compute/registry [:compute (keyword provider)]))]
     (when-not entry (refuse "invalid SSH compute provider"))
-    (let [setting (:ssh-setting entry) key (keyword setting)
+    (let [settings (filter #(contains? opts (keyword %)) (cons (:ssh-setting entry) (map name (keys (:ssh-aliases entry)))))
+          _ (when (> (count settings) 1) (refuse "ambiguous external SSH key settings"))
+          setting (first settings) key (when setting (keyword setting))
           identity-key (if (contains? opts :ssh-private-key-path) :ssh-private-key-path
                           (keyword (str provider "-ssh-private-key")))]
       (if (contains? opts key)
         (do
-          (when-not (reference? (get opts key)) (refuse "invalid external SSH key reference"))
+          (when-not (if (contains? (:ssh-aliases entry) key) (nonblank? (get opts key)) (reference? (get opts key))) (refuse "invalid external SSH key reference"))
           (when (and (contains? opts identity-key) (not (nonblank? (get opts identity-key))))
             (refuse "invalid external SSH identity reference"))
           (cond-> {:mode "external" :setting setting :reference (get opts key)}

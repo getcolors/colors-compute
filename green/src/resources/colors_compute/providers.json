@@ -78,7 +78,10 @@
       "tofu-env": {
         "do-token": "DIGITALOCEAN_TOKEN"
       },
-      "user": "root"
+      "user": "root",
+      "ssh-aliases": {
+        "digitalocean-ssh-authorized-keys": "fingerprint_file"
+      }
     },
     "google": {
       "registration": false,

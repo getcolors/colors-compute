@@ -5,7 +5,7 @@ registrations remain shared-resource lifecycle work, not one registration per
 node. This API neither creates cloud registrations nor grants dispatch authority.
 
 `prepare_keypair(opts, ownership, environment, record_intent, record_prepared,
-runner)` uses provider registry `ssh-setting` presence to select mode. An absent
+runner)` uses provider registry `ssh-setting` and `ssh-aliases` presence to select mode. An absent
 setting selects managed keygen. A present valid nonblank string or nonempty list
 of nonblank strings/positive integer IDs selects external mode and returns
 `{mode:"external",setting:<registry setting>,reference:<unchanged reference>}`.
@@ -71,3 +71,13 @@ verification and prepared acknowledgement. A competing or stale reservation
 refuses explicit recovery and is never deleted by a process that did not create
 it. Normal completion/cancellation removes only its own reservation. This
 protects same-profile deployments even when their remote backend locks differ.
+
+The DigitalOcean public-file alias `digitalocean-ssh-authorized-keys` selects
+external ownership. It is mutually exclusive with `digitalocean-ssh-keys`, even
+when both settings appear to identify the same key. Real request resolution
+reads only a regular, non-symlink `.pub` file and converts its validated SSH wire
+blob to the colon-separated MD5 fingerprint accepted by the provider. The
+library neither creates nor deletes that account key. Build validates the path
+shape and uses a deterministic all-zero fingerprint without reading the file.
+Applications whose contract retires this legacy option must remove it before
+calling the library; otherwise explicit presence selects external ownership.

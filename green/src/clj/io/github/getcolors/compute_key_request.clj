@@ -1,10 +1,12 @@
 (ns io.github.getcolors.compute-key-request
   (:require [clojure.string :as str]
+            [io.github.getcolors.compute :as compute]
             [io.github.getcolors.compute-deployment-request :as deployment]
             [io.github.getcolors.compute-ssh :as ssh])
   (:import [java.nio.file Files Paths LinkOption OpenOption StandardOpenOption]
            [java.nio.charset StandardCharsets]
            [java.nio ByteBuffer]
+           [java.security MessageDigest]
            [java.util Base64]))
 (defn- fail [message] (throw (ex-info message {})))
 (defn- missing? [value] (or (nil? value) (and (string? value) (or (str/blank? value) (= "REPLACE_ME" (str/upper-case (str/trim value)))))))
@@ -21,15 +23,15 @@
           (when-not (= algorithm (String. name-bytes StandardCharsets/UTF_8)) (throw (Exception.)))))
       (catch Exception _ (fail "invalid external SSH public key")))
     value))
-(defn key-request
-  ([opts prepared] (key-request opts prepared (into {} (System/getenv))))
+(defn- resolve-key-request
+  ([opts prepared] (resolve-key-request opts prepared (into {} (System/getenv))))
   ([opts prepared environment]
    (case (:mode prepared)
      "managed" {:mode "managed" :public_key (:public_key prepared)}
      "external"
      (let [provider (:provider-compute opts) recipe (when (string? provider) (get deployment/recipes (keyword provider)))
            _ (when-not recipe (fail "compute provider recipe unavailable"))
-           kind (:external_key_kind recipe) reference (:reference prepared) references (if (vector? reference) reference [reference])]
+           kind (or (get-in compute/registry [:compute (keyword provider) :ssh-aliases (keyword (:setting prepared))]) (:external_key_kind recipe)) reference (:reference prepared) references (if (vector? reference) reference [reference])]
        (if (= kind "ids")
          (do (when-not (and (seq references) (every? #(or (and (string? %) (not (missing? %)))
                                                                          (and (number? %) (< 0 % 9007199254740992) (== % (Math/floor (double %))))) references))
@@ -38,11 +40,13 @@
          (do
            (when-not (and (= 1 (count references)) (string? (first references)) (not (missing? (first references))))
              (fail "one external SSH public key is required"))
+           (when (and (= kind "fingerprint_file") (or (not (str/ends-with? (first references) ".pub")) (re-find #"[\u0000\r\n]" (first references))))
+             (fail "external SSH key must name a regular .pub file"))
            {:mode "external" :public_key
             (cond
               (or (contains? #{:build "build"} (:green/event opts)) (true? (:green/dry-run opts))) ssh/placeholder-public
               (= kind "content") (public-key (first references))
-              (= kind "public_file")
+              (contains? #{"public_file" "fingerprint_file"} kind)
               (let [filename (first references) filename (if (str/starts-with? filename "~/") (str (get environment "HOME" (System/getProperty "user.home")) "/" (subs filename 2)) filename)
                     path (Paths/get filename (make-array String 0)) nofollow (into-array LinkOption [LinkOption/NOFOLLOW_LINKS])]
                 (when-not (and (str/ends-with? filename ".pub") (Files/isRegularFile path nofollow))
@@ -55,3 +59,17 @@
                   (catch Exception _ (fail "invalid external SSH public key file"))))
               :else (fail "unsupported external SSH key reference"))})))
      (fail "invalid compute key request"))))
+
+(defn key-request
+  ([opts prepared] (key-request opts prepared (into {} (System/getenv))))
+  ([opts prepared environment]
+   (let [result (resolve-key-request opts prepared environment)
+         kind (get-in compute/registry [:compute (keyword (:provider-compute opts)) :ssh-aliases (keyword (:setting prepared))])]
+     (if (and (= "external" (:mode prepared)) (= "fingerprint_file" kind))
+       (let [fingerprint (if (= ssh/placeholder-public (:public_key result))
+                           (str/join ":" (repeat 16 "00"))
+                           (str/join ":" (map #(format "%02x" (bit-and 255 %))
+                             (.digest (MessageDigest/getInstance "MD5")
+                               (.decode (Base64/getDecoder) ^String (second (str/split (:public_key result) #"\s+")))))))]
+         {:mode "external" :ids [fingerprint] :reference fingerprint})
+       result))))

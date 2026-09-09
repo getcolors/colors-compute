@@ -37,6 +37,7 @@ def main():
     cases.extend(json.loads((ROOT / "test/fixtures/network-none.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/yandex-static-ip.json").read_text()))
     cases.extend(json.loads((ROOT / "test/fixtures/network-reference.json").read_text()))
+    cases.extend(json.loads((ROOT / "test/fixtures/ssh-aliases.json").read_text()))
     for example in json.loads((ROOT / "test/fixtures/provider-plans.json").read_text()):
         directory = ROOT / "providers" / example["provider"] / "examples"
         cases.append({"name": f'packaged {example["provider"]} {example["stage"]}',

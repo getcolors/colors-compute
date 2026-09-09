@@ -28,3 +28,30 @@ def test_ids_and_content_have_distinct_semantics():
 def test_planning_never_reads_supplied_path():
     result = key_request({'provider-compute': 'azure', 'blue/event': 'build'}, {'mode': 'external', 'reference': '/missing.pub'})
     assert 'PLACEHOLDER' in result['public_key']
+
+
+def test_do_public_file_alias_keeps_external_ownership(tmp_path):
+    import hashlib
+    import base64
+    from colors_compute.ssh import _mode
+    opts = {'profile': 'demo', 'provider-compute': 'digitalocean', 'digitalocean-ssh-authorized-keys': '~/operator.pub'}
+    prepared = _mode(opts)
+    assert prepared['mode'] == 'external'
+    assert key_request({**opts, 'blue/event': 'build'}, prepared)['ids'] == [':'.join(['00'] * 16)]
+    path = tmp_path / 'operator.pub'
+    path.write_text(PUBLIC)
+    expected = ':'.join(f'{b:02x}' for b in hashlib.md5(base64.b64decode(PUBLIC.split()[1])).digest())
+    assert key_request(opts, prepared, {'HOME': str(tmp_path)}) == {'mode': 'external', 'ids': [expected], 'reference': expected}
+    assert path.read_text() == PUBLIC
+    with pytest.raises(ValueError, match='ambiguous'):
+        _mode({**opts, 'digitalocean-ssh-keys': ['123']})
+    with pytest.raises(ValueError, match='invalid external'):
+        _mode({**opts, 'digitalocean-ssh-authorized-keys': []})
+    path.write_text('not a public key')
+    with pytest.raises(ValueError, match='invalid external SSH public key file'):
+        key_request(opts, prepared, {'HOME': str(tmp_path)})
+    path.unlink()
+    path.symlink_to(tmp_path / 'missing.pub')
+    with pytest.raises(ValueError, match='regular .pub'):
+        key_request(opts, prepared, {'HOME': str(tmp_path)})
+    assert _mode({'profile': 'demo', 'provider-compute': 'digitalocean'}) == {'mode': 'managed'}

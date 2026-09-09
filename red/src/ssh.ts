@@ -14,8 +14,9 @@ const cancelled=(e:unknown)=>e instanceof Error&&e.name==='AbortError';
 export function mode(opts:Map):Map {
   if(!safe(opts.profile))refuse(':profile must be a safe identifier');
   const provider=opts['provider-compute'];if(typeof provider!=='string'||!Object.hasOwn(registry.compute,provider))refuse('invalid SSH compute provider');
-  const setting=(registry.compute as Map)[provider]['ssh-setting'];if(!Object.hasOwn(opts,setting))return {mode:'managed'};
-  const value=opts[setting];
+  const entry=(registry.compute as Map)[provider],settings=[entry['ssh-setting'],...Object.keys(entry['ssh-aliases']??{})].filter(s=>Object.hasOwn(opts,s));
+  if(settings.length>1)refuse('ambiguous external SSH key settings');if(!settings.length)return {mode:'managed'};const setting=settings[0];
+  const value=opts[setting];if(Object.hasOwn(entry['ssh-aliases']??{},setting)&&!nonblank(value))refuse('invalid external SSH key reference');
   if(!(nonblank(value)||(Array.isArray(value)&&value.length&&value.every(v=>nonblank(v)||(typeof v==='number'&&Number.isSafeInteger(v)&&v>0)))))refuse('invalid external SSH key reference');
   const result:Map={mode:'external',setting,reference:structuredClone(value)};
   const identitySetting=Object.hasOwn(opts,'ssh-private-key-path')?'ssh-private-key-path':provider+'-ssh-private-key';

@@ -1,5 +1,7 @@
 (ns io.github.getcolors.compute-ssh-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [cheshire.core :as json]
+            [io.github.getcolors.compute-key-request :as key-request]
+            [clojure.test :refer [deftest is]]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [io.github.getcolors.compute-ssh :as ssh]
@@ -181,3 +183,22 @@
         (is (thrown-with-msg? Exception #"SSH key reservation exists"
                               (ssh/cleanup-keypair! opts {:status "fresh"} {:all_resources_destroyed true} env)))
         (is (= "another-owner" (slurp reservation)))))))
+
+(deftest public-file-alias-keeps-external-ownership
+  (with-home
+    (fn [root env]
+      (let [opts {:profile "demo" :provider-compute "digitalocean" :digitalocean-ssh-authorized-keys "~/operator.pub"}
+            prepared (ssh/mode opts) path (str root "/operator.pub")
+            public (get-in (first (json/parse-string (slurp "../test/fixtures/provider-requests.json") true)) [:args 2 :key :public_key])]
+        (is (= "external" (:mode prepared)))
+        (is (= [(str/join ":" (repeat 16 "00"))] (:ids (key-request/key-request (assoc opts :green/event :build) prepared env))))
+        (spit path public)
+        (let [result (key-request/key-request opts prepared env)]
+          (is (re-matches #"[0-9a-f]{2}(:[0-9a-f]{2}){15}" (:reference result)))
+          (is (= [(:reference result)] (:ids result)))
+          (is (= public (slurp path))))
+        (is (thrown-with-msg? Exception #"ambiguous" (ssh/mode (assoc opts :digitalocean-ssh-keys ["123"]))))
+        (is (thrown-with-msg? Exception #"invalid external" (ssh/mode (assoc opts :digitalocean-ssh-authorized-keys []))))
+        (spit path "not a public key")
+        (is (thrown-with-msg? Exception #"invalid external SSH public key file" (key-request/key-request opts prepared env)))
+        (is (= {:mode "managed"} (ssh/mode (dissoc opts :digitalocean-ssh-authorized-keys))))))))

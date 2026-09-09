@@ -36,10 +36,15 @@ def _mode(opts):
     entry = registry()['compute'].get(provider) if isinstance(provider, str) else None
     if entry is None:
         _refuse('invalid SSH compute provider')
-    setting = entry['ssh-setting']
-    if setting not in opts:
+    settings = [name for name in [entry['ssh-setting'], *entry.get('ssh-aliases', {})] if name in opts]
+    if len(settings) > 1:
+        _refuse('ambiguous external SSH key settings')
+    if not settings:
         return {'mode': 'managed'}
+    setting = settings[0]
     value = opts[setting]
+    if setting in entry.get('ssh-aliases', {}) and not _nonblank(value):
+        _refuse('invalid external SSH key reference')
     if not (_nonblank(value) or isinstance(value, list) and value and all(
             _nonblank(v) or type(v) in (int, float) and 0 < v <= 9007199254740991 and v == int(v) for v in value)):
         _refuse('invalid external SSH key reference')
