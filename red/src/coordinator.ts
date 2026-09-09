@@ -91,7 +91,7 @@ export class Coordinator {
   private event(type:string,extra:Map={}):Map {
     return {type:this.eventPrefix+type,run_id:this.runId,write_id:this.id(),target_etag:this.observation!.etag,...extra};
   }
-  acquire():Promise<void> {
+  acquire(requireExisting=false):Promise<void> {
     return this.serial(async()=>{
       if(this.poisoned)this.uncertain();
       if(this.attempted)throw new Error('coordination already acquired');
@@ -99,6 +99,9 @@ export class Coordinator {
       let observed:unknown;
       try{observed=await this.read();}catch(error){this.uncertain(error);}
       if(!(exact(observed,['status'])&&observed.status==='absent')&&!(exact(observed,['status','etag','document'])&&observed.status==='present'&&nonblank(observed.etag)))this.uncertain();
+      if(typeof requireExisting!=='boolean')throw new Error('existing compute ownership required');
+      if(requireExisting){const doc=observed.document;
+        if(!(observed.status==='present'&&doc?.status==='active'&&doc.key?.phase==='prepared'&&['ready','failed'].includes(doc.shared?.phase)&&Object.values(doc.nodes??{}).some((node:any)=>['ready','failed'].includes(node.phase))))throw new Error('existing compute ownership required');}
       await this.commit(observed,{type:this.eventPrefix+'acquire',run_id:this.runId,write_id:this.id(),target_etag:observed.status==='present'?observed.etag:null});
       this.acquired=true;
     });

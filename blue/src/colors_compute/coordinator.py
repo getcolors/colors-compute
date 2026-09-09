@@ -81,7 +81,7 @@ class Coordinator:
         self._confirmed = deepcopy(confirmed)
         return deepcopy(confirmed)
 
-    async def acquire(self):
+    async def acquire(self, require_existing=False):
         async with self._mutex:
             if self._phase == 'poisoned':
                 self._uncertain()
@@ -100,6 +100,15 @@ class Coordinator:
                 self._uncertain()
             if observed == {'status': 'error'}:
                 self._uncertain()
+            if type(require_existing) is not bool:
+                raise ValueError('existing compute ownership required')
+            if require_existing:
+                doc = observed.get('document', {})
+                if not (observed.get('status') == 'present' and doc.get('status') == 'active'
+                        and doc.get('key', {}).get('phase') == 'prepared'
+                        and doc.get('shared', {}).get('phase') in ('ready', 'failed')
+                        and any(node.get('phase') in ('ready', 'failed') for node in doc.get('nodes', {}).values())):
+                    raise ValueError('existing compute ownership required')
             result = await self._commit(observed, 'acquire')
             self._phase = 'acquired'
             return result

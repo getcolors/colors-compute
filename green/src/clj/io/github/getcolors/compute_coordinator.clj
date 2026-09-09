@@ -112,7 +112,9 @@
     (merge {:type (str (:event-prefix coordinator) type) :run_id (:run-id state) :write_id (fresh-id! coordinator)
             :target_etag (get-in state [:observation :etag])} extra)))
 
-(defn acquire! [coordinator]
+(defn acquire!
+  ([coordinator] (acquire! coordinator false))
+  ([coordinator require-existing?]
   (serialized coordinator
     (when (:attempted? @(:state coordinator)) (refuse "coordination already acquired"))
     (swap! (:state coordinator) assoc :attempted? true)
@@ -120,10 +122,18 @@
                            (catch InterruptedException error (poison! coordinator) (throw error))
                            (catch Exception _ (uncertain! coordinator)))]
       (when-not (observation? observation) (uncertain! coordinator))
+      (when-not (boolean? require-existing?) (refuse "existing compute ownership required"))
+      (when require-existing?
+        (let [doc (:document observation)]
+          (when-not (and (= "present" (:status observation)) (= "active" (:status doc))
+                         (= "prepared" (get-in doc [:key :phase]))
+                         (contains? #{"ready" "failed"} (get-in doc [:shared :phase]))
+                         (some #(contains? #{"ready" "failed"} (:phase %)) (vals (:nodes doc))))
+            (refuse "existing compute ownership required"))))
       (swap! (:state coordinator) assoc :observation observation :run-id (fresh-id! coordinator))
       (let [result (commit! coordinator (event! coordinator "acquire" {}))]
         (swap! (:state coordinator) assoc :phase :held)
-        result))))
+        result)))))
 
 (defn declare! [coordinator topology]
   (serialized coordinator

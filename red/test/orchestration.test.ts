@@ -66,3 +66,23 @@ test('missing compute credentials are named after state ownership checks',async(
  const s=new Runtime(),other:any=s.deps();delete other.compute_credential_errors;s.states['demo/compute/shared.tfstate']={params:{provider:'vultr'}};
  expect(await orchestrate(opts,[{count:1}],{},{},other)).toEqual({status:'error'});expect(s.events).toEqual([]);
 });
+
+test('existing state guard refuses fresh, uninitialized and retired ownership before writes',async()=>{
+ const r=new Runtime(),guarded={...opts,'compute-require-existing-state':true};
+ const run=()=>orchestrate(guarded,[{count:2}],{},{},r.deps());
+ expect(await run()).toEqual({status:'error'});expect(r.writes).toBe(0);expect(r.events).toEqual([]);
+ const owner=r.deps().coordinator(opts,{eventPrefix:'lifecycle/'});await owner.acquire();await owner.release();
+ const initial=r.writes;expect(await run()).toEqual({status:'error'});expect(r.writes).toBe(initial);
+ expect((await r.run()).status).toBe('ready');expect((await run()).status).toBe('ready');
+ expect(await r.run(2,'delete')).toEqual({status:'destroyed'});const before=r.writes;r.events=[];
+ expect(await run()).toEqual({status:'error'});expect(r.writes).toBe(before);expect(r.events).toEqual([]);
+ expect(await orchestrate({...guarded,'red/event':'delete'},[{count:2}],{},{},r.deps())).toEqual({status:'destroyed'});
+});
+test('existing state guard requires actual booleans',async()=>{
+ const {validate}=await import('../src/index.ts');
+ for(const value of [null,'true',1,[]]){
+  const r=new Runtime(),input={...opts,'compute-require-existing-state':value};
+  expect(validate(input)).toContain(':compute-require-existing-state must be a boolean');
+  expect(await orchestrate(input,[{count:1}],{},{},r.deps())).toEqual({status:'error'});expect(r.writes).toBe(0);
+ }
+});

@@ -208,3 +208,38 @@ async def test_missing_credentials_follow_ownership_checks_and_precede_key_gener
     del dependencies['compute_credential_errors']
     assert await orchestrate(OPTS, [{'count': 1}], {}, {}, dependencies) == {'status': 'error'}
     assert not runtime.prepared and runtime.events == []
+
+@pytest.mark.asyncio
+async def test_existing_state_guard_refuses_fresh_and_retired_without_writes():
+    runtime = Runtime()
+    guarded = {**OPTS, 'compute-require-existing-state': True}
+    async def run():
+        return await orchestrate(guarded, [{'count': 2}], {}, {}, runtime.dependencies())
+    assert await run() == {'status': 'error'}
+    assert runtime.store.calls == 0 and runtime.events == [] and not runtime.prepared
+    assert (await runtime.run())['status'] == 'ready'
+    assert (await run())['status'] == 'ready'
+    assert await runtime.run(event='delete') == {'status': 'destroyed'}
+    before = runtime.store.calls
+    runtime.events.clear()
+    assert await run() == {'status': 'error'}
+    assert runtime.store.calls == before and runtime.events == []
+    assert await orchestrate({**guarded, 'blue/event': 'delete', 'compute-prevent-destroy': False},
+                             [{'count': 2}], {}, {}, runtime.dependencies()) == {'status': 'destroyed'}
+
+@pytest.mark.asyncio
+async def test_existing_state_guard_refuses_uninitialized_and_invalid_options():
+    from colors_compute.contract import validate
+    for value in (None, 'true', 1, []):
+        runtime = Runtime()
+        opts = {**OPTS, 'compute-require-existing-state': value}
+        assert ':compute-require-existing-state must be a boolean' in validate(opts)
+        assert await orchestrate(opts, [{'count': 1}], {}, {}, runtime.dependencies()) == {'status': 'error'}
+        assert runtime.store.calls == 0
+    runtime = Runtime()
+    owner = runtime.coordinator(OPTS, {}, event_prefix='lifecycle/')
+    await owner.acquire()
+    await owner.release()
+    before = runtime.store.calls
+    assert await orchestrate({**OPTS, 'compute-require-existing-state': True}, [{'count': 1}], {}, {}, runtime.dependencies()) == {'status': 'error'}
+    assert runtime.store.calls == before

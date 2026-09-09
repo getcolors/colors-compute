@@ -102,7 +102,8 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         require(operation != 'delete' or opts.get('compute-prevent-destroy') is False)
         keys = state_keys(opts['profile'], [node['node_id'] for node in declarations])
         coordinator = deps.get('coordinator', Coordinator)(opts, env, event_prefix='lifecycle/')
-        await coordinator.acquire()
+        require('compute-require-existing-state' not in opts or type(opts['compute-require-existing-state']) is bool)
+        await coordinator.acquire(require_existing=operation == 'create' and opts.get('compute-require-existing-state', False))
         acquired = True
         doc = await snapshot()
         if operation == 'delete' and doc['status'] == 'retired':

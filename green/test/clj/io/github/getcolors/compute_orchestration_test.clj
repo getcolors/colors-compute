@@ -123,3 +123,32 @@
     (is (= "present" (:status (inspection/read-deployment opts {} reader requirements))))
     (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
     (is (= "destroyed" (:status (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps))))))
+
+(deftest existing-state-guard-refuses-without-writes-and-allows-owned-convergence
+  (let [{:keys [deps calls storage]} (world)
+        guarded (assoc opts :compute-require-existing-state true)
+        run #(o/orchestrate guarded topology requirements {} deps)]
+    (is (= {:status "error"} (run)))
+    (is (= 0 (:writes @(:state storage))))
+    (is (empty? @calls))
+    (let [owner ((:coordinator deps) opts {})]
+      (c/acquire! owner) (c/release! owner))
+    (let [before (:writes @(:state storage))]
+      (is (= {:status "error"} (run)))
+      (is (= before (:writes @(:state storage)))))
+    (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
+    (is (= "ready" (:status (run))))
+    (is (= {:status "destroyed"} (o/orchestrate (assoc guarded :green/event :delete) topology requirements {} deps)))
+    (reset! calls [])
+    (let [before (:writes @(:state storage))]
+      (is (= {:status "error"} (run)))
+      (is (= before (:writes @(:state storage))))
+      (is (empty? @calls)))
+    (is (= {:status "destroyed"} (o/orchestrate (assoc guarded :green/event :delete) topology requirements {} deps)))))
+
+(deftest existing-state-guard-requires-boolean
+  (doseq [value [nil "true" 1 []]]
+    (let [{:keys [deps storage]} (world) input (assoc opts :compute-require-existing-state value)]
+      (is (some #{":compute-require-existing-state must be a boolean"} (io.github.getcolors.compute/validate input)))
+      (is (= {:status "error"} (o/orchestrate input topology requirements {} deps)))
+      (is (= 0 (:writes @(:state storage)))))))

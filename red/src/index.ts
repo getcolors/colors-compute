@@ -31,6 +31,7 @@ export function validate(opts: Map): string[] {
   const errors = selections(opts);
   if (missing(opts.profile)) errors.push(':profile is required');
   else if (!safe(opts.profile)) errors.push(':profile must be a safe identifier');
+  if (Object.hasOwn(opts,"compute-require-existing-state") && typeof opts["compute-require-existing-state"] !== "boolean") errors.push(":compute-require-existing-state must be a boolean");
   const required = new Set<string>(selected(opts).flatMap(e => e.required));
   for (const key of [...required].sort()) if (missing(opts[key])) errors.push(`:${key} is required`);
   for (const entry of selected(opts)) for (const alternatives of entry['required-one-of'] ?? []) {

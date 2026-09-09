@@ -47,7 +47,8 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
   const operation=opts['red/event']??'create';require(operation!=='delete'||opts['compute-prevent-destroy']===false);
   keys=state_keys(opts.profile,declarations.map(node=>node.node_id));
   coordinator=deps.coordinator?deps.coordinator(opts,{environment:env,eventPrefix:'lifecycle/'}):new Coordinator(opts,{environment:env,eventPrefix:'lifecycle/'});
-  await coordinator.acquire();acquired=true;let doc=await snapshot();
+  require(!Object.hasOwn(opts,'compute-require-existing-state')||typeof opts['compute-require-existing-state']==='boolean');
+  await coordinator.acquire(operation==='create'&&(opts['compute-require-existing-state']??false));acquired=true;let doc=await snapshot();
   if(operation==='delete'&&doc.status==='retired')return {status:'destroyed'};
   if(operation==='create'&&doc.status==='retired'){await coordinator.transition('recreate');doc=await snapshot();}
   require(operation==='create'?doc.status==='active':['active','deleting'].includes(doc.status));

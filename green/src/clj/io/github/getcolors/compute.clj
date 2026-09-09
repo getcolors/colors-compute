@@ -19,6 +19,8 @@
 
 (defn validate [opts]
   (into (cond-> (selection-errors opts)
+          (and (contains? opts :compute-require-existing-state) (not (boolean? (:compute-require-existing-state opts))))
+          (conj ":compute-require-existing-state must be a boolean")
           (missing? (:profile opts)) (conj ":profile is required")
           (and (not (missing? (:profile opts))) (not (safe? (:profile opts)))) (conj ":profile must be a safe identifier"))
         (concat (for [key (sort (distinct (concat (:required (entry :compute (:provider-compute opts)))

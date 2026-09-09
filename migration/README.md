@@ -74,3 +74,17 @@ Next: reconcile destination addresses with implemented provider templates,
 add legacy deployment topology validation and backend ownership checks, then
 review an operator-supplied state snapshot. State backup, locking, transfer,
 rollback, and replacement-free plan verification are not implemented here.
+
+## Preventing fresh creation during rollout
+
+Set `compute-require-existing-state: true` in a deployment whose existing
+resources still need state migration. Build remains available. Create requires
+an active compatible ownership journal with a prepared key and recorded shared
+and node state. An absent, uninitialized, or retired journal is refused before
+any journal write, key preparation, or provider mutation. Acquisition still uses
+the observed ETag, and lifecycle checks read each recorded state before compute.
+
+This guard does not import resources or move local state to R2 or S3. Preserve
+the old state and complete the transfer procedure before running create. Keep
+the guard enabled after migration to prevent accidental recreation if remote
+state is lost. Delete retains its existing protection and recovery behavior.

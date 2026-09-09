@@ -68,7 +68,8 @@
                  (require-valid (or (= operation "create") (false? (:compute-prevent-destroy opts))))
                  (reset! keys (compute/state-keys (:profile opts) (mapv :node_id declarations)))
                  (reset! owner (call :coordinator (fn [opts env] (coordinator/coordinator opts env nil nil nil {:event-prefix "lifecycle/"})) opts environment))
-                 (coordinator/acquire! @owner) (reset! acquired true)
+                 (require-valid (or (not (contains? opts :compute-require-existing-state)) (boolean? (:compute-require-existing-state opts))))
+                 (coordinator/acquire! @owner (and (= operation "create") (true? (:compute-require-existing-state opts)))) (reset! acquired true)
                  (let [initial (snapshot)]
                    (if (and (= operation "delete") (= "retired" (:status initial))) {:status "destroyed"}
                        (do

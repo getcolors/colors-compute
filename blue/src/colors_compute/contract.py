@@ -39,6 +39,8 @@ def validate(opts: dict) -> list[str]:
         errors.append(":profile is required")
     elif not _safe(profile):
         errors.append(":profile must be a safe identifier")
+    if "compute-require-existing-state" in opts and type(opts["compute-require-existing-state"]) is not bool:
+        errors.append(":compute-require-existing-state must be a boolean")
     required = set()
     for slot in ("compute", "backend"):
         selected = opts.get(f"provider-{slot}")
