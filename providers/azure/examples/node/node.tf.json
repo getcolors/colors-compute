@@ -1,0 +1,94 @@
+{
+  "terraform": {
+    "required_providers": {
+      "azurerm": {
+        "source": "hashicorp/azurerm",
+        "version": "4.30.0"
+      }
+    }
+  },
+  "provider": {
+    "azurerm": {
+      "subscription_id": "00000000-0000-0000-0000-000000000001",
+      "features": {}
+    }
+  },
+  "resource": {
+    "azurerm_public_ip": {
+      "node": {
+        "name": "example-0-public",
+        "location": "westeurope",
+        "resource_group_name": "example-compute",
+        "allocation_method": "Static",
+        "sku": "Standard",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "azurerm_network_interface": {
+      "node": {
+        "name": "example-0-nic",
+        "location": "westeurope",
+        "resource_group_name": "example-compute",
+        "ip_configuration": {
+          "name": "primary",
+          "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
+          "private_ip_address_allocation": "Dynamic",
+          "public_ip_address_id": "${azurerm_public_ip.node.id}"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "azurerm_linux_virtual_machine": {
+      "node": {
+        "name": "example-0",
+        "location": "westeurope",
+        "resource_group_name": "example-compute",
+        "size": "Standard_B2s",
+        "admin_username": "ubuntu",
+        "disable_password_authentication": true,
+        "network_interface_ids": [
+          "${azurerm_network_interface.node.id}"
+        ],
+        "admin_ssh_key": {
+          "username": "ubuntu",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY"
+        },
+        "source_image_reference": {
+          "publisher": "Canonical",
+          "offer": "ubuntu-24_04-lts",
+          "sku": "server",
+          "version": "latest"
+        },
+        "os_disk": {
+          "caching": "ReadWrite",
+          "storage_account_type": "Standard_LRS",
+          "disk_size_gb": 32
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "0",
+        "provider": "azure",
+        "name": "${azurerm_linux_virtual_machine.node.name}",
+        "ip": "${azurerm_public_ip.node.ip_address}",
+        "vpc_ip": "${azurerm_network_interface.node.private_ip_address}",
+        "vm_id": "${azurerm_linux_virtual_machine.node.id}",
+        "nic_id": "${azurerm_network_interface.node.id}",
+        "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
+        "user": "ubuntu",
+        "sudoer": "ubuntu",
+        "ssh_key_id": null
+      }
+    }
+  }
+}

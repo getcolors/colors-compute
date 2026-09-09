@@ -1,0 +1,52 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "resource": {
+    "digitalocean_droplet": {
+      "node": {
+        "name": "example-0",
+        "region": "nyc3",
+        "size": "s-2vcpu-4gb",
+        "image": "ubuntu-24-04-x64",
+        "vpc_uuid": "00000000-0000-0000-0000-000000000001",
+        "ssh_keys": [
+          "12345"
+        ],
+        "tags": [
+          "colors-postgres-ha",
+          "example",
+          "colors-compute-example"
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "0",
+        "provider": "digitalocean",
+        "name": "${digitalocean_droplet.node.name}",
+        "ip": "${digitalocean_droplet.node.ipv4_address}",
+        "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}",
+        "droplet_id": "${digitalocean_droplet.node.id}",
+        "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+        "user": "root",
+        "sudoer": "root",
+        "ssh_key_id": "12345"
+      }
+    }
+  }
+}

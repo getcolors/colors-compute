@@ -1,0 +1,80 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "data": {
+    "digitalocean_vpc": {
+      "network": {
+        "region": "{{region}}"
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "digitalocean",
+        "vpc_id": "${data.digitalocean_vpc.network.id}",
+        "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}",
+        "firewall_id": "${digitalocean_firewall.network.id}",
+        "deployment_tag": "${digitalocean_tag.deployment.name}"
+      }
+    }
+  },
+  "locals": {
+    "public_ingress": "{{public_ingress}}",
+    "private_ingress": "{{private_ingress}}"
+  },
+  "resource": {
+    "digitalocean_firewall": {
+      "network": {
+        "name": "{{firewall_name}}",
+        "dynamic": {
+          "inbound_rule": [
+            {
+              "for_each": "${local.public_ingress}",
+              "content": {
+                "protocol": "${inbound_rule.value.protocol}",
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "source_addresses": "${inbound_rule.value.source_addresses}"
+              }
+            },
+            {
+              "for_each": "${local.private_ingress}",
+              "content": {
+                "protocol": "${inbound_rule.value.protocol}",
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "source_addresses": [
+                  "${data.digitalocean_vpc.network.ip_range}"
+                ]
+              }
+            }
+          ]
+        },
+        "outbound_rule": "{{outbound_rules}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        },
+        "tags": [
+          "${digitalocean_tag.deployment.name}"
+        ]
+      }
+    },
+    "digitalocean_tag": {
+      "deployment": {
+        "name": "{{deployment_tag}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  }
+}

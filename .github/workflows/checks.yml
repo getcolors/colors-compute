@@ -1,0 +1,33 @@
+name: Checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          bb: '1.13.219'
+      - run: bun install --frozen-lockfile
+        working-directory: red
+      - run: python3 scripts/registry.py
+      - run: python3 scripts/parity.py
+      - run: uv run --directory blue pytest -q
+      - run: bb test
+        working-directory: green
+      - run: bun test && bun run typecheck
+        working-directory: red
+      - run: python3 -m unittest discover -s migration -v
+      - run: |
+          for checker in providers/*/check.py; do
+            python3 "$checker"
+          done

@@ -1,0 +1,47 @@
+{
+  "terraform": {
+    "required_providers": {
+      "vultr": {
+        "source": "vultr/vultr",
+        "version": "~> 2.0"
+      }
+    }
+  },
+  "provider": {
+    "vultr": {}
+  },
+  "resource": {
+    "vultr_instance": {
+      "node": {
+        "label": "example",
+        "region": "ewr",
+        "plan": "vc2-2c-4gb",
+        "os_id": 2284,
+        "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+        "vpc_ids": [
+          "00000000-0000-0000-0000-000000000002"
+        ],
+        "ssh_key_ids": [
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "0",
+        "provider": "vultr",
+        "name": "${vultr_instance.node.label}",
+        "ip": "${vultr_instance.node.main_ip}",
+        "vpc_ip": "${vultr_instance.node.internal_ip}",
+        "user": "root",
+        "sudoer": "root",
+        "ssh_key_id": "00000000-0000-0000-0000-000000000003"
+      }
+    }
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "terraform": {
+    "required_providers": {
+      "azurerm": {
+        "source": "hashicorp/azurerm",
+        "version": "4.30.0"
+      }
+    }
+  },
+  "provider": {
+    "azurerm": {
+      "subscription_id": "00000000-0000-0000-0000-000000000001",
+      "features": {}
+    }
+  },
+  "locals": {
+    "ingress": {
+      "ssh": {
+        "priority": 100,
+        "protocol": "Tcp",
+        "port": "22",
+        "sources": [
+          "192.0.2.1/32"
+        ]
+      },
+      "peer": {
+        "priority": 110,
+        "protocol": "Tcp",
+        "port": "9093-9094",
+        "sources": [
+          "10.42.1.0/24"
+        ]
+      }
+    }
+  },
+  "resource": {
+    "azurerm_resource_group": {
+      "deployment": {
+        "name": "example-compute",
+        "location": "westeurope",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "azurerm_virtual_network": {
+      "network": {
+        "name": "example-network",
+        "location": "${azurerm_resource_group.deployment.location}",
+        "resource_group_name": "${azurerm_resource_group.deployment.name}",
+        "address_space": [
+          "10.42.0.0/16"
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "azurerm_subnet": {
+      "network": {
+        "name": "example-subnet",
+        "resource_group_name": "${azurerm_resource_group.deployment.name}",
+        "virtual_network_name": "${azurerm_virtual_network.network.name}",
+        "address_prefixes": [
+          "10.42.1.0/24"
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "azurerm_network_security_group": {
+      "network": {
+        "name": "example-firewall",
+        "location": "${azurerm_resource_group.deployment.location}",
+        "resource_group_name": "${azurerm_resource_group.deployment.name}",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "azurerm_network_security_rule": {
+      "ingress": {
+        "for_each": "${local.ingress}",
+        "name": "${each.key}",
+        "priority": "${each.value.priority}",
+        "direction": "Inbound",
+        "access": "Allow",
+        "protocol": "${each.value.protocol}",
+        "source_port_range": "*",
+        "destination_port_range": "${each.value.port}",
+        "source_address_prefixes": "${each.value.sources}",
+        "destination_address_prefix": "*",
+        "resource_group_name": "${azurerm_resource_group.deployment.name}",
+        "network_security_group_name": "${azurerm_network_security_group.network.name}"
+      },
+      "deny_inbound": {
+        "name": "colors-deny-inbound",
+        "priority": 4096,
+        "direction": "Inbound",
+        "access": "Deny",
+        "protocol": "*",
+        "source_port_range": "*",
+        "destination_port_range": "*",
+        "source_address_prefix": "*",
+        "destination_address_prefix": "*",
+        "resource_group_name": "${azurerm_resource_group.deployment.name}",
+        "network_security_group_name": "${azurerm_network_security_group.network.name}"
+      }
+    },
+    "azurerm_subnet_network_security_group_association": {
+      "network": {
+        "subnet_id": "${azurerm_subnet.network.id}",
+        "network_security_group_id": "${azurerm_network_security_group.network.id}",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "azure",
+        "resource_group_name": "${azurerm_resource_group.deployment.name}",
+        "location": "${azurerm_resource_group.deployment.location}",
+        "vpc_id": "${azurerm_virtual_network.network.id}",
+        "vpc_ip_range": "10.42.0.0/16",
+        "subnet_id": "${azurerm_subnet.network.id}",
+        "firewall_id": "${azurerm_network_security_group.network.id}"
+      }
+    }
+  }
+}

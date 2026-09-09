@@ -1,0 +1,52 @@
+{
+  "profile": "example",
+  "prevent_destroy": true,
+  "network_name": "example-network",
+  "network_cidr": "10.42.0.0/16",
+  "subnet_cidr": "10.42.1.0/24",
+  "network_zone": "eu-central",
+  "firewall_name": "example-firewall",
+  "public_rules": [
+    {
+      "direction": "in",
+      "protocol": "tcp",
+      "port": "22",
+      "source_ips": [
+        "192.0.2.1/32"
+      ]
+    },
+    {
+      "direction": "in",
+      "protocol": "udp",
+      "port": "51820",
+      "source_ips": [
+        "192.0.2.1/32"
+      ]
+    },
+    {
+      "direction": "in",
+      "protocol": "icmp",
+      "source_ips": [
+        "192.0.2.1/32"
+      ]
+    }
+  ],
+  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+  "name": "example-0",
+  "image": "ubuntu-24.04",
+  "server_type": "cx22",
+  "location": "fsn1",
+  "ssh_key_ids": [
+    12345
+  ],
+  "firewall_ids": [
+    23456
+  ],
+  "labels": {
+    "colors-profile": "example"
+  },
+  "network_id": 34567,
+  "private_ip": "10.42.1.10",
+  "node_id": "0",
+  "ssh_key_id": "12345"
+}

@@ -1,0 +1,18 @@
+{
+  "resource": {
+    "vultr_ssh_key": {
+      "machine": {
+        "name": "{{profile}}",
+        "ssh_key": "{{public_key}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "ssh_key_id": {
+      "value": "${vultr_ssh_key.machine.id}"
+    }
+  }
+}

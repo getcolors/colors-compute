@@ -1,0 +1,18 @@
+{
+  "resource": {
+    "digitalocean_ssh_key": {
+      "machine": {
+        "name": "{{profile}}",
+        "public_key": "{{public_key}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "ssh_key_id": {
+      "value": "${digitalocean_ssh_key.machine.id}"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "aws": {
+        "source": "hashicorp/aws",
+        "version": "6.31.0"
+      }
+    }
+  },
+  "provider": {
+    "aws": {
+      "region": "eu-west-1"
+    }
+  },
+  "resource": {
+    "aws_instance": {
+      "node": {
+        "ami": "ami-0123456789abcdef0",
+        "instance_type": "t3.small",
+        "availability_zone": "eu-west-1a",
+        "subnet_id": "subnet-0123456789abcdef0",
+        "vpc_security_group_ids": [
+          "sg-0123456789abcdef0"
+        ],
+        "associate_public_ip_address": true,
+        "key_name": "example",
+        "root_block_device": {
+          "volume_size": 20,
+          "volume_type": "gp3",
+          "encrypted": true
+        },
+        "tags": {
+          "Name": "example-broker-0"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "broker-0",
+        "provider": "aws",
+        "name": "${aws_instance.node.tags[\"Name\"]}",
+        "ip": "${aws_instance.node.public_ip}",
+        "vpc_ip": "${aws_instance.node.private_ip}",
+        "user": "ubuntu",
+        "sudoer": "ubuntu",
+        "ssh_key_id": "example",
+        "instance_id": "${aws_instance.node.id}"
+      }
+    }
+  }
+}

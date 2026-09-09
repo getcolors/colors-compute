@@ -1,0 +1,18 @@
+{
+  "resource": {
+    "aws_key_pair": {
+      "machine": {
+        "key_name": "example",
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+      }
+    }
+  },
+  "output": {
+    "ssh_key_id": {
+      "value": "${aws_key_pair.machine.id}"
+    },
+    "key_name": {
+      "value": "${aws_key_pair.machine.key_name}"
+    }
+  }
+}

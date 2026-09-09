@@ -1,0 +1,11 @@
+{
+  "name": "colors-compute-red",
+  "version": "0.1.0",
+  "description": "Shared compute contracts and Colors workflow composition",
+  "type": "module",
+  "license": "MIT",
+  "exports": {".": "./red/src/index.ts", "./workflow": "./red/src/workflow.ts"},
+  "files": ["red/src", "red/resources", "providers", "contracts"],
+  "dependencies": {"red": "github:getcolors/red#db9bfe61282e2093f4098bf5a6ee0cd10added6e"},
+  "scripts": {"test": "cd red && bun test", "typecheck": "cd red && bun run typecheck"}
+}

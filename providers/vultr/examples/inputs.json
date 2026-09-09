@@ -1,0 +1,54 @@
+{
+  "profile": "example",
+  "name": "example",
+  "region": "ewr",
+  "network_address": "10.42.0.0",
+  "network_prefix": 24,
+  "network_cidr": "10.42.0.0/24",
+  "prevent_destroy": true,
+  "firewall_name": "example-firewall",
+  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+  "node_id": "0",
+  "plan": "vc2-2c-4gb",
+  "os_id": 2284,
+  "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+  "vpc_ids": [
+    "00000000-0000-0000-0000-000000000002"
+  ],
+  "ssh_key_ids": [
+    "00000000-0000-0000-0000-000000000003"
+  ],
+  "ssh_key_id": "00000000-0000-0000-0000-000000000003",
+  "user": "root",
+  "sudoer": "root",
+  "ingress": {
+    "ssh:192.0.2.1/32": {
+      "protocol": "tcp",
+      "port": "22",
+      "ip_type": "v4",
+      "subnet": "192.0.2.1",
+      "subnet_size": 32
+    },
+    "kafka:192.0.2.1/32": {
+      "protocol": "tcp",
+      "port": "9092",
+      "ip_type": "v4",
+      "subnet": "192.0.2.1",
+      "subnet_size": 32
+    },
+    "cluster_internal:9093": {
+      "protocol": "tcp",
+      "port": "9093",
+      "ip_type": "v4",
+      "subnet": "10.42.0.0",
+      "subnet_size": 24
+    },
+    "cluster_internal:9094": {
+      "protocol": "tcp",
+      "port": "9094",
+      "ip_type": "v4",
+      "subnet": "10.42.0.0",
+      "subnet_size": 24
+    }
+  }
+}

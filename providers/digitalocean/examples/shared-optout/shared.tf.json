@@ -1,0 +1,144 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "data": {
+    "digitalocean_vpc": {
+      "network": {
+        "region": "nyc3"
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "digitalocean",
+        "vpc_id": "${data.digitalocean_vpc.network.id}",
+        "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}",
+        "firewall_id": "${digitalocean_firewall.network.id}",
+        "deployment_tag": "${digitalocean_tag.deployment.name}"
+      }
+    }
+  },
+  "locals": {
+    "public_ingress": {
+      "ssh": {
+        "protocol": "tcp",
+        "port_range": "22",
+        "source_addresses": [
+          "192.0.2.1/32"
+        ]
+      },
+      "client-primary": {
+        "protocol": "tcp",
+        "port_range": "5432",
+        "source_addresses": [
+          "192.0.2.1/32"
+        ]
+      },
+      "client-replica": {
+        "protocol": "tcp",
+        "port_range": "5433",
+        "source_addresses": [
+          "192.0.2.1/32"
+        ]
+      },
+      "icmp": {
+        "protocol": "icmp",
+        "source_addresses": [
+          "192.0.2.1/32"
+        ]
+      }
+    },
+    "private_ingress": {
+      "tcp": {
+        "protocol": "tcp",
+        "port_range": "1-65535"
+      },
+      "udp": {
+        "protocol": "udp",
+        "port_range": "1-65535"
+      },
+      "icmp": {
+        "protocol": "icmp"
+      }
+    }
+  },
+  "resource": {
+    "digitalocean_firewall": {
+      "network": {
+        "name": "example-firewall",
+        "dynamic": {
+          "inbound_rule": [
+            {
+              "for_each": "${local.public_ingress}",
+              "content": {
+                "protocol": "${inbound_rule.value.protocol}",
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "source_addresses": "${inbound_rule.value.source_addresses}"
+              }
+            },
+            {
+              "for_each": "${local.private_ingress}",
+              "content": {
+                "protocol": "${inbound_rule.value.protocol}",
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "source_addresses": [
+                  "${data.digitalocean_vpc.network.ip_range}"
+                ]
+              }
+            }
+          ]
+        },
+        "outbound_rule": [
+          {
+            "protocol": "tcp",
+            "port_range": "1-65535",
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ]
+          },
+          {
+            "protocol": "udp",
+            "port_range": "1-65535",
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ]
+          },
+          {
+            "protocol": "icmp",
+            "destination_addresses": [
+              "0.0.0.0/0",
+              "::/0"
+            ]
+          }
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        },
+        "tags": [
+          "${digitalocean_tag.deployment.name}"
+        ]
+      }
+    },
+    "digitalocean_tag": {
+      "deployment": {
+        "name": "colors-compute-example",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  }
+}

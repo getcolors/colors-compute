@@ -1,0 +1,89 @@
+{
+  "profile": "example",
+  "region": "nyc3",
+  "prevent_destroy": true,
+  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+  "firewall_name": "example-firewall",
+  "name": "example-0",
+  "size": "s-2vcpu-4gb",
+  "image": "ubuntu-24-04-x64",
+  "vpc_id": "00000000-0000-0000-0000-000000000001",
+  "ssh_key_ids": [
+    "12345"
+  ],
+  "ssh_key_id": "12345",
+  "tags": [
+    "colors-postgres-ha",
+    "example",
+    "colors-compute-example"
+  ],
+  "node_id": "0",
+  "public_ingress": {
+    "ssh": {
+      "protocol": "tcp",
+      "port_range": "22",
+      "source_addresses": [
+        "192.0.2.1/32"
+      ]
+    },
+    "client-primary": {
+      "protocol": "tcp",
+      "port_range": "5432",
+      "source_addresses": [
+        "192.0.2.1/32"
+      ]
+    },
+    "client-replica": {
+      "protocol": "tcp",
+      "port_range": "5433",
+      "source_addresses": [
+        "192.0.2.1/32"
+      ]
+    },
+    "icmp": {
+      "protocol": "icmp",
+      "source_addresses": [
+        "192.0.2.1/32"
+      ]
+    }
+  },
+  "private_ingress": {
+    "tcp": {
+      "protocol": "tcp",
+      "port_range": "1-65535"
+    },
+    "udp": {
+      "protocol": "udp",
+      "port_range": "1-65535"
+    },
+    "icmp": {
+      "protocol": "icmp"
+    }
+  },
+  "outbound_rules": [
+    {
+      "protocol": "tcp",
+      "port_range": "1-65535",
+      "destination_addresses": [
+        "0.0.0.0/0",
+        "::/0"
+      ]
+    },
+    {
+      "protocol": "udp",
+      "port_range": "1-65535",
+      "destination_addresses": [
+        "0.0.0.0/0",
+        "::/0"
+      ]
+    },
+    {
+      "protocol": "icmp",
+      "destination_addresses": [
+        "0.0.0.0/0",
+        "::/0"
+      ]
+    }
+  ],
+  "deployment_tag": "colors-compute-example"
+}

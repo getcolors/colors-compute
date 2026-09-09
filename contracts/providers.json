@@ -1,0 +1,180 @@
+{
+  "backend": {
+    "r2": {
+      "backend-config": {
+        "r2-access-key-id": "access_key",
+        "r2-secret-access-key": "secret_key"
+      },
+      "required": [
+        "r2-bucket",
+        "r2-endpoint"
+      ],
+      "secrets": [
+        "r2-access-key-id",
+        "r2-secret-access-key"
+      ],
+      "tofu-env": {}
+    },
+    "s3": {
+      "required": [
+        "s3-bucket",
+        "s3-region"
+      ],
+      "secrets": [],
+      "tofu-env": {}
+    }
+  },
+  "compute": {
+    "aws": {
+      "registration": true,
+      "required": [
+        "aws-region",
+        "aws-availability-zone",
+        "aws-instance-type",
+        "aws-image-id",
+        "aws-vpc-cidr",
+        "aws-subnet-cidr",
+        "aws-root-volume-size-gb"
+      ],
+      "secrets": [],
+      "ssh-setting": "aws-ssh-authorized-keys",
+      "sudoer": "ubuntu",
+      "tofu-env": {},
+      "user": "ubuntu"
+    },
+    "azure": {
+      "registration": false,
+      "required": [
+        "azure-subscription-id",
+        "azure-location",
+        "azure-resource-group",
+        "azure-vm-size",
+        "azure-image-publisher",
+        "azure-image-offer",
+        "azure-image-sku",
+        "azure-image-version",
+        "azure-vnet-cidr",
+        "azure-subnet-cidr",
+        "azure-boot-disk-size-gb"
+      ],
+      "secrets": [],
+      "ssh-setting": "azure-ssh-authorized-keys",
+      "sudoer": "ubuntu",
+      "tofu-env": {},
+      "user": "ubuntu"
+    },
+    "digitalocean": {
+      "registration": true,
+      "required": [
+        "digitalocean-region",
+        "digitalocean-size",
+        "digitalocean-image"
+      ],
+      "secrets": [
+        "do-token"
+      ],
+      "ssh-setting": "digitalocean-ssh-keys",
+      "sudoer": "root",
+      "tofu-env": {
+        "do-token": "DIGITALOCEAN_TOKEN"
+      },
+      "user": "root"
+    },
+    "google": {
+      "registration": false,
+      "required": [
+        "google-project",
+        "google-region",
+        "google-zone",
+        "google-machine-type",
+        "google-image-project",
+        "google-image-family",
+        "google-image-id",
+        "google-subnet-cidr",
+        "google-boot-disk-size-gb"
+      ],
+      "secrets": [],
+      "ssh-setting": "google-ssh-authorized-keys",
+      "sudoer": "ubuntu",
+      "tofu-env": {},
+      "user": "ubuntu"
+    },
+    "hcloud": {
+      "registration": true,
+      "required": [
+        "hcloud-image",
+        "hcloud-server-type",
+        "hcloud-location"
+      ],
+      "secrets": [
+        "hcloud-token"
+      ],
+      "ssh-setting": "hcloud-ssh-keys",
+      "sudoer": "root",
+      "tofu-env": {
+        "hcloud-token": "HCLOUD_TOKEN"
+      },
+      "user": "root"
+    },
+    "oci": {
+      "registration": false,
+      "required": [
+        "oci-config-file-profile",
+        "oci-subnet-id",
+        "oci-compartment-id",
+        "oci-availability-domain",
+        "oci-shape",
+        "oci-ocpus",
+        "oci-memory-in-gbs",
+        "oci-boot-volume-size-in-gbs",
+        "oci-boot-volume-vpus-per-gb"
+      ],
+      "secrets": [],
+      "ssh-setting": "oci-ssh-authorized-keys",
+      "sudoer": "ubuntu",
+      "tofu-env": {},
+      "user": "ubuntu"
+    },
+    "vultr": {
+      "registration": true,
+      "required": [
+        "vultr-region",
+        "vultr-plan",
+        "vultr-os-id"
+      ],
+      "secrets": [
+        "vultr-api-key"
+      ],
+      "ssh-setting": "vultr-ssh-keys",
+      "sudoer": "root",
+      "tofu-env": {
+        "vultr-api-key": "VULTR_API_KEY"
+      },
+      "user": "root"
+    },
+    "yandex": {
+      "registration": false,
+      "required": [
+        "yandex-cloud-id",
+        "yandex-folder-id",
+        "yandex-zone",
+        "yandex-image-family",
+        "yandex-subnet-cidr",
+        "yandex-platform-id",
+        "yandex-cores",
+        "yandex-memory-gb",
+        "yandex-core-fraction",
+        "yandex-disk-size-gb"
+      ],
+      "secrets": [
+        "yandex-token"
+      ],
+      "ssh-setting": "compute-pubkey",
+      "sudoer": "ubuntu",
+      "tofu-env": {
+        "yandex-token": "YC_TOKEN"
+      },
+      "user": "ubuntu"
+    }
+  }
+}

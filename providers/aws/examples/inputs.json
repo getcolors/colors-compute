@@ -1,0 +1,45 @@
+{
+  "profile": "example",
+  "name": "example-broker-0",
+  "firewall_name": "example",
+  "region": "eu-west-1",
+  "availability_zone": "eu-west-1a",
+  "vpc_cidr": "10.42.0.0/16",
+  "subnet_cidr": "10.42.1.0/24",
+  "ingress": {
+    "ssh-admin": {
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "cidr": "192.0.2.0/24"
+    },
+    "cluster-peer": {
+      "protocol": "tcp",
+      "from_port": 9092,
+      "to_port": 9092,
+      "cidr": "10.42.1.0/24"
+    }
+  },
+  "egress": {
+    "all-ipv4": {
+      "protocol": "-1",
+      "from_port": null,
+      "to_port": null,
+      "cidr": "0.0.0.0/0"
+    }
+  },
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only",
+  "node_id": "broker-0",
+  "image_id": "ami-0123456789abcdef0",
+  "instance_type": "t3.small",
+  "subnet_id": "subnet-0123456789abcdef0",
+  "security_group_ids": [
+    "sg-0123456789abcdef0"
+  ],
+  "key_name": "example",
+  "root_volume_size_gb": 20,
+  "user": "ubuntu",
+  "sudoer": "ubuntu",
+  "ssh_key_id": "example",
+  "prevent_destroy": true
+}

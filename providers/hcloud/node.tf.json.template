@@ -1,0 +1,60 @@
+{
+  "terraform": {
+    "required_providers": {
+      "hcloud": {
+        "source": "hetznercloud/hcloud",
+        "version": "1.54.0"
+      }
+    }
+  },
+  "provider": {
+    "hcloud": {}
+  },
+  "resource": {
+    "hcloud_server": {
+      "node": {
+        "name": "{{name}}",
+        "image": "{{image}}",
+        "server_type": "{{server_type}}",
+        "location": "{{location}}",
+        "ssh_keys": "{{ssh_key_ids}}",
+        "firewall_ids": "{{firewall_ids}}",
+        "labels": "{{labels}}",
+        "public_net": {
+          "ipv4_enabled": true,
+          "ipv6_enabled": false
+        },
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "hcloud_server_network": {
+      "node": {
+        "server_id": "${hcloud_server.node.id}",
+        "network_id": "{{network_id}}",
+        "ip": "{{private_ip}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "{{node_id}}",
+        "provider": "hcloud",
+        "name": "${hcloud_server.node.name}",
+        "ip": "${hcloud_server.node.ipv4_address}",
+        "vpc_ip": "${hcloud_server_network.node.ip}",
+        "server_id": "${hcloud_server.node.id}",
+        "vpc_id": "${hcloud_server_network.node.network_id}",
+        "network_attachment_id": "${hcloud_server_network.node.id}",
+        "user": "root",
+        "sudoer": "root",
+        "ssh_key_id": "{{ssh_key_id}}"
+      }
+    }
+  }
+}

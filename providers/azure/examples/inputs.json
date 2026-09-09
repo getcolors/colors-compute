@@ -1,0 +1,43 @@
+{
+  "subscription_id": "00000000-0000-0000-0000-000000000001",
+  "prevent_destroy": true,
+  "resource_group_name": "example-compute",
+  "location": "westeurope",
+  "network_name": "example-network",
+  "network_cidr": "10.42.0.0/16",
+  "subnet_name": "example-subnet",
+  "subnet_cidr": "10.42.1.0/24",
+  "firewall_name": "example-firewall",
+  "ingress": {
+    "ssh": {
+      "priority": 100,
+      "protocol": "Tcp",
+      "port": "22",
+      "sources": [
+        "192.0.2.1/32"
+      ]
+    },
+    "peer": {
+      "priority": 110,
+      "protocol": "Tcp",
+      "port": "9093-9094",
+      "sources": [
+        "10.42.1.0/24"
+      ]
+    }
+  },
+  "public_ip_name": "example-0-public",
+  "nic_name": "example-0-nic",
+  "subnet_id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/example-compute/providers/Microsoft.Network/virtualNetworks/example-network/subnets/example-subnet",
+  "name": "example-0",
+  "vm_size": "Standard_B2s",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINdamAGCsQq31Uv+08lkBzoO4XLz2qYjJa8CGmj3B1Ea RFC8032-TEST-ONLY",
+  "image_reference": {
+    "publisher": "Canonical",
+    "offer": "ubuntu-24_04-lts",
+    "sku": "server",
+    "version": "latest"
+  },
+  "disk_size_gb": 32,
+  "node_id": "0"
+}

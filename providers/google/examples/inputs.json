@@ -1,0 +1,39 @@
+{
+  "project": "colors-example-project",
+  "region": "europe-west1",
+  "zone": "europe-west1-b",
+  "network_name": "example-network",
+  "network_tag": "example-network",
+  "network_cidr": "10.42.0.0/24",
+  "prevent_destroy": true,
+  "node_id": "0",
+  "name": "example-0",
+  "machine_type": "e2-medium",
+  "image": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+  "boot_disk_size": 20,
+  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+  "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+  "ingress": {
+    "ssh": {
+      "name": "example-ssh",
+      "protocol": "tcp",
+      "ports": [
+        "22"
+      ],
+      "source_ranges": [
+        "192.0.2.1/32"
+      ]
+    },
+    "cluster": {
+      "name": "example-cluster",
+      "protocol": "tcp",
+      "ports": [
+        "9093",
+        "9094"
+      ],
+      "source_ranges": [
+        "10.42.0.0/24"
+      ]
+    }
+  }
+}
