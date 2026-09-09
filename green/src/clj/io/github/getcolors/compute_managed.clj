@@ -54,6 +54,15 @@
               :storage_class (:storage_class traits)}
        (some? pod-cidr) (assoc :pod_cidr pod-cidr)))))
 
+(defn managed-application-artifacts
+  "Library-owned scripts for the selected managed provider."
+  ([opts] (managed-application-artifacts opts []))
+  ([opts required]
+   (let [{:keys [provider]} (resolve-request opts {})
+         artifacts (get (json/parse-string (slurp (io/resource "colors_compute/managed-artifacts.json"))) provider)]
+     (require-valid (and (vector? required) (every? #(and (string? %) (contains? artifacts %)) required)) "managed provider lacks required application artifact")
+     artifacts)))
+
 (defn ^:no-doc read-managed-state
   ([opts key environment] (read-managed-state opts key environment false runtime/run-command))
   ([opts key environment write] (read-managed-state opts key environment write runtime/run-command))

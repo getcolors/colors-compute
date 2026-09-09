@@ -30,6 +30,13 @@ the storage-class override, and the pod CIDR used by application manifests.
 Vultr retains its configured pod range; DigitalOcean uses the observed range.
 These mappings belong in the library's managed provider descriptor.
 
+`managed_application_artifacts` supplies the selected provider's cleanup and
+ingress verification scripts. Applications can require named artifacts; an
+unsupported requirement fails before rendering. Applications own Kubernetes
+workload deletion and retain the original volume IDs and load-balancer address
+across retries. The library checks those resources at the provider and refuses
+unverified cleanup. Credentials reach curl through standard input.
+
 ## Ownership
 
 The journal uses the same `<profile>/compute/coordination.json` key as VM

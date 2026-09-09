@@ -100,6 +100,16 @@ def managed_application_settings(opts, params=None):
     return result
 
 
+def managed_application_artifacts(opts, required=None):
+    """Return library-owned scripts for the selected managed provider."""
+    provider, _, _ = _resolve(opts, {})
+    artifacts = json.loads(files('colors_compute').joinpath('managed-artifacts.json').read_text())[provider]
+    required = [] if required is None else required
+    if not isinstance(required, list) or any(not isinstance(name, str) or name not in artifacts for name in required):
+        raise ValueError('managed provider lacks required application artifact')
+    return artifacts
+
+
 async def _read_managed_state(opts, key, environment=None, runner=None, write=False):
     decoder = AccessDecoder(opts, environment)
     result = await _read_state(opts, key, environment, runner, True, decoder)

@@ -1,0 +1,9 @@
+{
+  "vultr": {
+    "managed-cleanup.sh": "providers/vultr/managed-cleanup.sh"
+  },
+  "digitalocean": {
+    "managed-cleanup.sh": "providers/digitalocean/managed-cleanup.sh",
+    "managed-ingress.sh": "providers/digitalocean/managed-ingress.sh"
+  }
+}

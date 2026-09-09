@@ -1,5 +1,6 @@
 import {get} from 'node:https';
 import recipesData from '../resources/managed-providers.json';
+import managedArtifacts from '../resources/managed-artifacts.json';
 import {copy} from './copy.ts';import {compute_credential_errors} from './index.ts';import {backend_plan} from './rendering.ts';import {provider_plan} from './providers.ts';
 import {readState,readStateDecoded,executeBackendCommand} from './backend.ts';import {convergeStateDecoded,statePresence} from './execution.ts';
 import {journalGet,identity} from './journal.ts';import {identityEqual} from './coordination.ts';import {managedDocumentValid} from './managed-journal.ts';import {Coordinator} from './coordinator.ts';import {AccessDecoder,managed_kubeconfig_path,publicParams} from './managed-access.ts';
@@ -26,4 +27,11 @@ export function managed_application_settings(opts:Map,params?:Map):Map {
  const podCIDR=traits.pod_cidr_source==='observed'?observed.pod_cidr:opts[traits.pod_cidr_option];
  if(podCIDR!==undefined&&podCIDR!==null){publicParams({...observed,pod_cidr:podCIDR},provider);result.pod_cidr=podCIDR;}
  return result;
+}
+
+export function managed_application_artifacts(opts:Map,required:string[]=[]):Record<string,string> {
+ const {provider}=resolveRequest(opts,{});
+ const artifacts=(managedArtifacts as Record<string,Record<string,string>>)[provider];
+ require(Array.isArray(required)&&required.every(name=>typeof name==='string'&&Object.hasOwn(artifacts,name)),'managed provider lacks required application artifact');
+ return copy(artifacts);
 }
