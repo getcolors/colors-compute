@@ -24,6 +24,11 @@ async def test_inspect_recorded_nodes_without_mutation():
     assert len(result['cluster']['nodes']) == len(document['nodes'])
     assert result['key']['private_key_path'] == '/home/test/.ssh/demo'
     assert document['lock']['state'] == 'idle'
+    deps = {'journal_get': lambda *_: {'status': 'present', 'document': document}, 'read_state': read}
+    entry = result['cluster']['nodes'][-1]['node_id']
+    selected = await read_deployment(OPTS, {}, deps, {'entry_node_id': entry})
+    assert selected['cluster']['entry_node_id'] == entry
+    assert await read_deployment(OPTS, {}, deps, {'entry_node_id': 'missing'}) == {'status': 'error'}
 
 
 @pytest.mark.asyncio

@@ -106,3 +106,19 @@ resources, credentials or state were accessed. Remaining work is the library
 renderer integration, semantic validation, remote state and shared ownership
 lifecycle, readiness checks, and package fan-out integration. The canonical
 resource names agree with the migration planner; no planner changes were needed.
+
+## Role firewall policy
+
+`shared-roles` and `shared-roles-keygen` are alternate shared configurations
+for explicit role security policies. They retain the network and registration
+addresses while owning `vultr_firewall_group.role[role]` and stable ingress
+keys. `params.role_firewall_ids` binds each node to its role group. Peer rules
+use observed `/32` addresses after the guarded node join; the first shared
+converge creates public ingress before any node. See
+[the role contract](../../contracts/roles.md).
+
+The additional representative role configuration passed OpenTofu 1.12.5
+`init -backend=false` and `validate` against Vultr 2.32.0 on 2026-09-09.
+`check.py` verifies its deterministic render and provider schema along with
+the original three configurations. These are schema checks, not live traffic
+verification.

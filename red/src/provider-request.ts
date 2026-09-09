@@ -15,7 +15,7 @@ const integer=(value:unknown,lo:number,hi:number)=>typeof value==='number'&&Numb
 function fail(message:string):never{throw new Error(message);}
 interface Network {address:string;prefix:number;start:number;end:number}
 function ipNumber(value:string):number{return value.split('.').reduce((number,part)=>number*256+Number(part),0);}
-function cidr(value:unknown):Network {
+function cidr(value:unknown,allowIPv6=false):Network {
   if(typeof value!=='string')fail('invalid compute network CIDR');
   const parts=value.split('/');const address=parts[0];const family=isIP(address);
   if(!family||parts.length>2)fail('invalid compute network CIDR');
@@ -35,7 +35,9 @@ function cidr(value:unknown):Network {
     const groups=halves.length===2?[...left,...Array(8-left.length-right.length).fill('0'),...right]:left;
     const number=groups.reduce((n,part)=>(n<<16n)+BigInt('0x'+part),0n);
     if(number% (1n<<BigInt(128-prefix))!==0n)fail('invalid compute network CIDR');
-    fail('unsupported compute network address family');
+    const canonical=new URL('http://['+address+']/').hostname.slice(1,-1);
+    if(!allowIPv6||canonical+'/'+prefix!==value)fail('unsupported compute network address family');
+    return {address:canonical,prefix,start:0,end:0};
   }
   const start=ipNumber(address);const size=2**(32-prefix);
   if(start%size!==0)fail('invalid compute network CIDR');
@@ -63,22 +65,24 @@ function binding(spec:Map,context:Map):any {
 }
 function rules(format:string,request:Map,network:string|null,name:string):Map {
   const expanded:[string,Map,string|null,boolean][]=[];
-  for(const rule of [...request.security.ingress].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0))for(const source of [...rule.sources].sort()) {
+  for(const rule of [...request.security.ingress].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)){
+    if(Object.hasOwn(rule,'peer_roles')){for(const [id,peer] of Object.entries(request.peers??{}).sort() as [string,Map][])if(rule.peer_roles.includes(peer.role))expanded.push([rule.id+':peer:'+id,rule,peer.vpc_ip+'/32',false]);continue;}
+    for(const source of [...rule.sources].sort()) {
     const privateSource=source==='private';let range=privateSource?network:source;
     if(privateSource&&format==='digitalocean')range=null;
     else if(privateSource&&range===null)fail('missing compute network CIDR for private ingress');
     expanded.push([rule.id+':'+source,rule,range,privateSource]);
-  }
+  }}
   const result:Map={},publicIngress:Map={},privateIngress:Map={},publicRules:Map[]=[];
   for(const [ordinal,[key,rule,range,privateSource]] of expanded.entries()) {
     const lo=rule.from_port,hi=rule.to_port,protocol=rule.protocol;const icmp=protocol==='icmp';const ports=icmp?null:lo===hi?String(lo):`${lo}-${hi}`;
     switch(format) {
-      case 'vultr': {const net=cidr(range);result[key]={protocol,port:ports,ip_type:'v4',subnet:net.address,subnet_size:net.prefix};break;}
+      case 'vultr': {const net=cidr(range,true);result[key]={protocol,port:ports,ip_type:isIP(net.address)===6?'v6':'v4',subnet:net.address,subnet_size:net.prefix};break;}
       case 'aws':result[key]={protocol,from_port:icmp?-1:lo,to_port:icmp?-1:hi,cidr:range};break;
       case 'azure':if(ordinal>=3996)fail('too many compute ingress rules');result[key.replaceAll(':','-').replaceAll('/','-').replaceAll('.','-')]={priority:100+ordinal,protocol:protocol[0].toUpperCase()+protocol.slice(1),port:icmp?'*':ports,sources:[range]};break;
       case 'google':result[key]={name:name+'-'+createHash('sha256').update(key).digest('hex').slice(0,12),protocol,ports:icmp?[]:[ports],source_ranges:[range]};break;
       case 'yandex':result[key]={protocol:protocol.toUpperCase(),from_port:lo,to_port:hi,cidr_blocks:[range]};break;
-      case 'digitalocean':(privateSource?privateIngress:publicIngress)[key]={protocol,...(icmp?{}:{port_range:ports}),...(!privateSource?{source_addresses:[range]}:{})};break;
+      case 'digitalocean':(privateSource&&range===null?privateIngress:publicIngress)[key]={protocol,...(icmp?{}:{port_range:ports}),...(!(privateSource&&range===null)?{source_addresses:[range]}:{})};break;
       case 'hcloud':publicRules.push({direction:'in',protocol,...(icmp?{}:{port:ports}),source_ips:[range]});break;
       case 'oci':result[key]={direction:'INGRESS',protocol:icmp?'1':protocol==='tcp'?'6':'17',cidr:range,from_port:lo,to_port:hi};break;
       default:fail('unsupported compute firewall format');
@@ -94,6 +98,14 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   const provider=object(opts)?opts['provider-compute']:null;
   if(typeof provider!=='string'||!Object.hasOwn(recipes,provider))fail('compute provider recipe unavailable');
   const recipe=recipes[provider],entry=(registry.compute as Map)[provider];
+  opts={...opts};const role=object(request)?request.role:null;
+  if(role!=null){
+   if(!safe(role))fail('invalid compute role');const settings=opts['compute-role-settings']??{};
+   if(!object(settings))fail('invalid compute role settings');const values=Object.hasOwn(settings,role)?settings[role]:{};
+   if(!object(values)||Object.keys(values).some(k=>!['size','image'].includes(k)))fail('invalid compute role settings');
+   for(const [kind,value] of Object.entries(values)){const target=recipe.role_options?.[kind];if(!target)fail('unsupported compute role setting');if(missing(value))fail('invalid compute role settings');opts[target]=structuredClone(value);}
+   if(!Object.hasOwn(values,'size'))for(const legacy of recipe.role_size_legacy??[]){const value=opts[legacy.replace('{role}',role)];if(!missing(value)){opts[recipe.role_options.size]=value;break;}}
+  }
   const endpoint=object(request)&&Object.hasOwn(request,'endpoint')?request.endpoint:undefined;
   if(object(request)&&Object.hasOwn(request,'endpoint')){
     if(!fields(endpoint,['kind','assignment'])||endpoint.kind!=='reserved-ip'||endpoint.assignment!=='application')fail('invalid compute endpoint request');
@@ -101,24 +113,30 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   }
   if(stage!=='shared'&&stage!=='node')fail('unsupported compute request stage');
   if(!safe(opts.profile))fail('invalid compute profile');
-  if(!fields(request,['node_id','key','network','security'],['name','endpoint'])||!safe(request.node_id))fail('invalid compute request');
+  if(!fields(request,['node_id','key','network','security'],['name','endpoint','role','roles','peers'])||!safe(request.node_id))fail('invalid compute request');
+  const roles=request.roles;
+  if(roles!=null&&(!recipe.role_firewalls||!object(roles)||!Object.keys(roles).length||Object.entries(roles).some(([r,p])=>!safe(r)||!fields(p,['security']))))fail('unsupported compute role firewall policy');
+  const peers=request.peers??{};if(!object(peers)||Object.keys(peers).length>1000)fail('invalid compute peers');
+  for(const [id,peer] of Object.entries(peers))if(!safe(id)||!fields(peer,['role','vpc_ip'])||!roles||typeof peer.role!=='string'||!Object.hasOwn(roles,peer.role)||typeof peer.vpc_ip!=='string'||isIP(peer.vpc_ip)!==4)fail('invalid compute peers');
+  for(const [id,peer] of Object.entries(peers)){const suffix=id.slice(peer.role.length+1);if(!id.startsWith(peer.role+'-')||/^(0|[1-9][0-9]{0,2})$/.exec(suffix)?.[0]!==suffix)fail('invalid compute peer identity');}
   const profile=opts.profile;const name=Object.hasOwn(request,'name')?request.name:stage==='shared'?profile:profile+'-'+request.node_id;
   if(!safe(name))fail('invalid compute name');
   const {key,network,security}=request;
   if(!fields(key,['mode'],['public_key','ids','reference'])||!['managed','external'].includes(key.mode))fail('invalid compute key request');
   if(!fields(network,['mode'],['cidr','subnet_cidr','zone','private_ip']))fail('invalid compute network request');
-  if(network.mode!==recipe.network_mode)fail('unsupported compute network mode');
+  if(!(recipe.network_modes??[recipe.network_mode]).includes(network.mode))fail('unsupported compute network mode');
   if(!fields(security,['ingress','egress','private_filter'])||security.egress!=='all'||typeof security.private_filter!=='boolean')fail('unsupported compute security policy');
   if(security.private_filter&&!recipe.private_filter)fail('unsupported compute private filtering');
   if(!Array.isArray(security.ingress)||!security.ingress.length)fail('invalid compute ingress');
   const seen=new Set<string>();let hasSSH=false;
   for(const rule of security.ingress) {
-    if(!fields(rule,['id','protocol','from_port','to_port','sources'])||!safe(rule.id)||seen.has(rule.id))fail('invalid compute ingress');seen.add(rule.id);
+    if(!fields(rule,['id','protocol','from_port','to_port'],['sources','peer_roles'])||Object.hasOwn(rule,'sources')===Object.hasOwn(rule,'peer_roles')||!safe(rule.id)||seen.has(rule.id))fail('invalid compute ingress');seen.add(rule.id);
     if(!(rule.protocol==='icmp'&&rule.from_port===null&&rule.to_port===null||['tcp','udp'].includes(rule.protocol)&&integer(rule.from_port,1,65535)&&integer(rule.to_port,rule.from_port,65535)))fail('invalid compute ingress');
+    if(Object.hasOwn(rule,'peer_roles')){if(!roles||!recipe.role_firewalls||!Array.isArray(rule.peer_roles)||!rule.peer_roles.length||rule.peer_roles.some((r:any)=>typeof r!=='string'||!Object.hasOwn(roles,r))||new Set(rule.peer_roles).size!==rule.peer_roles.length)fail('invalid compute peer roles');continue;}
     if(!Array.isArray(rule.sources)||!rule.sources.length||rule.sources.some((source:any)=>typeof source!=='string')||new Set(rule.sources).size!==rule.sources.length)fail('invalid compute ingress');
     for(const source of rule.sources) {
       if(source==='private') {if(recipe.firewall_format==='hcloud')fail('unsupported compute private filtering');}
-      else {cidr(source);hasSSH ||= rule.protocol==='tcp'&&rule.from_port<=22&&rule.to_port>=22;}
+      else {cidr(source,recipe.ipv6_ingress===true);hasSSH ||= rule.protocol==='tcp'&&rule.from_port<=22&&rule.to_port>=22;}
     }
   }
   if(!hasSSH)fail('compute public SSH ingress required');
@@ -126,7 +144,9 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   if(missing(networkCIDR))networkCIDR=recipe.network_cidr_options.map((name:string)=>opts[name]).find((value:any)=>!missing(value))??null;
   let subnet=network.subnet_cidr;
   if(missing(subnet))subnet=recipe.subnet_cidr_options.map((name:string)=>opts[name]).find((value:any)=>!missing(value))??networkCIDR;
+  if(network.mode==='created'&&recipe.network_stages&&networkCIDR===null)fail('compute created network CIDR required');
   const parsed=networkCIDR!==null?cidr(networkCIDR):null;
+  if(parsed&&Object.values(peers).some(peer=>ipNumber(peer.vpc_ip)<=parsed.start||ipNumber(peer.vpc_ip)>=parsed.end))fail('compute peer outside private network');
   if(subnet!==null) {const parsedSubnet=cidr(subnet);if(parsed&&(parsedSubnet.start<parsed.start||parsedSubnet.end>parsed.end))fail('compute subnet must be inside network');}
   if(!missing(network.private_ip)) {
     if(!recipe.static_private_ip)fail('unsupported compute static private address');
@@ -138,6 +158,11 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   if(typeof protect!=='boolean')fail('invalid compute prevent-destroy flag');
   shared??={};if(!object(shared))fail('invalid compute shared results');
   if(stage==='node'&&(!object(shared.params)||shared.params.provider!==provider))fail('compute shared provider mismatch');
+  if(stage==='node'&&roles!=null){
+   if(typeof role!=='string'||!Object.hasOwn(roles,role)||!object(shared.params.role_firewall_ids)||!Object.hasOwn(shared.params.role_firewall_ids,role))fail('missing compute role firewall');
+   shared=structuredClone(shared);shared.params[recipe.role_firewall_param]=shared.params.role_firewall_ids[role];
+   if(recipe.role_tag_param){if(!object(shared.params.role_tags)||!Object.hasOwn(shared.params.role_tags,role))fail('missing compute role tag');shared.params[recipe.role_tag_param]=shared.params.role_tags[role];}
+  }
   const registrationOwned=key.mode==='managed'||recipe.registration_external===true;
   const primary=(registrationOwned?shared.ssh_key_id:key.reference)??null;
   const ids=registrationOwned&&primary!==null?[primary]:(Object.hasOwn(key,'ids')?key.ids:[]);
@@ -148,7 +173,20 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
   if(missing(image)&&!missing(opts['google-image-project'])&&!missing(opts['google-image-family']))image='projects/'+opts['google-image-project']+'/global/images/family/'+opts['google-image-family'];
   derived.google_image=image??null;
   let selectedStage=stage==='shared'&&registrationOwned&&entry.registration?'shared-keygen':stage;
+  selectedStage=recipe.network_stages?.[network.mode]?.[selectedStage]??selectedStage;
   if(stage==='node'&&recipe.discovery_stage&&missing(opts[recipe.image_option]))selectedStage=recipe.discovery_stage;
+  if(stage==='shared'&&roles!=null){
+   const roleIngress:Map={},rolePublic:Map={},rolePrivate:Map={};
+   for(const [r,policy] of Object.entries(roles).sort() as [string,Map][]){
+    const roleRequest={...structuredClone(request),role:r,security:structuredClone(policy.security)};
+    const validationShared={...structuredClone(shared),ssh_key_id:primary||'validation-key',params:{provider,vpc_id:'validation-vpc',role_firewall_ids:Object.fromEntries(Object.keys(roles).map(r=>[r,'validation-firewall'])),role_tags:Object.fromEntries(Object.keys(roles).map(r=>[r,'validation-tag']))}};
+    provider_request(opts,'node',roleRequest,validationShared);
+    const rendered=rules(recipe.firewall_format,roleRequest,networkCIDR,profile);rolePublic[r]=rendered.public_ingress;rolePrivate[r]=rendered.private_ingress;
+    for(const [id,rule] of Object.entries(rendered.ingress))roleIngress[r+':'+id]={...rule as Map,role:r};
+   }
+   Object.assign(derived,{role_ingress:roleIngress,role_public_ingress:rolePublic,role_private_ingress:rolePrivate,role_tags:Object.fromEntries(Object.keys(roles).sort().map(r=>[r,'colors-compute-'+profile+'-'+r])),firewall_groups:Object.fromEntries(Object.keys(roles).sort().map(r=>[r,profile+'-'+r+'-firewall']))});
+   selectedStage=recipe.role_stages[selectedStage];
+  }
   const tokens=[...new Set([...JSON.stringify(templates[provider][selectedStage]).matchAll(/\{\{([a-z_]+)\}\}/g)].map(match=>match[1]))].sort();
   const context={opts,request,shared,derived};const inputs:Map={};
   for(const token of tokens) {

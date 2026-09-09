@@ -1,0 +1,33 @@
+{
+  "node": [
+    "node.tf.json"
+  ],
+  "shared": [
+    "shared.tf.json"
+  ],
+  "shared-keygen": [
+    "shared.tf.json",
+    "shared-keygen.tf.json"
+  ],
+  "shared-created": [
+    "shared-created.tf.json"
+  ],
+  "shared-created-keygen": [
+    "shared-created.tf.json",
+    "shared-keygen.tf.json"
+  ],
+  "shared-roles": [
+    "shared-roles.tf.json"
+  ],
+  "shared-roles-keygen": [
+    "shared-roles.tf.json",
+    "shared-keygen.tf.json"
+  ],
+  "shared-created-roles": [
+    "shared-created-roles.tf.json"
+  ],
+  "shared-created-roles-keygen": [
+    "shared-created-roles.tf.json",
+    "shared-keygen.tf.json"
+  ]
+}

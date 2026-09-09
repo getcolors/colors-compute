@@ -1,0 +1,139 @@
+[
+  {
+    "args": [
+      {
+        "digitalocean-cloud-controller-version": "v0.1.68",
+        "profile": "demo",
+        "provider-compute": "digitalocean"
+      },
+      {
+        "params": {
+          "provider": "digitalocean",
+          "vpc_id": "network-123"
+        }
+      }
+    ],
+    "expected": {
+      "cluster_name": "demo",
+      "content": "- name: Create DigitalOcean cloud-controller secret without writing it to disk\n  ansible.builtin.command: kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f -\n  args:\n    stdin: |\n      apiVersion: v1\n      kind: Secret\n      metadata:\n        name: digitalocean\n        namespace: kube-system\n      stringData:\n        access-token: \"{{ lookup('ansible.builtin.env', 'COLORS_PAR_DO_TOKEN') }}\"\n  register: digitalocean_secret\n  changed_when: \"'created' in digitalocean_secret.stdout or 'configured' in digitalocean_secret.stdout\"\n  no_log: true\n\n- name: Download pinned DigitalOcean cloud controller\n  ansible.builtin.get_url:\n    url: \"https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/v0.1.68/releases/digitalocean-cloud-controller-manager/v0.1.68.yml\"\n    dest: \"/root/digitalocean-ccm-v0.1.68.yml\"\n    mode: \"0644\"\n\n- name: Apply DigitalOcean cloud controller\n  ansible.builtin.command: >-\n    kubectl --kubeconfig=/etc/kubernetes/admin.conf apply\n    -f /root/digitalocean-ccm-v0.1.68.yml\n  register: ccm_apply\n  changed_when: \"'created' in ccm_apply.stdout or 'configured' in ccm_apply.stdout\"\n\n- name: Bind DigitalOcean load balancers to the deployment-owned VPC\n  ansible.builtin.command: >-\n    kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system\n    set env deployment/digitalocean-cloud-controller-manager\n    DO_CLUSTER_VPC_ID=network-123\n  register: ccm_vpc\n  changed_when: \"'updated' in ccm_vpc.stdout\"\n\n- name: Wait for DigitalOcean cloud controller after VPC configuration\n  ansible.builtin.command: >-\n    kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system\n    rollout status deployment/digitalocean-cloud-controller-manager --timeout=300s\n  changed_when: false\n\n",
+      "credentials": [
+        "COLORS_PAR_DO_TOKEN"
+      ],
+      "filename": "colors-compute-controller.yml",
+      "namespace": "kube-system",
+      "rollout_resource": "deployment/digitalocean-cloud-controller-manager"
+    },
+    "name": "controller legacy version",
+    "op": "controller_artifact"
+  },
+  {
+    "args": [
+      {
+        "digitalocean-cloud-controller-version": "v0.1.68",
+        "kubernetes-controller-version": "v0.1.69",
+        "profile": "demo",
+        "provider-compute": "digitalocean"
+      },
+      {
+        "params": {
+          "provider": "digitalocean",
+          "vpc_id": "network-123"
+        }
+      }
+    ],
+    "expected": {
+      "cluster_name": "demo",
+      "content": "- name: Create DigitalOcean cloud-controller secret without writing it to disk\n  ansible.builtin.command: kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f -\n  args:\n    stdin: |\n      apiVersion: v1\n      kind: Secret\n      metadata:\n        name: digitalocean\n        namespace: kube-system\n      stringData:\n        access-token: \"{{ lookup('ansible.builtin.env', 'COLORS_PAR_DO_TOKEN') }}\"\n  register: digitalocean_secret\n  changed_when: \"'created' in digitalocean_secret.stdout or 'configured' in digitalocean_secret.stdout\"\n  no_log: true\n\n- name: Download pinned DigitalOcean cloud controller\n  ansible.builtin.get_url:\n    url: \"https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/v0.1.69/releases/digitalocean-cloud-controller-manager/v0.1.69.yml\"\n    dest: \"/root/digitalocean-ccm-v0.1.69.yml\"\n    mode: \"0644\"\n\n- name: Apply DigitalOcean cloud controller\n  ansible.builtin.command: >-\n    kubectl --kubeconfig=/etc/kubernetes/admin.conf apply\n    -f /root/digitalocean-ccm-v0.1.69.yml\n  register: ccm_apply\n  changed_when: \"'created' in ccm_apply.stdout or 'configured' in ccm_apply.stdout\"\n\n- name: Bind DigitalOcean load balancers to the deployment-owned VPC\n  ansible.builtin.command: >-\n    kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system\n    set env deployment/digitalocean-cloud-controller-manager\n    DO_CLUSTER_VPC_ID=network-123\n  register: ccm_vpc\n  changed_when: \"'updated' in ccm_vpc.stdout\"\n\n- name: Wait for DigitalOcean cloud controller after VPC configuration\n  ansible.builtin.command: >-\n    kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system\n    rollout status deployment/digitalocean-cloud-controller-manager --timeout=300s\n  changed_when: false\n\n",
+      "credentials": [
+        "COLORS_PAR_DO_TOKEN"
+      ],
+      "filename": "colors-compute-controller.yml",
+      "namespace": "kube-system",
+      "rollout_resource": "deployment/digitalocean-cloud-controller-manager"
+    },
+    "name": "controller neutral version",
+    "op": "controller_artifact"
+  },
+  {
+    "args": [
+      {
+        "digitalocean-cloud-controller-version": "v0.1.68",
+        "profile": "demo",
+        "provider-compute": "vultr"
+      },
+      {
+        "params": {
+          "provider": "digitalocean",
+          "vpc_id": "network-123"
+        }
+      }
+    ],
+    "expected": {
+      "error": "unsupported compute Kubernetes controller capability"
+    },
+    "name": "unsupported controller",
+    "op": "controller_artifact"
+  },
+  {
+    "args": [
+      {
+        "digitalocean-cloud-controller": false,
+        "digitalocean-cloud-controller-version": "v0.1.68",
+        "profile": "demo",
+        "provider-compute": "digitalocean"
+      },
+      {
+        "params": {
+          "provider": "digitalocean",
+          "vpc_id": "network-123"
+        }
+      }
+    ],
+    "expected": {
+      "error": "Kubernetes controller must be enabled"
+    },
+    "name": "controller cannot disable",
+    "op": "controller_artifact"
+  },
+  {
+    "args": [
+      {
+        "digitalocean-cloud-controller-version": "v0.1.68",
+        "kubernetes-controller-version": "v1.2.3;id",
+        "profile": "demo",
+        "provider-compute": "digitalocean"
+      },
+      {
+        "params": {
+          "provider": "digitalocean",
+          "vpc_id": "network-123"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid Kubernetes controller version"
+    },
+    "name": "controller malformed version",
+    "op": "controller_artifact"
+  },
+  {
+    "args": [
+      {
+        "digitalocean-cloud-controller-version": "v0.1.68",
+        "profile": "demo",
+        "provider-compute": "digitalocean"
+      },
+      {
+        "params": {
+          "provider": "digitalocean",
+          "vpc_id": "x\ny"
+        }
+      }
+    ],
+    "expected": {
+      "error": "invalid Kubernetes controller shared network"
+    },
+    "name": "controller malformed network",
+    "op": "controller_artifact"
+  }
+]

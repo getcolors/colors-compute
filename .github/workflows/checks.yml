@@ -45,6 +45,9 @@ jobs:
       - run: python3 scripts/registry.py
       - run: python3 scripts/provider_resources.py
       - run: python3 scripts/provider_recipes.py
+      - run: python3 scripts/endpoint_resources.py
+      - run: python3 scripts/controller_resources.py
+      - run: python3 scripts/execution_resources.py
       - run: python3 scripts/parity.py
       - name: Check native backend readers against local synthetic state
         run: |

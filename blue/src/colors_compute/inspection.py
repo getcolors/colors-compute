@@ -10,13 +10,16 @@ from .lifecycle import lifecycle_document_valid
 from .ssh import _mode
 
 
-async def read_deployment(opts, environment=None, dependencies=None):
+async def read_deployment(opts, environment=None, dependencies=None, requirements=None):
     deps = dependencies or {}
     env = dict(os.environ if environment is None else environment)
     async def call(name, default, *args, **kwargs):
         value = deps.get(name, default)(*args, **kwargs)
         return await value if inspect.isawaitable(value) else value
     try:
+        requirements = {} if requirements is None else requirements
+        if not isinstance(requirements, dict):
+            return {"status": "error"}
         observed = await call('journal_get', journal_get, opts, env)
         if observed == {'status': 'absent'}:
             return {'status': 'absent'}
@@ -46,7 +49,10 @@ async def read_deployment(opts, environment=None, dependencies=None):
         if not declarations:
             return {'status': 'error'}
         declarations.sort(key=lambda node: (node['role'] or '', node['index']))
-        cluster = collect(declarations, results, declarations[0]['node_id'])
+        entry = requirements.get('entry_node_id', declarations[0]['node_id'])
+        if not isinstance(entry, str) or entry not in {node['node_id'] for node in declarations}:
+            return {'status': 'error'}
+        cluster = collect(declarations, results, entry)
         key = {'mode': document['key']['mode']}
         selected = _mode(opts)
         if selected['mode'] != key['mode']:

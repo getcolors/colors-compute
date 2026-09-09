@@ -74,3 +74,21 @@ state_empty. The latter is true only when the validated v4 envelope has no
 resources and no outputs. A retained empty state object is valid after destroy;
 its presence alone must not block recreation. Failed attempts still require
 readable provider ownership and never treat an empty object as recovery evidence.
+
+## Selective VPC drain retry
+
+Reviewed `contracts/execution-policy.json`, packaged with each library, currently
+permits one retry class: DigitalOcean shared documents owning a
+`digitalocean_vpc`, during delete only, when the apply error contains the exact
+provider message `Can not delete VPC with members`. Error classification is
+bounded to 1 MiB and refuses known credential values. Other errors, providers,
+node documents, creates and drift checks never retry.
+
+At most four apply attempts run, with 30 seconds between attempts. Before each
+retry the executor pulls and validates the partial state, requires the selected
+provider, and creates and validates a fresh destroy plan. Empty valid state
+confirms completion. An unreadable or malformed partial state refuses. The same
+journal shared attempt remains active throughout; there is no second node
+operation or blind replay of an old saved plan. The existing timeout applies to
+each subprocess. Tests inject a sleep function to avoid real waiting (seconds
+in Python, milliseconds in Red/Green); native callers use the fixed delay.

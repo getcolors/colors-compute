@@ -74,14 +74,18 @@
                                                                 (every? (get provider-fields provider) (keys config)))) providers)
                           (every? (fn [kind] (and (map? (get doc kind {})) (every? (get resource-types kind) (keys (get doc kind {}))))) [:resource :data])
                           (not-any? #(str/includes? text %) ["-----BEGIN " "\"private_key\"" "\"provisioner\""])))) documents))))
-(defn- converge* [opts key documents operation presence environment runner]
-  (require-valid (and (map? opts) (state-key? opts key) (contains? #{"create" "delete"} operation)
+(def ^:private execution-policy (json/parse-string (slurp (io/resource "colors_compute/execution-policy.json")) true))
+(defn- converge* [opts key documents operation presence environment runner sleeper]
+  (require-valid (and (map? opts) (state-key? opts key) (contains? #{"create" "delete" "check"} operation)
                       (map? presence) (= #{:status} (set (keys presence))) (contains? #{"present" "absent"} (:status presence))))
+  (require-valid (or (not= operation "check") (= presence {:status "present"})))
   (let [documents (json/parse-string-strict (json/generate-string documents) true)
         protect (get opts :compute-prevent-destroy true) provider (:provider-compute opts)]
-    (require-valid (and (boolean? protect) (or (= operation "create") (not protect))
+    (require-valid (and (boolean? protect) (or (not= operation "delete") (not protect))
                         (string? provider) (contains? (:compute compute/registry) (keyword provider)) (valid-documents? documents provider)))
-    (let [plan (compute/backend-plan opts key)]
+    (let [policy (get-in execution-policy [(keyword provider) :destroy_retry])
+          retry-policy (when (and (= operation "delete") policy (some #(contains? (:resource %) (keyword (:resource_type policy))) (vals documents))) policy)
+          plan (compute/backend-plan opts key)]
       (if (and (= operation "delete") (= "absent" (:status presence))) {:status "destroyed"}
           (let [credentials (into {} (for [[variable option] (:credential_bindings plan)]
                                        (let [value (get environment variable)] (require-valid (not (missing? value))) [option value])))
@@ -103,17 +107,32 @@
                               (let [argv (into ["tofu"] arguments)]
                                 (require-valid (not (journal/bound-secret? argv secrets)))
                                 (let [result (runner argv (str directory) env timeout)]
-                                  (require-valid (= 0 (:exit result))) (:out result))))]
+                                  (when-not (= 0 (:exit result))
+                                    (throw (ex-info "execution failed" {:retryable (boolean (and retry-policy (= "apply" (first arguments))
+                                      (string? (:err result)) (<= (count (:err result)) 1048576) (str/includes? (:err result) (:error_text retry-policy))
+                                      (not (journal/bound-secret? (:err result) secrets))))}))) (:out result))))]
                 (execute ["init" "-input=false" "-no-color" "-reconfigure" (str "-backend-config=" credential-file)] 120000)
                 (let [before (execute ["state" "pull"] 120000)
                       current (when (nonblank? before) (state before))]
                   (require-valid (or current (= "absent" (:status presence))))
                   (require-valid (or (nil? current) (empty-state? (:document current)) (= provider (get-in current [:params :provider]))))
                   (if (and (= operation "delete") current (empty-state? (:document current))) {:status "destroyed"}
+                      (if (= operation "check")
+                        (do (require-valid (and current (not (empty-state? (:document current)))))
+                            (execute ["plan" "-input=false" "-no-color" "-detailed-exitcode"] 1800000)
+                            {:status "clean"})
                       (do
-                        (execute (cond-> ["plan" "-input=false" "-no-color" (str "-out=" plan-file)] (= operation "delete") (conj "-destroy")) 1800000)
-                        (require-valid (valid-plan? (execute ["show" "-json" plan-file] 120000) operation))
-                        (execute ["apply" "-input=false" "-no-color" plan-file] 1800000)
+                        (loop [attempt 0]
+                          (execute (cond-> ["plan" "-input=false" "-no-color" (str "-out=" plan-file)] (= operation "delete") (conj "-destroy")) 1800000)
+                          (require-valid (valid-plan? (execute ["show" "-json" plan-file] 120000) operation))
+                          (let [again? (try (execute ["apply" "-input=false" "-no-color" plan-file] 1800000) false
+                                        (catch clojure.lang.ExceptionInfo error
+                                          (when-not (and (:retryable (ex-data error)) (< (inc attempt) (:attempts retry-policy))) (throw error))
+                                          (let [observed (state (execute ["state" "pull"] 120000))]
+                                            (if (empty-state? (:document observed)) false
+                                                (do (require-valid (= provider (get-in observed [:params :provider])))
+                                                    (sleeper (:delay_ms retry-policy)) true)))))]
+                            (when again? (recur (inc attempt)))))
                         (let [after (execute ["state" "pull"] 120000)]
                           (if (and (= operation "delete") (not (nonblank? after))) {:status "destroyed"}
                               (let [{:keys [document params]} (state after)]
@@ -121,12 +140,19 @@
                                   (do (require-valid (empty-state? document)) {:status "destroyed"})
                                   (let [outputs (runtime/flatten-outputs document)]
                                     (require-valid (and (= provider (:provider params)) (not (journal/bound-secret? outputs secrets))))
-                                    {:status "ready" :params params :outputs outputs})))))))))
+                                    {:status "ready" :params params :outputs outputs}))))))))))
               (finally (journal/cleanup! directory))))))))
 (defn converge-state
   ([opts key documents operation presence] (converge-state opts key documents operation presence (into {} (System/getenv)) runtime/run-command))
   ([opts key documents operation presence environment] (converge-state opts key documents operation presence environment runtime/run-command))
   ([opts key documents operation presence environment runner]
-   (try (converge* opts key documents operation presence environment runner)
+   (converge-state opts key documents operation presence environment runner #(Thread/sleep %)))
+  ([opts key documents operation presence environment runner sleeper]
+   (try (converge* opts key documents operation presence environment runner sleeper)
         (catch InterruptedException error (throw error))
         (catch Exception _ {:status "error"}))))
+
+(defn check-state
+  ([opts key documents] (check-state opts key documents (into {} (System/getenv)) runtime/run-command))
+  ([opts key documents environment] (check-state opts key documents environment runtime/run-command))
+  ([opts key documents environment runner] (converge-state opts key documents "check" {:status "present"} environment runner)))

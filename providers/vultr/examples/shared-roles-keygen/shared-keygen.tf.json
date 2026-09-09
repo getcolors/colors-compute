@@ -1,0 +1,25 @@
+{
+  "resource": {
+    "vultr_ssh_key": {
+      "machine": {
+        "name": "example",
+        "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "ssh_key_id": {
+      "value": "${vultr_ssh_key.machine.id}"
+    },
+    "registration": {
+      "value": {
+        "provider": "vultr",
+        "scope": "account",
+        "id": "${vultr_ssh_key.machine.id}"
+      }
+    }
+  }
+}

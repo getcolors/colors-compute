@@ -1,0 +1,41 @@
+- name: Create DigitalOcean cloud-controller secret without writing it to disk
+  ansible.builtin.command: kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f -
+  args:
+    stdin: |
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: digitalocean
+        namespace: kube-system
+      stringData:
+        access-token: "{{ lookup('ansible.builtin.env', 'COLORS_PAR_DO_TOKEN') }}"
+  register: digitalocean_secret
+  changed_when: "'created' in digitalocean_secret.stdout or 'configured' in digitalocean_secret.stdout"
+  no_log: true
+
+- name: Download pinned DigitalOcean cloud controller
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/digitalocean/digitalocean-cloud-controller-manager/@VERSION@/releases/digitalocean-cloud-controller-manager/@VERSION@.yml"
+    dest: "/root/digitalocean-ccm-@VERSION@.yml"
+    mode: "0644"
+
+- name: Apply DigitalOcean cloud controller
+  ansible.builtin.command: >-
+    kubectl --kubeconfig=/etc/kubernetes/admin.conf apply
+    -f /root/digitalocean-ccm-@VERSION@.yml
+  register: ccm_apply
+  changed_when: "'created' in ccm_apply.stdout or 'configured' in ccm_apply.stdout"
+
+- name: Bind DigitalOcean load balancers to the deployment-owned VPC
+  ansible.builtin.command: >-
+    kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system
+    set env deployment/digitalocean-cloud-controller-manager
+    DO_CLUSTER_VPC_ID=@NETWORK_ID@
+  register: ccm_vpc
+  changed_when: "'updated' in ccm_vpc.stdout"
+
+- name: Wait for DigitalOcean cloud controller after VPC configuration
+  ansible.builtin.command: >-
+    kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system
+    rollout status deployment/digitalocean-cloud-controller-manager --timeout=300s
+  changed_when: false

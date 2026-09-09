@@ -9,8 +9,10 @@
 (defn read-deployment
   ([opts] (read-deployment opts (into {} (System/getenv)) {}))
   ([opts environment] (read-deployment opts environment {}))
-  ([opts environment dependencies]
+  ([opts environment dependencies] (read-deployment opts environment dependencies {}))
+  ([opts environment dependencies requirements]
    (try
+     (require-valid (map? requirements))
      (let [observed ((get dependencies :journal-get journal/journal-get) opts environment)]
        (if (= observed {:status "absent"}) {:status "absent"}
            (let [doc (:document observed)
@@ -34,9 +36,10 @@
                                          (require-valid (= "present" (:status state)))
                                          {:request {:node_id (name node-id) :role (:role node) :index (:index node) :provider (:provider-compute opts)}
                                           :params (cond-> (:params state) private-path (assoc :ssh_identity_file private-path))})) records)
-                       declarations (vec (sort-by (juxt #(or (:role %) "") :index) (map :request entries)))]
-                   (require-valid (seq declarations))
-                   {:status "present" :shared (:outputs shared) :cluster (compute/collect declarations (mapv :params entries) (:node_id (first declarations)))
+                       declarations (vec (sort-by (juxt #(or (:role %) "") :index) (map :request entries)))
+                       entry (get requirements :entry_node_id (:node_id (first declarations)))]
+                   (require-valid (and (seq declarations) (string? entry) (some #(= entry (:node_id %)) declarations)))
+                   {:status "present" :shared (:outputs shared) :cluster (compute/collect declarations (mapv :params entries) entry)
                     :key (cond-> {:mode (get-in doc [:key :mode])}
                            private-path (assoc :private_key_path private-path))})))))
      (catch InterruptedException error (throw error))

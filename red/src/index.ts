@@ -143,3 +143,7 @@ export {registrationPreflight} from './registration.ts';
 export {mode as keyMode} from './ssh.ts';
 export {validate_deployment} from './planning.ts';
 export {endpoint_agent} from './endpoint.ts';
+
+export {check_deployment_drift} from './drift.ts';
+
+export {controller_artifact} from './controller.ts';

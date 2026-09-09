@@ -1,0 +1,108 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "digitalocean": {
+        "source": "digitalocean/digitalocean",
+        "version": "2.51.0"
+      }
+    }
+  },
+  "provider": {
+    "digitalocean": {}
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "digitalocean",
+        "vpc_id": "${digitalocean_vpc.network.id}",
+        "vpc_ip_range": "${digitalocean_vpc.network.ip_range}",
+        "deployment_tag": "${digitalocean_tag.deployment.name}",
+        "network_cidr": "${digitalocean_vpc.network.ip_range}",
+        "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+        "role_firewall_ids": "${ {for role, firewall in digitalocean_firewall.network : role => firewall.id} }",
+        "role_tags": "${ {for role, tag in digitalocean_tag.role : role => tag.name} }"
+      }
+    }
+  },
+  "locals": {
+    "public_ingress": "{{public_ingress}}",
+    "private_ingress": "{{private_ingress}}",
+    "role_public_ingress": "{{role_public_ingress}}",
+    "role_private_ingress": "{{role_private_ingress}}"
+  },
+  "resource": {
+    "digitalocean_firewall": {
+      "network": {
+        "name": "${each.value}",
+        "dynamic": {
+          "inbound_rule": [
+            {
+              "for_each": "${local.role_public_ingress[each.key]}",
+              "content": {
+                "protocol": "${inbound_rule.value.protocol}",
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "source_addresses": "${inbound_rule.value.source_addresses}"
+              }
+            },
+            {
+              "for_each": "${local.role_private_ingress[each.key]}",
+              "content": {
+                "protocol": "${inbound_rule.value.protocol}",
+                "port_range": "${try(inbound_rule.value.port_range, null)}",
+                "source_addresses": [
+                  "${digitalocean_vpc.network.ip_range}"
+                ]
+              }
+            }
+          ]
+        },
+        "outbound_rule": "{{outbound_rules}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        },
+        "tags": [
+          "${digitalocean_tag.role[each.key].name}"
+        ],
+        "for_each": "{{firewall_groups}}"
+      }
+    },
+    "digitalocean_tag": {
+      "deployment": {
+        "name": "{{deployment_tag}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      },
+      "role": {
+        "for_each": "{{role_tags}}",
+        "name": "${each.value}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "digitalocean_reserved_ip": {
+      "endpoint": {
+        "count": "{{endpoint_count}}",
+        "region": "{{region}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}",
+          "ignore_changes": [
+            "droplet_id"
+          ]
+        }
+      }
+    },
+    "digitalocean_vpc": {
+      "network": {
+        "name": "{{network_name}}",
+        "region": "{{region}}",
+        "ip_range": "{{network_cidr}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  }
+}

@@ -22,8 +22,13 @@ def validate_deployment(opts, topology, requirements):
     provider = planning_opts['provider-compute']
     recipe = json.loads(files('colors_compute').joinpath('provider-recipes.json').read_text())[provider]
     provider_request(planning_opts, 'shared', assembly['shared'])
+    shared = deepcopy(recipe['planning_shared'])
+    if 'roles' in requirements:
+        shared['params']['role_firewall_ids'] = {role: 'build-firewall-' + role for role in requirements['roles']}
+        if recipe.get('role_tag_param'):
+            shared['params']['role_tags'] = {role: 'colors-compute-' + opts['profile'] + '-' + role for role in requirements['roles']}
     for node in assembly['nodes']:
-        provider_request(planning_opts, 'node', node, recipe['planning_shared'])
+        provider_request(planning_opts, 'node', node, shared)
     return True
 
 
@@ -38,6 +43,10 @@ def plan_deployment(opts, topology, requirements):
     provider = opts['provider-compute']
     recipe = json.loads(files('colors_compute').joinpath('provider-recipes.json').read_text())[provider]
     shared = deepcopy(recipe['planning_shared'])
+    if 'roles' in requirements:
+        shared['params']['role_firewall_ids'] = {role: 'build-firewall-' + role for role in requirements['roles']}
+        if recipe.get('role_tag_param'):
+            shared['params']['role_tags'] = {role: 'colors-compute-' + opts['profile'] + '-' + role for role in requirements['roles']}
     shared_plan = provider_request(opts, 'shared', assembly['shared'])
     declarations = expand(topology)
     if len(declarations) > 245:
@@ -66,8 +75,12 @@ def plan_deployment(opts, topology, requirements):
         elif selected.get('private_key_path'):
             params['ssh_identity_file'] = selected['private_key_path']
         results.append(params)
+    if 'roles' in requirements:
+        roles_by_id = {node['node_id']: node['role'] for node in declarations}
+        assembly['shared']['peers'] = {node['node_id']: {'role': roles_by_id[node['node_id']], 'vpc_ip': node['vpc_ip']} for node in results}
+        documents['shared'] = provider_request(opts, 'shared', assembly['shared'])['documents']
     return {'status': 'planned', 'documents': documents, 'shared': shared,
             'state_keys': state_keys(opts['profile'], [node['node_id'] for node in declarations]),
-            'cluster': collect(declarations, results, declarations[0]['node_id']),
+            'cluster': collect(declarations, results, assembly['entry_node_id']),
             'key': {'mode': selected['mode'], **({'private_key_path': '$HOME/.ssh/' + opts['profile']} if selected['mode'] == 'managed' else
                     {'private_key_path': selected['private_key_path']} if selected.get('private_key_path') else {})}}

@@ -9,10 +9,10 @@
 (def requirements {:security {}})
 (def fp (str "SHA256:" (apply str (repeat 43 "A"))))
 (defn world []
-  (let [storage (ct/store) states (atom {}) calls (atom []) failures (atom #{})]
+  (let [storage (ct/store) states (atom {}) calls (atom []) failures (atom #{}) id-factory (ct/ids)]
     {:storage storage :states states :calls calls :failures failures
      :deps {:validate-deployment (fn [& _] true) :compute-credential-errors (fn [& _] [])
-            :coordinator (fn [opts env] (c/coordinator opts env (:read storage) (:write storage) (ct/ids) {:event-prefix "lifecycle/"}))
+            :coordinator (fn [opts env] (c/coordinator opts env (:read storage) (:write storage) id-factory {:event-prefix "lifecycle/"}))
             :registration-preflight (fn [& _] {:status "checked"})
             :prepare-keypair (fn [_ ownership _ intent prepared]
                                (when (= "fresh" (:status ownership)) (is (true? (intent))) (is (true? (prepared fp))))
@@ -58,5 +58,42 @@
     (o/orchestrate opts topology requirements {} deps)
     (let [reader {:journal-get (fn [& _] ((:read storage))) :read-state (:read-state deps)}]
       (is (= "present" (:status (inspection/read-deployment opts {"HOME" "/tmp/operator"} reader))))
+      (is (= "broker-1" (get-in (inspection/read-deployment opts {} reader {:entry_node_id "broker-1"}) [:cluster :entry_node_id])))
+      (is (= {:status "error"} (inspection/read-deployment opts {} reader {:entry_node_id "missing"})))
       (swap! (:state storage) assoc-in [:observation :document :lock] {:state "held" :run_id "foreign"})
       (is (= {:status "error"} (inspection/read-deployment opts {} reader))))))
+
+(defn role-world []
+  (let [{:keys [deps states] :as w} (world) renders (atom [])
+        role-policy {:broker {:security {}}}
+        converge (:converge-state deps)]
+    (assoc w :renders renders
+      :deps (assoc deps
+        :deployment-requests (fn [_ _ _ key] {:shared {:node_id "shared" :key key :roles role-policy}
+                                              :entry_node_id "broker-1"
+                                              :nodes [{:node_id "broker-0" :role "broker" :key key} {:node_id "broker-1" :role "broker" :key key}]})
+        :provider-request (fn [_ stage request & _] (when (= stage "shared") (swap! renders conj request)) {:documents {}})
+        :converge-state (fn [& args]
+                          (let [result (apply converge args) key (second args)]
+                            (if (and (= "ready" (:status result)) (get-in result [:params :node_id]))
+                              (let [result (assoc-in result [:params :vpc_ip] (if (= "broker-0" (get-in result [:params :node_id])) "10.2.0.10" "10.2.0.11"))
+                                    result (assoc-in result [:outputs :params] (:params result))]
+                                (swap! states assoc key (assoc result :status "present")) result)
+                              result)))))))
+(deftest peer-rules-converge-after-native-join-and-preserve-observed-peers
+  (let [{:keys [deps renders calls]} (role-world)
+        first-result (o/orchestrate opts topology requirements {} deps)]
+    (is (= "ready" (:status first-result)))
+    (is (= "broker-1" (get-in first-result [:cluster :entry_node_id])))
+    (is (= {} (:peers (first @renders))))
+    (is (= {:broker-0 {:role "broker" :vpc_ip "10.2.0.10"} :broker-1 {:role "broker" :vpc_ip "10.2.0.11"}} (:peers (second @renders))))
+    (is (= ["demo/compute/shared.tfstate" "create"] (last @calls)))
+    (reset! renders [])
+    (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
+    (is (= (:peers (first @renders)) (:peers (second @renders))))))
+(deftest failed-peer-prevents-final-shared-attempt
+  (let [{:keys [deps failures renders calls]} (role-world)]
+    (swap! failures conj "demo/compute/nodes/broker-1.tfstate")
+    (is (= {:status "error"} (o/orchestrate opts topology requirements {} deps)))
+    (is (= 1 (count @renders)))
+    (is (= 1 (count (filter #(= ["demo/compute/shared.tfstate" "create"] %) @calls))))))

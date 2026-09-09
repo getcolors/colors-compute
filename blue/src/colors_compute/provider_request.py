@@ -22,14 +22,14 @@ def _fields(value, required, optional=()):
     return isinstance(value, dict) and set(required) <= set(value) <= set(required) | set(optional)
 
 
-def _cidr(value):
+def _cidr(value, allow_ipv6=False):
     if not isinstance(value, str):
         _fail('invalid compute network CIDR')
     try:
         network = ipaddress.ip_network(value, strict=True)
     except ValueError:
         _fail('invalid compute network CIDR')
-    if network.version != 4 or str(network) != value:
+    if (network.version != 4 and not allow_ipv6) or str(network) != value:
         _fail('unsupported compute network address family')
     return network
 
@@ -64,6 +64,11 @@ def _binding(spec, context):
 def _rules(format_name, request, network, name):
     expanded = []
     for rule in sorted(request['security']['ingress'], key=lambda item: item['id']):
+        if 'peer_roles' in rule:
+            for peer_id, peer in sorted(request.get('peers', {}).items()):
+                if peer['role'] in rule['peer_roles']:
+                    expanded.append((rule['id'] + ':peer:' + peer_id, rule, peer['vpc_ip'] + '/32', False))
+            continue
         for source in sorted(rule['sources']):
             private = source == 'private'
             cidr = network if private else source
@@ -79,8 +84,8 @@ def _rules(format_name, request, network, name):
         lo, hi = (None, None) if icmp else (int(rule['from_port']), int(rule['to_port']))
         ports = None if icmp else str(lo) if lo == hi else f'{lo}-{hi}'
         if format_name == 'vultr':
-            net = _cidr(cidr)
-            result[key] = {'protocol': protocol, 'port': ports, 'ip_type': 'v4', 'subnet': str(net.network_address), 'subnet_size': net.prefixlen}
+            net = _cidr(cidr, allow_ipv6=True)
+            result[key] = {'protocol': protocol, 'port': ports, 'ip_type': 'v' + str(net.version), 'subnet': str(net.network_address), 'subnet_size': net.prefixlen}
         elif format_name == 'aws':
             result[key] = {'protocol': protocol, 'from_port': -1 if icmp else lo, 'to_port': -1 if icmp else hi, 'cidr': cidr}
         elif format_name == 'azure':
@@ -93,9 +98,10 @@ def _rules(format_name, request, network, name):
             result[key] = {'protocol': protocol.upper(), 'from_port': lo, 'to_port': hi, 'cidr_blocks': [cidr]}
         elif format_name == 'digitalocean':
             value = {'protocol': protocol, **({} if icmp else {'port_range': ports})}
-            if not private:
+            subnet_rule = private and cidr is None
+            if not subnet_rule:
                 value['source_addresses'] = [cidr]
-            (private_rules if private else public)[key] = value
+            (private_rules if subnet_rule else public)[key] = value
         elif format_name == 'hcloud':
             public_rules.append({'direction': 'in', 'protocol': protocol, **({} if icmp else {'port': ports}), 'source_ips': [cidr]})
         elif format_name == 'oci':
@@ -119,6 +125,30 @@ def provider_request(opts, stage, request, shared=None):
     if not isinstance(provider, str) or provider not in recipes:
         _fail('compute provider recipe unavailable')
     recipe = recipes[provider]
+    opts = deepcopy(opts)
+    role = request.get('role') if isinstance(request, dict) else None
+    if role is not None:
+        if not _safe(role):
+            _fail('invalid compute role')
+        settings = opts.get('compute-role-settings', {})
+        if not isinstance(settings, dict):
+            _fail('invalid compute role settings')
+        values = settings.get(role, {})
+        if not isinstance(values, dict) or set(values) - {'size', 'image'}:
+            _fail('invalid compute role settings')
+        for kind, value in values.items():
+            target = recipe.get('role_options', {}).get(kind)
+            if not target:
+                _fail('unsupported compute role setting')
+            if _missing(value):
+                _fail('invalid compute role settings')
+            opts[target] = deepcopy(value)
+        if 'size' not in values:
+            for legacy in recipe.get('role_size_legacy', []):
+                candidate = opts.get(legacy.replace('{role}', role))
+                if not _missing(candidate):
+                    opts[recipe['role_options']['size']] = candidate
+                    break
     endpoint = request.get('endpoint') if isinstance(request, dict) else None
     if isinstance(request, dict) and 'endpoint' in request:
         if not _fields(endpoint, ('kind', 'assignment')) or endpoint != {'kind': 'reserved-ip', 'assignment': 'application'}:
@@ -130,8 +160,28 @@ def provider_request(opts, stage, request, shared=None):
     entry = registry()['compute'][provider]
     if not _safe(opts.get('profile')):
         _fail('invalid compute profile')
-    if not _fields(request, ('node_id', 'key', 'network', 'security'), ('name', 'endpoint')) or not _safe(request['node_id']):
+    if not _fields(request, ('node_id', 'key', 'network', 'security'), ('name', 'endpoint', 'role', 'roles', 'peers')) or not _safe(request['node_id']):
         _fail('invalid compute request')
+    roles = request.get('roles')
+    if roles is not None and (not recipe.get('role_firewalls') or not isinstance(roles, dict) or not roles or
+            any(not _safe(r) or not _fields(policy, ('security',)) for r, policy in roles.items())):
+        _fail('unsupported compute role firewall policy')
+    peers = request.get('peers', {})
+    if not isinstance(peers, dict) or len(peers) > 1000:
+        _fail('invalid compute peers')
+    for peer_id, peer in peers.items():
+        if not _safe(peer_id) or not _fields(peer, ('role', 'vpc_ip')) or roles is None or not isinstance(peer['role'], str) or peer['role'] not in roles:
+            _fail('invalid compute peers')
+        if not re.fullmatch(re.escape(peer['role']) + r'-(0|[1-9][0-9]{0,2})', peer_id):
+            _fail('invalid compute peer identity')
+        if not isinstance(peer['vpc_ip'], str):
+            _fail('invalid compute peers')
+        try:
+            address = ipaddress.IPv4Address(peer['vpc_ip'])
+        except ValueError:
+            _fail('invalid compute peers')
+        if str(address) != peer['vpc_ip']:
+            _fail('invalid compute peers')
     profile = opts['profile']
     name = request.get('name', profile if stage == 'shared' else profile + '-' + request['node_id'])
     if not _safe(name):
@@ -141,7 +191,7 @@ def provider_request(opts, stage, request, shared=None):
         _fail('invalid compute key request')
     if not _fields(network, ('mode',), ('cidr', 'subnet_cidr', 'zone', 'private_ip')):
         _fail('invalid compute network request')
-    if network['mode'] != recipe['network_mode']:
+    if network['mode'] not in recipe.get('network_modes', [recipe['network_mode']]):
         _fail('unsupported compute network mode')
     if not _fields(security, ('ingress', 'egress', 'private_filter')) or security['egress'] != 'all' or type(security['private_filter']) is not bool:
         _fail('unsupported compute security policy')
@@ -151,11 +201,15 @@ def provider_request(opts, stage, request, shared=None):
         _fail('invalid compute ingress')
     seen, has_ssh = set(), False
     for rule in security['ingress']:
-        if not _fields(rule, ('id', 'protocol', 'from_port', 'to_port', 'sources')) or not _safe(rule['id']) or rule['id'] in seen:
+        if not _fields(rule, ('id', 'protocol', 'from_port', 'to_port'), ('sources', 'peer_roles')) or ('sources' in rule) == ('peer_roles' in rule) or not _safe(rule['id']) or rule['id'] in seen:
             _fail('invalid compute ingress')
         seen.add(rule['id'])
         if not (rule['protocol'] == 'icmp' and rule['from_port'] is None and rule['to_port'] is None or rule['protocol'] in ('tcp', 'udp') and _integer(rule['from_port'], 1, 65535) and _integer(rule['to_port'], int(rule['from_port']), 65535)):
             _fail('invalid compute ingress')
+        if 'peer_roles' in rule:
+            if roles is None or not recipe.get('role_firewalls') or not isinstance(rule['peer_roles'], list) or not rule['peer_roles'] or any(not isinstance(r, str) or r not in roles for r in rule['peer_roles']) or len(set(rule['peer_roles'])) != len(rule['peer_roles']):
+                _fail('invalid compute peer roles')
+            continue
         if not isinstance(rule['sources'], list) or not rule['sources'] or any(not isinstance(source, str) for source in rule['sources']) or len(set(rule['sources'])) != len(rule['sources']):
             _fail('invalid compute ingress')
         for source in rule['sources']:
@@ -163,7 +217,7 @@ def provider_request(opts, stage, request, shared=None):
                 if recipe['firewall_format'] == 'hcloud':
                     _fail('unsupported compute private filtering')
             else:
-                _cidr(source)
+                _cidr(source, allow_ipv6=recipe.get('ipv6_ingress', False))
                 has_ssh |= rule['protocol'] == 'tcp' and rule['from_port'] <= 22 <= rule['to_port']
     if not has_ssh:
         _fail('compute public SSH ingress required')
@@ -173,7 +227,12 @@ def provider_request(opts, stage, request, shared=None):
     subnet = network.get('subnet_cidr')
     if _missing(subnet):
         subnet = next((opts.get(key) for key in recipe['subnet_cidr_options'] if not _missing(opts.get(key))), cidr)
+    if network['mode'] == 'created' and recipe.get('network_stages') and cidr is None:
+        _fail('compute created network CIDR required')
     parsed = _cidr(cidr) if cidr is not None else None
+    if parsed is not None and any(ipaddress.IPv4Address(peer['vpc_ip']) not in parsed or
+            ipaddress.IPv4Address(peer['vpc_ip']) in (parsed.network_address, parsed.broadcast_address) for peer in peers.values()):
+        _fail('compute peer outside private network')
     if subnet is not None:
         parsed_subnet = _cidr(subnet)
         if parsed is not None and not parsed_subnet.subnet_of(parsed):
@@ -196,6 +255,15 @@ def provider_request(opts, stage, request, shared=None):
         _fail('invalid compute shared results')
     if stage == 'node' and (not isinstance(shared.get('params'), dict) or shared['params'].get('provider') != provider):
         _fail('compute shared provider mismatch')
+    if stage == 'node' and roles is not None:
+        if role not in roles or not isinstance(shared.get('params', {}).get('role_firewall_ids'), dict) or role not in shared['params']['role_firewall_ids']:
+            _fail('missing compute role firewall')
+        shared = deepcopy(shared)
+        shared['params'][recipe['role_firewall_param']] = shared['params']['role_firewall_ids'][role]
+        if recipe.get('role_tag_param'):
+            if role not in shared['params'].get('role_tags', {}):
+                _fail('missing compute role tag')
+            shared['params'][recipe['role_tag_param']] = shared['params']['role_tags'][role]
     registration_owned = key['mode'] == 'managed' or recipe.get('registration_external', False)
     primary = shared.get('ssh_key_id') if registration_owned else key.get('reference')
     ids = [primary] if registration_owned and primary is not None else key.get('ids', [])
@@ -217,8 +285,31 @@ def provider_request(opts, stage, request, shared=None):
         image = 'projects/' + opts['google-image-project'] + '/global/images/family/' + opts['google-image-family']
     derived['google_image'] = image
     selected_stage = 'shared-keygen' if stage == 'shared' and registration_owned and entry['registration'] else stage
+    selected_stage = recipe.get('network_stages', {}).get(network['mode'], {}).get(selected_stage, selected_stage)
     if stage == 'node' and recipe.get('discovery_stage') and _missing(opts.get(recipe['image_option'])):
         selected_stage = recipe['discovery_stage']
+    if stage == 'shared' and roles is not None:
+        role_ingress, role_public, role_private = {}, {}, {}
+        for role_name, policy in sorted(roles.items()):
+            role_request = {**deepcopy(request), 'role': role_name, 'security': deepcopy(policy['security'])}
+            # Validate every role through the same policy validator. Node-stage
+            # rendering uses synthetic shared references, never cloud calls.
+            validation_shared = {**deepcopy(shared), 'ssh_key_id': primary or 'validation-key',
+                'params': {'provider': provider, 'vpc_id': 'validation-vpc',
+                    'role_firewall_ids': {r: 'validation-firewall' for r in roles},
+                    'role_tags': {r: 'validation-tag' for r in roles}}}
+            provider_request(opts, 'node', role_request, validation_shared)
+            rendered_rules = _rules(recipe['firewall_format'], role_request, cidr, profile)
+            role_public[role_name] = rendered_rules['public_ingress']
+            role_private[role_name] = rendered_rules['private_ingress']
+            for rule_id, rule in rendered_rules['ingress'].items():
+                role_ingress[role_name + ':' + rule_id] = {**rule, 'role': role_name}
+        derived['role_ingress'] = role_ingress
+        derived['role_public_ingress'] = role_public
+        derived['role_private_ingress'] = role_private
+        derived['role_tags'] = {r: 'colors-compute-' + profile + '-' + r for r in sorted(roles)}
+        derived['firewall_groups'] = {r: profile + '-' + r + '-firewall' for r in sorted(roles)}
+        selected_stage = recipe['role_stages'][selected_stage]
     templates = json.loads(files('colors_compute').joinpath('templates.json').read_text())[provider][selected_stage]
     tokens = sorted(set(re.findall(r'\{\{([a-z_]+)\}\}', json.dumps(templates))))
     context = {'opts': opts, 'request': request, 'shared': shared, 'derived': derived}

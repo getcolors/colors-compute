@@ -46,7 +46,8 @@
         },
         "node_id": "shared",
         "security": {}
-      }
+      },
+      "entry_node_id": "0"
     },
     "name": "request names 0",
     "op": "deployment_requests"
@@ -122,7 +123,8 @@
         },
         "node_id": "shared",
         "security": {}
-      }
+      },
+      "entry_node_id": "0"
     },
     "name": "request names 1",
     "op": "deployment_requests"
@@ -174,7 +176,8 @@
         },
         "node_id": "shared",
         "security": {}
-      }
+      },
+      "entry_node_id": "0"
     },
     "name": "request names 2",
     "op": "deployment_requests"
@@ -217,7 +220,8 @@
             "mode": "created"
           },
           "node_id": "server-0",
-          "security": {}
+          "security": {},
+          "role": "server"
         },
         {
           "key": {
@@ -229,7 +233,8 @@
             "mode": "created"
           },
           "node_id": "worker-0",
-          "security": {}
+          "security": {},
+          "role": "worker"
         },
         {
           "key": {
@@ -241,7 +246,8 @@
             "mode": "created"
           },
           "node_id": "worker-1",
-          "security": {}
+          "security": {},
+          "role": "worker"
         }
       ],
       "shared": {
@@ -255,7 +261,8 @@
         },
         "node_id": "shared",
         "security": {}
-      }
+      },
+      "entry_node_id": "server-0"
     },
     "name": "request names 3",
     "op": "deployment_requests"

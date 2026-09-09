@@ -5,11 +5,17 @@
             [io.github.getcolors.compute-key-request :as key]
             [io.github.getcolors.compute-ssh :as ssh]))
 (defn- address [number] (clojure.string/join "." (map #(bit-and 255 (bit-shift-right number %)) [24 16 8 0])))
+(defn- planning-shared [opts recipe requirements]
+  (cond-> (:planning_shared recipe)
+    (contains? requirements :roles)
+    (assoc-in [:params :role_firewall_ids] (into {} (map (fn [role] [role (str "build-firewall-" (name role))]) (keys (:roles requirements)))))
+    (and (contains? requirements :roles) (:role_tag_param recipe))
+    (assoc-in [:params :role_tags] (into {} (map (fn [role] [role (str "colors-compute-" (:profile opts) "-" (name role))]) (keys (:roles requirements)))))))
 (defn plan-deployment [opts topology requirements]
   (let [opts (assoc opts :green/event :build) selected (ssh/mode opts)
         selected (cond-> selected (= "managed" (:mode selected)) (assoc :public_key ssh/placeholder-public))
         key (key/key-request opts selected {}) assembly (deployment/deployment-requests opts topology requirements key)
-        provider (:provider-compute opts) recipe (get deployment/recipes (keyword provider)) shared (:planning_shared recipe)
+        provider (:provider-compute opts) recipe (get deployment/recipes (keyword provider)) shared (planning-shared opts recipe requirements)
         shared-plan (request/provider-request opts "shared" (:shared assembly)) declarations (compute/expand topology)
         _ (when (> (count declarations) 245) (throw (ex-info "build exceeds documentation address capacity" {})))
         entry (get-in compute/registry [:compute (keyword provider)])
@@ -28,9 +34,11 @@
                                       (= "managed" (:mode selected)) (assoc :ssh_identity_file (str "$HOME/.ssh/" (:profile opts)))
                                       (:private_key_path selected) (assoc :ssh_identity_file (:private_key_path selected)))}))
                        (range) (:nodes assembly))]
-    {:status "planned" :shared shared :documents {:shared (:documents shared-plan) :nodes (into {} (map (fn [node result] [(:node_id node) (:documents result)]) (:nodes assembly) resolved))}
+    {:status "planned" :shared shared :documents {:shared (:documents (if (contains? requirements :roles)
+         (request/provider-request opts "shared" (assoc (:shared assembly) :peers
+           (into {} (map (fn [declaration result] [(keyword (:node_id declaration)) {:role (:role declaration) :vpc_ip (get-in result [:params :vpc_ip])}]) declarations resolved)))) shared-plan)) :nodes (into {} (map (fn [node result] [(:node_id node) (:documents result)]) (:nodes assembly) resolved))}
      :state_keys (compute/state-keys (:profile opts) (mapv :node_id declarations))
-     :cluster (compute/collect declarations (mapv :params resolved) (:node_id (first declarations)))
+     :cluster (compute/collect declarations (mapv :params resolved) (:entry_node_id assembly))
      :key (cond-> (select-keys selected [:mode :private_key_path]) (= "managed" (:mode selected)) (assoc :private_key_path (str "$HOME/.ssh/" (:profile opts))))}))
 
 (defn validate-deployment [opts topology requirements]
@@ -39,5 +47,5 @@
         assembly (deployment/deployment-requests opts topology requirements (key/key-request opts selected {}))
         recipe (get deployment/recipes (keyword (:provider-compute opts)))]
     (request/provider-request opts "shared" (:shared assembly))
-    (doseq [node (:nodes assembly)] (request/provider-request opts "node" node (:planning_shared recipe)))
+    (doseq [node (:nodes assembly)] (request/provider-request opts "node" node (planning-shared opts recipe requirements)))
     true))

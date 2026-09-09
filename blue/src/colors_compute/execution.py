@@ -1,5 +1,6 @@
 """Guarded per-state execution; only a locked coordinator may call converge_state."""
 import json
+import asyncio
 import os
 from pathlib import Path
 import re
@@ -116,10 +117,12 @@ def _documents(documents, provider):
     return True
 
 
-async def converge_state(opts, state_key, documents, operation, presence, environment=None, runner=None):
+async def converge_state(opts, state_key, documents, operation, presence, environment=None, runner=None, sleeper=None):
     """Execute one approved plan; caller must hold committed coordinator intent."""
     try:
-        if not _state_key(opts, state_key) or operation not in ('create', 'delete') or presence not in ({'status': 'present'}, {'status': 'absent'}):
+        if not _state_key(opts, state_key) or operation not in ('create', 'delete', 'check') or presence not in ({'status': 'present'}, {'status': 'absent'}):
+            return {'status': 'error'}
+        if operation == 'check' and presence != {'status': 'present'}:
             return {'status': 'error'}
         protect = opts.get('compute-prevent-destroy', True)
         if type(protect) is not bool or operation == 'delete' and protect:
@@ -127,6 +130,8 @@ async def converge_state(opts, state_key, documents, operation, presence, enviro
         provider = opts.get('provider-compute')
         if not isinstance(provider, str) or provider not in registry()['compute'] or not _documents(documents, provider):
             return {'status': 'error'}
+        policy = json.loads(files('colors_compute').joinpath('execution-policy.json').read_text()).get(provider, {}).get('destroy_retry')
+        retry = policy if operation == 'delete' and policy and any(policy['resource_type'] in doc.get('resource', {}) for doc in documents.values()) else None
         plan = backend_plan(opts, state_key)
         if operation == 'delete' and presence == {'status': 'absent'}:
             return {'status': 'destroyed'}
@@ -165,7 +170,9 @@ async def converge_state(opts, state_key, documents, operation, presence, enviro
                     raise ValueError('invalid command')
                 result = await execute(command, directory, child, timeout)
                 if result.exit != 0:
-                    raise ValueError('execution failed')
+                    error = ValueError('execution failed')
+                    error.retryable = bool(retry and arguments[0] == 'apply' and isinstance(result.err, str) and len(result.err) <= 1048576 and retry['error_text'] in result.err and not _contains_secret(result.err, secrets))
+                    raise error
                 return result.out
             await run(['init', '-input=false', '-no-color', '-reconfigure', f'-backend-config={credential_file}'])
             before = await run(['state', 'pull'])
@@ -178,13 +185,30 @@ async def converge_state(opts, state_key, documents, operation, presence, enviro
                     return {'status': 'error'}
             elif presence != {'status': 'absent'}:
                 return {'status': 'error'}
-            arguments = ['plan', '-input=false', '-no-color', f'-out={plan_file}']
-            if operation == 'delete':
-                arguments.append('-destroy')
-            await run(arguments, 1800000)
-            if not _valid_plan(await run(['show', '-json', str(plan_file)]), operation):
-                return {'status': 'error'}
-            await run(['apply', '-input=false', '-no-color', str(plan_file)], 1800000)
+            if operation == 'check':
+                if not before.strip() or _empty(state):
+                    return {'status': 'error'}
+                await run(['plan', '-input=false', '-no-color', '-detailed-exitcode'], 1800000)
+                return {'status': 'clean'}
+            for attempt in range(retry['attempts'] if retry else 1):
+                arguments = ['plan', '-input=false', '-no-color', f'-out={plan_file}']
+                if operation == 'delete':
+                    arguments.append('-destroy')
+                await run(arguments, 1800000)
+                if not _valid_plan(await run(['show', '-json', str(plan_file)]), operation):
+                    return {'status': 'error'}
+                try:
+                    await run(['apply', '-input=false', '-no-color', str(plan_file)], 1800000)
+                    break
+                except ValueError as error:
+                    if not getattr(error, 'retryable', False) or attempt + 1 >= retry['attempts']:
+                        raise
+                    observed, observed_params = _state(await run(['state', 'pull']))
+                    if _empty(observed):
+                        return {'status': 'destroyed'}
+                    if observed_params.get('provider') != provider:
+                        return {'status': 'error'}
+                    await (sleeper or asyncio.sleep)(retry['delay_ms'] / 1000)
             after = await run(['state', 'pull'])
             if operation == 'delete' and not after.strip():
                 return {'status': 'destroyed'}
@@ -197,3 +221,8 @@ async def converge_state(opts, state_key, documents, operation, presence, enviro
             return {'status': 'ready', 'params': params, 'outputs': outputs}
     except Exception:
         return {'status': 'error'}
+
+
+async def check_state(opts, state_key, documents, environment=None, runner=None):
+    """Caller holds deployment journal; zero-change plan only, never apply."""
+    return await converge_state(opts, state_key, documents, 'check', {'status': 'present'}, environment, runner)

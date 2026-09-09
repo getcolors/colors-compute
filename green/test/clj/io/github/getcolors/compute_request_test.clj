@@ -1,7 +1,9 @@
 (ns io.github.getcolors.compute-request-test
   (:require [clojure.test :refer [deftest is testing]]
             [cheshire.core :as json]
-            [io.github.getcolors.compute-request :as r]))
+            [io.github.getcolors.compute-request :as r]
+            [io.github.getcolors.compute-deployment-request :as deployment]
+            [io.github.getcolors.compute-planning :as planning]))
 (deftest shared-provider-request-fixtures
   (doseq [{:keys [name args expected]} (json/parse-string (slurp "../test/fixtures/provider-requests.json") true)]
     (testing name
@@ -29,3 +31,36 @@
   (doseq [{:keys [name args expected]} (json/parse-string (slurp "../test/fixtures/provider-endpoint.json") true)]
     (testing name
       (is (= expected (json/parse-string (json/generate-string (try (apply r/provider-request args) (catch Exception e {:error (.getMessage e)}))) true))))))
+
+(deftest role-provider-fixtures
+  (doseq [{:keys [name args expected]} (json/parse-string (slurp "../test/fixtures/provider-roles.json") true)]
+    (testing name
+      (let [before (pr-str args)
+            actual (try (apply r/provider-request args) (catch Exception e {:error (.getMessage e)}))]
+        (is (= expected (json/parse-string (json/generate-string actual) true)))
+        (is (= before (pr-str args)))))))
+
+(deftest role-assembly-planning-and-settings-are-pure
+  (let [[opts _ request] (:args (first (json/parse-string (slurp "../test/fixtures/provider-roles.json") true)))
+        topology [{:role "db" :count 1} {:role "app" :count 1}]
+        requirements {:security (:security request) :network (:network request) :roles (:roles request) :entry_node_id "app-0"}
+        before (pr-str [opts topology requirements])
+        assembly (deployment/deployment-requests opts topology requirements (:key request))
+        result (planning/plan-deployment opts topology requirements)]
+    (is (= ["db" "app"] (mapv :role (:nodes assembly))))
+    (is (= "app-0" (:entry_node_id assembly)))
+    (is (= "app-0" (get-in result [:cluster :entry_node_id])))
+    (is (= "10.42.1.11" (get-in result [:documents :shared "shared-roles.tf.json" "locals" "ingress" "db:db:peer:app-0" :subnet])))
+    (is (= before (pr-str [opts topology requirements])))
+    (doseq [bad [(assoc requirements :entry_node_id "missing")
+                 (assoc requirements :roles {:db (get-in requirements [:roles :db])})
+                 (assoc-in requirements [:roles :db :security :ingress 1 :peer_roles] ["unknown"])]]
+      (is (thrown? Exception (deployment/deployment-requests opts topology bad (:key request)))))
+    (is (thrown? Exception (deployment/deployment-requests (assoc opts :compute-role-settings {:missing {:size "a"}}) topology requirements (:key request))))))
+
+(deftest vultr-ipv6-rules-retain-canonical-family
+  (let [[opts _ request] (:args (first (json/parse-string (slurp "../test/fixtures/provider-roles.json") true)))
+        request (-> request (dissoc :roles) (assoc-in [:security :ingress 0 :sources] ["2606:4700::/32"]))
+        result (r/provider-request opts "shared" request)]
+    (is (= "v6" (get-in result [:inputs :ingress "ssh:2606:4700::/32" :ip_type])))
+    (is (thrown? Exception (r/provider-request opts "shared" (assoc-in request [:security :ingress 0 :sources] ["2606:4700:0:0::/32"]))))))

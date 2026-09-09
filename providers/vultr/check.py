@@ -41,6 +41,11 @@ def check():
             expected = (ROOT / 'examples' / mode / output).read_text()
             assert json.dumps(rendered, indent=2) + '\n' == expected, f'render drift: {mode}/{output}'
             assert 'COLORS_PAR_' not in expected and 'api_key' not in expected
+    role_inputs = json.loads((ROOT / 'examples/role-inputs.json').read_text())
+    for template in ('shared-roles', 'shared-keygen'):
+        source = json.loads((ROOT / f'{template}.tf.json.template').read_text())
+        expected = (ROOT / 'examples/shared-roles-keygen' / f'{template}.tf.json').read_text()
+        assert json.dumps(render(source, role_inputs), indent=2) + '\n' == expected
     assert render('{{value}}', {'value': True}) is True
     assert render('{{value}}', {'value': 24}) == 24
     assert render('{{value}}', {'value': ['a']}) == ['a']
@@ -64,7 +69,7 @@ def main():
         # Schema checks need registry access but no ambient provider/backend credentials.
         env = {key: value for key, value in os.environ.items()
                if key in ('PATH', 'HOME', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NIX_SSL_CERT_FILE', 'LANG')}
-        for mode in ('shared-keygen', 'shared-optout', 'node'):
+        for mode in ('shared-keygen', 'shared-optout', 'node', 'shared-roles-keygen'):
             with tempfile.TemporaryDirectory(prefix='colors-compute-vultr-') as directory:
                 for source in (ROOT / 'examples' / mode).glob('*.tf.json'):
                     (Path(directory) / source.name).write_bytes(source.read_bytes())

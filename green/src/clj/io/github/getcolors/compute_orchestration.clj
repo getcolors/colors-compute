@@ -76,11 +76,11 @@
                          (let [doc (snapshot) selected (ssh/mode opts)]
                            (require-valid (if (= operation "create") (= "active" (:status doc)) (contains? #{"active" "deleting"} (:status doc))))
                            (require-valid (contains? #{nil (:mode selected)} (get-in doc [:key :mode])))
-                           (let [shared-read (atom nil)]
+                           (let [shared-read (atom nil) observed-nodes (atom {})]
                              (doseq [[id record] (cons [nil (:shared doc)] (map (fn [[id record]] [(name id) record]) (:nodes doc)))]
                                (let [key (node-key id) presence (presence-for key record)]
                                  (when (and (= presence {:status "present"}) (not (contains? #{"declared" "destroyed"} (:phase record))))
-                                   (let [result (readable key)] (when (nil? id) (reset! shared-read result))))))
+                                   (let [result (readable key)] (if (nil? id) (reset! shared-read result) (swap! observed-nodes assoc (keyword id) {:role (:role record) :vpc_ip (get-in result [:params :vpc_ip])}))))))
                              (if (= operation "create")
                                (do (doseq [node declarations :when (not (contains? (:nodes doc) (keyword (:node_id node))))]
                                      (presence-for (node-key (:node_id node)) {:phase "declared"}))
@@ -105,7 +105,11 @@
                                  (transition "key-intent" {:mode "external"}) (transition "key-prepared" {:fingerprint nil}))
                                (let [normalized (call :key-request key-request/key-request opts key environment)
                                      assembly (call :deployment-requests deployment/deployment-requests opts topology requirements normalized)
-                                     shared-request (:shared assembly) shared-plan (call :provider-request request/provider-request opts "shared" shared-request)
+                                     shared-request (cond-> (:shared assembly)
+                                       (contains? (:shared assembly) :roles)
+                                       (assoc :peers (into {} (filter (fn [[id peer]] (and (or (= operation "delete") (some #(= (:node_id %) (name id)) declarations))
+                                                                                       (contains? (get-in assembly [:shared :roles]) (keyword (:role peer)))))) @observed-nodes)))
+                                     shared-plan (call :provider-request request/provider-request opts "shared" shared-request)
                                      doc (snapshot)
                                      existing (if (and (not= "declared" (get-in doc [:shared :phase]))
                                                        (some #(and (not= "destroyed" (:phase %)) (or (= operation "delete") (not (:desired %)))) (vals (:nodes doc))))
@@ -114,7 +118,9 @@
                                          :when (and (not= "destroyed" (:phase node)) (or (= operation "delete") (not (:desired node))))]
                                    (let [id (name node-id)]
                                      (if (= "declared" (:phase node)) (attempt id {} "delete")
-                                         (let [plan (call :provider-request request/provider-request opts "node" (assoc (dissoc shared-request :name) :node_id id) existing)]
+                                         (let [plan (call :provider-request request/provider-request opts "node" (cond-> (assoc (dissoc shared-request :name) :node_id id)
+                                           (:role node) (assoc :role (:role node))
+                                           (contains? shared-request :roles) (assoc :security (or (get-in shared-request [:roles (keyword (:role node)) :security]) (throw (ex-info "compute lifecycle refused" {}))))) existing)]
                                            (attempt id (:documents plan) "delete")))))
                                  (if (= operation "delete")
                                    (do (attempt nil (:documents shared-plan) "delete")
@@ -130,7 +136,7 @@
                                                           (assoc values :colors-compute/params (cond-> (:params result) (:private_key_path key) (assoc :ssh_identity_file (:private_key_path key)))))
                                                         (catch InterruptedException error (coordinator/poison! @owner) (throw error))
                                                         (catch Exception _ (assoc values :green/exit 1 :green/err "compute node failed")))))
-                                         task (future (call :run engine/run (workflow/cluster-workflow declarations (:node_id (first declarations)) callback) opts))
+                                         task (future (call :run engine/run (workflow/cluster-workflow declarations (get assembly :entry_node_id (:node_id (first declarations))) callback) opts))
                                          result (try @task
                                                      (catch InterruptedException error
                                                        (coordinator/poison! @owner)
@@ -139,7 +145,10 @@
                                                                   (when-not finished (recur))))
                                                        (throw error)))]
                                      (require-valid (and (= 0 (:green/exit result)) (contains? result :colors-compute/cluster)))
-                                     {:status "ready" :cluster (:colors-compute/cluster result) :shared (:outputs shared) :key (select-keys key [:mode :private_key_path :fingerprint])})))))))))))]
+                                     {:status "ready" :cluster (:colors-compute/cluster result) :shared (if (contains? shared-request :roles)
+                                       (let [peers (into {} (map (fn [node] [(keyword (:node_id node)) {:role (:role node) :vpc_ip (:vpc_ip node)}]) (get-in result [:colors-compute/cluster :nodes])))
+                                             plan (call :provider-request request/provider-request opts "shared" (assoc shared-request :peers peers))]
+                                         (:outputs (attempt nil (:documents plan) "create"))) (:outputs shared)) :key (select-keys key [:mode :private_key_path :fingerprint])})))))))))))]
        (let [result (try (execute)
                          (catch InterruptedException error (when @owner (coordinator/poison! @owner)) (reset! cancelled error) {:status "error"})
                          (catch Exception error (if-let [errors (:compute/credential-errors (ex-data error))]

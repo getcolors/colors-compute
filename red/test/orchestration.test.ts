@@ -3,7 +3,7 @@ import {Coordinator} from '../src/coordinator.ts';
 import {orchestrate} from '../src/orchestration.ts';
 type Map=Record<string,any>;
 const opts={profile:'demo','provider-compute':'vultr','provider-backend':'s3','s3-bucket':'states','s3-region':'eu-west-1','compute-prevent-destroy':false};
-class Runtime {
+export class Runtime {
  observed:Map={status:'absent'};states:Map={};events:string[]=[];fails=new Set<string>();writes=0;
  deps=()=>({validate_deployment:()=>true,compute_credential_errors:()=>[],
   coordinator:(o:Map,config:Map)=>new Coordinator(o,{...config,read:async()=>structuredClone(this.observed),write:async(intent:Map)=>{
@@ -50,6 +50,8 @@ test('read-only inventory requires idle validated journal and complete node para
  const {read_deployment}=await import('../src/inspection.ts');const r=new Runtime();expect((await r.run()).status).toBe('ready');
  const deps={journal_get:async()=>structuredClone(r.observed),read_state:async(o:Map,key:string)=>({status:'present',params:r.states[key].params,outputs:r.states[key]})};
  const found=await read_deployment(opts,{HOME:'/example'},deps);expect(found.status).toBe('present');expect(found.cluster!.nodes.map((n:Map)=>n.node_id)).toEqual(['0','1']);expect(found.key!.private_key_path).toBe('/example/.ssh/demo');
+ expect((await read_deployment(opts,{},deps,{entry_node_id:'1'})).cluster!.entry_node_id).toBe('1');
+ expect(await read_deployment(opts,{},deps,{entry_node_id:'missing'})).toEqual({status:'error'});
  const owner=new Coordinator(opts,{eventPrefix:'lifecycle/',read:async()=>structuredClone(r.observed),write:async(intent:Map)=>{r.observed={status:'present',etag:'held',document:intent.document};return {status:'written',etag:'held'};}});await owner.acquire();
  expect(await read_deployment(opts,{},deps)).toEqual({status:'error'});
 });

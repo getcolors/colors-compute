@@ -51,10 +51,10 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
   if(operation==='delete'&&doc.status==='retired')return {status:'destroyed'};
   if(operation==='create'&&doc.status==='retired'){await coordinator.transition('recreate');doc=await snapshot();}
   require(operation==='create'?doc.status==='active':['active','deleting'].includes(doc.status));
-  const selected=mode(opts);require(doc.key.mode===null||doc.key.mode===selected.mode);let sharedRead:any=null;
+  const selected=mode(opts);require(doc.key.mode===null||doc.key.mode===selected.mode);let sharedRead:any=null;const observedNodes:Map={};
   for(const [nodeId,record] of [[null,doc.shared],...Object.entries(doc.nodes)] as [string|null,Map][]){
    const key=nodeId===null?keys.shared:state_keys(opts.profile,[nodeId]).nodes[nodeId];const p=await presenceFor(key,record);
-   if(p.status==='present'&&!['declared','destroyed'].includes(record.phase)){const r=await readable(key);if(nodeId===null)sharedRead=r;}
+   if(p.status==='present'&&!['declared','destroyed'].includes(record.phase)){const r=await readable(key);if(nodeId===null)sharedRead=r;else observedNodes[nodeId]={role:record.role,vpc_ip:r.params.vpc_ip};}
   }
   if(operation==='create'){
    for(const node of declarations)if(!Object.hasOwn(doc.nodes,node.node_id))await presenceFor(keys.nodes[node.node_id],{phase:'declared'});
@@ -81,13 +81,15 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
   }else{require(keyRecord.phase==='prepared');key=await call('prepare_keypair',prepareKeypair,{...opts,'red/event':'create'},ownership,env,recordIntent,recordPrepared);}
   const normalized=await call('key_request',key_request,opts,key,env);
   const assembly=await call('deployment_requests',deployment_requests,opts,topology,request,normalized);
-  const sharedRequest=assembly.shared,sharedPlan=await call('provider_request',provider_request,opts,'shared',sharedRequest);
+  const sharedRequest=assembly.shared;
+  if(sharedRequest.roles){const desired=new Set(declarations.map(n=>n.node_id));sharedRequest.peers=Object.fromEntries(Object.entries(observedNodes).filter(([id,peer])=>(operation==='delete'||desired.has(id))&&Object.hasOwn(sharedRequest.roles,peer.role)));}
+  const sharedPlan=await call('provider_request',provider_request,opts,'shared',sharedRequest);
   doc=await snapshot();let existingShared:Map={};
   if(Object.values(doc.nodes).some((node:any)=>node.phase!=='destroyed'&&(operation==='delete'||!node.desired))&&doc.shared.phase!=='declared')existingShared=(await readable(keys.shared)).outputs;
   for(const [nodeId,node] of Object.entries(doc.nodes) as [string,Map][]){
    if(node.phase==='destroyed'||operation==='create'&&node.desired)continue;
    if(node.phase==='declared'){await attempt(nodeId,{},'delete');continue;}
-   const nodeRequest={...structuredClone(sharedRequest),node_id:nodeId};delete nodeRequest.name;
+   const nodeRequest:Map={...structuredClone(sharedRequest),node_id:nodeId};delete nodeRequest.name;if(node.role!=null){nodeRequest.role=node.role;if(nodeRequest.roles){require(Object.hasOwn(nodeRequest.roles,node.role));nodeRequest.security=structuredClone(nodeRequest.roles[node.role].security);}}
    const plan=await call('provider_request',provider_request,opts,'node',nodeRequest,existingShared);await attempt(nodeId,plan.documents,'delete');
   }
   if(operation==='delete'){
@@ -100,9 +102,10 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
    try{const plan=await call('provider_request',provider_request,opts,'node',requests[nodeId],shared.outputs);const result=await attempt(nodeId,plan.documents,'create');return {...values,'colors-compute/params':{...result.params,...(key.private_key_path?{ssh_identity_file:key.private_key_path}:{})}};}
    catch(error){if(error instanceof Error&&error.name==='AbortError')throw error;return {...values,'red/exit':1,'red/err':'compute node failed'};}
   };
-  const result=await call('run',run,clusterWorkflow(declarations,declarations[0].node_id,nodeStep),opts);
+  const result=await call('run',run,clusterWorkflow(declarations,assembly.entry_node_id??declarations[0].node_id,nodeStep),opts);
   require(result['red/exit']===0&&result['colors-compute/cluster']);
-  return {status:'ready',cluster:result['colors-compute/cluster'],shared:shared.outputs,key:Object.fromEntries(Object.entries(key).filter(([k])=>['mode','private_key_path','fingerprint'].includes(k)))};
+  let sharedOutputs=shared.outputs;if(sharedRequest.roles){sharedRequest.peers=Object.fromEntries(result['colors-compute/cluster'].nodes.map((n:Map)=>[n.node_id,{role:n.role,vpc_ip:n.vpc_ip}]));const plan=await call('provider_request',provider_request,opts,'shared',sharedRequest);sharedOutputs=(await attempt(null,plan.documents,'create')).outputs;}
+  return {status:'ready',cluster:result['colors-compute/cluster'],shared:sharedOutputs,key:Object.fromEntries(Object.entries(key).filter(([k])=>['mode','private_key_path','fingerprint'].includes(k)))};
  };
  let result:any,cancelled:any;
  try{result=await execute();}catch(error){if(error instanceof Error&&error.name==='AbortError')cancelled=error;result={status:'error'};}

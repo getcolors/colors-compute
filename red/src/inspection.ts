@@ -7,9 +7,10 @@ import {journalGet,identity} from './journal.ts';
 import {lifecycleDocumentValid} from './lifecycle.ts';
 import {mode} from './ssh.ts';
 type Map=Record<string,any>;
-export async function read_deployment(opts:Map,environment:Map=process.env,dependencies:Map={}) {
+export async function read_deployment(opts:Map,environment:Map=process.env,dependencies:Map={},requirements:Map={}) {
  const env={...environment},call=async(name:string,fn:any,...args:any[])=>await (dependencies[name]??fn)(...args);
  try{
+  if(requirements===null||typeof requirements!=='object'||Array.isArray(requirements))return {status:'error'};
   const observed=await call('journal_get',journalGet,opts,env);
   if(observed.status==='absent'&&Object.keys(observed).length===1)return {status:'absent'};
   if(observed.status!=='present')return {status:'error'};
@@ -29,7 +30,9 @@ export async function read_deployment(opts:Map,environment:Map=process.env,depen
   const key:Map={mode:doc.key.mode},selected=mode(opts);if(selected.mode!==key.mode)return {status:'error'};
   if(key.mode==='managed')key.private_key_path=join(env.HOME||homedir(),'.ssh',opts.profile);
   else if(selected.private_key_path)key.private_key_path=selected.private_key_path;
-  const cluster=collect(declarations,results,declarations[0].node_id);
+  const entry=Object.hasOwn(requirements,'entry_node_id')?requirements.entry_node_id:declarations[0].node_id;
+  if(typeof entry!=='string'||!declarations.some(node=>node.node_id===entry))return {status:'error'};
+  const cluster=collect(declarations,results,entry);
   if(key.private_key_path)for(const node of cluster.nodes)node.ssh_identity_file=key.private_key_path;
   return {status:'present',cluster,shared:shared.outputs,key};
  }catch(error){if(error instanceof Error&&error.name==='AbortError')throw error;return {status:'error'};}

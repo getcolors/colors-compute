@@ -1,6 +1,7 @@
 import {chmodSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import executionPolicy from '../resources/execution-policy.json';
 import templatesData from '../resources/templates.json';
 import {registry} from './index.ts';
 import {backend_plan} from './rendering.ts';
@@ -68,13 +69,15 @@ function validDocuments(documents:unknown,provider:string):documents is Map {
   return true;
 }
 /** Internal lifecycle primitive: requires a confirmed schema-2 attempt and ownership. */
-export async function convergeState(opts:Map,key:string,documents:unknown,operation:string,presence:unknown,environment:Env=process.env,runner:BackendRunner=executeBackendCommand):Promise<Map> {
+export async function convergeState(opts:Map,key:string,documents:unknown,operation:string,presence:unknown,environment:Env=process.env,runner:BackendRunner=executeBackendCommand,sleeper:(milliseconds:number)=>Promise<unknown>=Bun.sleep):Promise<Map> {
   let directory:string|undefined;
   try {
-    if(!object(opts)||!stateKey(opts,key)||!['create','delete'].includes(operation)||!object(presence)||Object.keys(presence).length!==1||!['present','absent'].includes(presence.status))return {status:'error'};
+    if(!object(opts)||!stateKey(opts,key)||!['create','delete','check'].includes(operation)||!object(presence)||Object.keys(presence).length!==1||!['present','absent'].includes(presence.status))return {status:'error'};
+    if(operation==='check'&&presence.status!=='present')return {status:'error'};
     const protect=Object.hasOwn(opts,'compute-prevent-destroy')?opts['compute-prevent-destroy']:true;
     if(typeof protect!=='boolean'||(operation==='delete'&&protect))return {status:'error'};
     const provider=opts['provider-compute'];if(typeof provider!=='string'||!Object.hasOwn(registry.compute,provider)||!validDocuments(documents,provider))return {status:'error'};
+    const policy=(executionPolicy as Map)[provider]?.destroy_retry;const retry=operation==='delete'&&policy&&Object.values(documents).some(d=>Object.hasOwn(d.resource??{},policy.resource_type))?policy:null;
     const plan=backend_plan(opts,key);
     if(operation==='delete'&&presence.status==='absent')return {status:'destroyed'};
     const source={...environment},credentials:Map={},secrets:string[]=[];
@@ -92,7 +95,7 @@ export async function convergeState(opts:Map,key:string,documents:unknown,operat
     Object.assign(env,{TF_IN_AUTOMATION:'1',TF_INPUT:'0',TF_WORKSPACE:'default',TF_DATA_DIR:join(directory,'.terraform')});
     const execute=async(args:string[],timeoutMs=120000):Promise<string>=>{
       const command=['tofu',...args];if(containsSecret(JSON.stringify(command),secrets))throw new Error('invalid command');
-      const result=await runner(command,{cwd:directory!,env,timeoutMs});if(result.exit!==0)throw new Error('execution failed');return result.out;
+      const result=await runner(command,{cwd:directory!,env,timeoutMs});if(result.exit!==0){const error:any=new Error('execution failed');error.retryable=!!(retry&&args[0]==='apply'&&typeof result.err==='string'&&result.err.length<=1048576&&result.err.includes(retry.error_text)&&!containsSecret(result.err,secrets));throw error;}return result.out;
     };
     await execute(['init','-input=false','-no-color','-reconfigure',`-backend-config=${credentialFile}`]);
     const before=await execute(['state','pull']);
@@ -101,9 +104,13 @@ export async function convergeState(opts:Map,key:string,documents:unknown,operat
       if(empty(current.document)){if(operation==='delete')return {status:'destroyed'};}
       else if(current.params.provider!==provider)return {status:'error'};
     }else if(presence.status!=='absent')return {status:'error'};
-    const args=['plan','-input=false','-no-color',`-out=${planFile}`];if(operation==='delete')args.push('-destroy');
-    await execute(args,1800000);if(!validPlan(await execute(['show','-json',planFile]),operation))return {status:'error'};
-    await execute(['apply','-input=false','-no-color',planFile],1800000);
+    if(operation==='check'){if(!before.trim()||empty(state(before).document))return {status:'error'};await execute(['plan','-input=false','-no-color','-detailed-exitcode'],1800000);return {status:'clean'};}
+    for(let attempt=0;attempt<(retry?.attempts??1);attempt++){
+      const args=['plan','-input=false','-no-color',`-out=${planFile}`];if(operation==='delete')args.push('-destroy');
+      await execute(args,1800000);if(!validPlan(await execute(['show','-json',planFile]),operation))return {status:'error'};
+      try{await execute(['apply','-input=false','-no-color',planFile],1800000);break;}
+      catch(error){if(!(error as any).retryable||attempt+1>=retry.attempts)throw error;const observed=state(await execute(['state','pull']));if(empty(observed.document))return {status:'destroyed'};if(observed.params.provider!==provider)return {status:'error'};await sleeper(retry.delay_ms);}
+    }
     const after=await execute(['state','pull']);if(operation==='delete'&&!after.trim())return {status:'destroyed'};
     const final=state(after);
     if(operation==='delete')return {status:empty(final.document)?'destroyed':'error'};
@@ -113,3 +120,5 @@ export async function convergeState(opts:Map,key:string,documents:unknown,operat
   }catch(error){if(cancelled(error))throw error;return {status:'error'};}
   finally {if(directory)try{rmSync(directory,{recursive:true,force:true});}catch{return {status:'error'};}}
 }
+
+export async function checkState(opts:Map,key:string,documents:unknown,environment:Env=process.env,runner:BackendRunner=executeBackendCommand):Promise<Map>{return convergeState(opts,key,documents,'check',{status:'present'},environment,runner);}

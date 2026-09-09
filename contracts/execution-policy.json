@@ -1,0 +1,10 @@
+{
+  "digitalocean": {
+    "destroy_retry": {
+      "resource_type": "digitalocean_vpc",
+      "error_text": "Can not delete VPC with members",
+      "attempts": 4,
+      "delay_ms": 30000
+    }
+  }
+}

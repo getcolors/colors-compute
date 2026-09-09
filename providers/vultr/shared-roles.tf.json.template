@@ -1,0 +1,60 @@
+{
+  "terraform": {
+    "required_providers": {
+      "vultr": {
+        "source": "vultr/vultr",
+        "version": "2.32.0"
+      }
+    }
+  },
+  "provider": {
+    "vultr": {}
+  },
+  "locals": {
+    "ingress": "{{role_ingress}}"
+  },
+  "resource": {
+    "vultr_vpc": {
+      "network": {
+        "region": "{{region}}",
+        "description": "{{name}}",
+        "v4_subnet": "{{network_address}}",
+        "v4_subnet_mask": "{{network_prefix}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "vultr_firewall_group": {
+      "role": {
+        "for_each": "{{firewall_groups}}",
+        "description": "${each.value}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "vultr_firewall_rule": {
+      "ingress": {
+        "for_each": "${local.ingress}",
+        "firewall_group_id": "${vultr_firewall_group.role[each.value.role].id}",
+        "protocol": "${each.value.protocol}",
+        "port": "${each.value.port}",
+        "ip_type": "${each.value.ip_type}",
+        "subnet": "${each.value.subnet}",
+        "subnet_size": "${each.value.subnet_size}"
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "vultr",
+        "vpc_id": "${vultr_vpc.network.id}",
+        "vpc_ip_range": "{{network_cidr}}",
+        "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
+        "role_firewall_ids": "${ { for role, firewall in vultr_firewall_group.role : role => firewall.id } }"
+      }
+    }
+  }
+}

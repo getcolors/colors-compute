@@ -786,6 +786,474 @@
         }
       }
     },
+    "shared-created": {
+      "shared-created.tf.json": {
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "firewall_id": "${digitalocean_firewall.network.id}",
+              "network_cidr": "${digitalocean_vpc.network.ip_range}",
+              "provider": "digitalocean",
+              "vpc_id": "${digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.public_ingress}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.private_ingress}"
+                  }
+                ]
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.deployment.name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            }
+          },
+          "digitalocean_vpc": {
+            "network": {
+              "ip_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "region": "{{region}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-created-keygen": {
+      "shared-created.tf.json": {
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "firewall_id": "${digitalocean_firewall.network.id}",
+              "network_cidr": "${digitalocean_vpc.network.ip_range}",
+              "provider": "digitalocean",
+              "vpc_id": "${digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.public_ingress}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.private_ingress}"
+                  }
+                ]
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.deployment.name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            }
+          },
+          "digitalocean_vpc": {
+            "network": {
+              "ip_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "region": "{{region}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      },
+      "shared-keygen.tf.json": {
+        "output": {
+          "registration": {
+            "value": {
+              "id": "${digitalocean_ssh_key.machine.id}",
+              "provider": "digitalocean",
+              "scope": "account"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${digitalocean_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "digitalocean_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      }
+    },
+    "shared-created-roles": {
+      "shared-created-roles.tf.json": {
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}",
+          "role_private_ingress": "{{role_private_ingress}}",
+          "role_public_ingress": "{{role_public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "network_cidr": "${digitalocean_vpc.network.ip_range}",
+              "provider": "digitalocean",
+              "role_firewall_ids": "${ {for role, firewall in digitalocean_firewall.network : role => firewall.id} }",
+              "role_tags": "${ {for role, tag in digitalocean_tag.role : role => tag.name} }",
+              "vpc_id": "${digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.role_public_ingress[each.key]}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.role_private_ingress[each.key]}"
+                  }
+                ]
+              },
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.role[each.key].name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            },
+            "role": {
+              "for_each": "{{role_tags}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}"
+            }
+          },
+          "digitalocean_vpc": {
+            "network": {
+              "ip_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "region": "{{region}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-created-roles-keygen": {
+      "shared-created-roles.tf.json": {
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}",
+          "role_private_ingress": "{{role_private_ingress}}",
+          "role_public_ingress": "{{role_public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "network_cidr": "${digitalocean_vpc.network.ip_range}",
+              "provider": "digitalocean",
+              "role_firewall_ids": "${ {for role, firewall in digitalocean_firewall.network : role => firewall.id} }",
+              "role_tags": "${ {for role, tag in digitalocean_tag.role : role => tag.name} }",
+              "vpc_id": "${digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.role_public_ingress[each.key]}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.role_private_ingress[each.key]}"
+                  }
+                ]
+              },
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.role[each.key].name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            },
+            "role": {
+              "for_each": "{{role_tags}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}"
+            }
+          },
+          "digitalocean_vpc": {
+            "network": {
+              "ip_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "region": "{{region}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      },
+      "shared-keygen.tf.json": {
+        "output": {
+          "registration": {
+            "value": {
+              "id": "${digitalocean_ssh_key.machine.id}",
+              "provider": "digitalocean",
+              "scope": "account"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${digitalocean_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "digitalocean_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      }
+    },
     "shared-keygen": {
       "shared-keygen.tf.json": {
         "output": {
@@ -893,6 +1361,245 @@
                 "prevent_destroy": "{{prevent_destroy}}"
               },
               "name": "{{deployment_tag}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-roles": {
+      "shared-roles.tf.json": {
+        "data": {
+          "digitalocean_vpc": {
+            "network": {
+              "region": "{{region}}"
+            }
+          }
+        },
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}",
+          "role_private_ingress": "{{role_private_ingress}}",
+          "role_public_ingress": "{{role_public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+              "provider": "digitalocean",
+              "role_firewall_ids": "${ {for role, firewall in digitalocean_firewall.network : role => firewall.id} }",
+              "role_tags": "${ {for role, tag in digitalocean_tag.role : role => tag.name} }",
+              "vpc_id": "${data.digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.role_public_ingress[each.key]}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${data.digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.role_private_ingress[each.key]}"
+                  }
+                ]
+              },
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.role[each.key].name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            },
+            "role": {
+              "for_each": "{{role_tags}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-roles-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "registration": {
+            "value": {
+              "id": "${digitalocean_ssh_key.machine.id}",
+              "provider": "digitalocean",
+              "scope": "account"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${digitalocean_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "digitalocean_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared-roles.tf.json": {
+        "data": {
+          "digitalocean_vpc": {
+            "network": {
+              "region": "{{region}}"
+            }
+          }
+        },
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}",
+          "role_private_ingress": "{{role_private_ingress}}",
+          "role_public_ingress": "{{role_public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "endpoint_ip": "${try(digitalocean_reserved_ip.endpoint[0].ip_address, null)}",
+              "network_cidr": "${data.digitalocean_vpc.network.ip_range}",
+              "provider": "digitalocean",
+              "role_firewall_ids": "${ {for role, firewall in digitalocean_firewall.network : role => firewall.id} }",
+              "role_tags": "${ {for role, tag in digitalocean_tag.role : role => tag.name} }",
+              "vpc_id": "${data.digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.role_public_ingress[each.key]}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${data.digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.role_private_ingress[each.key]}"
+                  }
+                ]
+              },
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.role[each.key].name}"
+              ]
+            }
+          },
+          "digitalocean_reserved_ip": {
+            "endpoint": {
+              "count": "{{endpoint_count}}",
+              "lifecycle": {
+                "ignore_changes": [
+                  "droplet_id"
+                ],
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}"
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            },
+            "role": {
+              "for_each": "{{role_tags}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}"
             }
           }
         },
@@ -1845,6 +2552,155 @@
           "vultr_firewall_rule": {
             "ingress": {
               "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "for_each": "${local.ingress}",
+              "ip_type": "${each.value.ip_type}",
+              "port": "${each.value.port}",
+              "protocol": "${each.value.protocol}",
+              "subnet": "${each.value.subnet}",
+              "subnet_size": "${each.value.subnet_size}"
+            }
+          },
+          "vultr_vpc": {
+            "network": {
+              "description": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}",
+              "v4_subnet": "{{network_address}}",
+              "v4_subnet_mask": "{{network_prefix}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-roles": {
+      "shared-roles.tf.json": {
+        "locals": {
+          "ingress": "{{role_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
+              "provider": "vultr",
+              "role_firewall_ids": "${ { for role, firewall in vultr_firewall_group.role : role => firewall.id } }",
+              "vpc_id": "${vultr_vpc.network.id}",
+              "vpc_ip_range": "{{network_cidr}}"
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_firewall_group": {
+            "role": {
+              "description": "${each.value}",
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              }
+            }
+          },
+          "vultr_firewall_rule": {
+            "ingress": {
+              "firewall_group_id": "${vultr_firewall_group.role[each.value.role].id}",
+              "for_each": "${local.ingress}",
+              "ip_type": "${each.value.ip_type}",
+              "port": "${each.value.port}",
+              "protocol": "${each.value.protocol}",
+              "subnet": "${each.value.subnet}",
+              "subnet_size": "${each.value.subnet_size}"
+            }
+          },
+          "vultr_vpc": {
+            "network": {
+              "description": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}",
+              "v4_subnet": "{{network_address}}",
+              "v4_subnet_mask": "{{network_prefix}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-roles-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "registration": {
+            "value": {
+              "id": "${vultr_ssh_key.machine.id}",
+              "provider": "vultr",
+              "scope": "account"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${vultr_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "vultr_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "ssh_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared-roles.tf.json": {
+        "locals": {
+          "ingress": "{{role_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
+              "provider": "vultr",
+              "role_firewall_ids": "${ { for role, firewall in vultr_firewall_group.role : role => firewall.id } }",
+              "vpc_id": "${vultr_vpc.network.id}",
+              "vpc_ip_range": "{{network_cidr}}"
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_firewall_group": {
+            "role": {
+              "description": "${each.value}",
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              }
+            }
+          },
+          "vultr_firewall_rule": {
+            "ingress": {
+              "firewall_group_id": "${vultr_firewall_group.role[each.value.role].id}",
               "for_each": "${local.ingress}",
               "ip_type": "${each.value.ip_type}",
               "port": "${each.value.port}",

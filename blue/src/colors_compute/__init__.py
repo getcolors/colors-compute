@@ -36,3 +36,9 @@ async def orchestrate(*args, **kwargs):
     # Pure contract consumers do not load the SDK workflow machinery.
     from .orchestration import orchestrate as run_deployment
     return await run_deployment(*args, **kwargs)
+
+from .drift import check_deployment_drift
+__all__.append('check_deployment_drift')
+
+from .controller import controller_artifact
+__all__.append("controller_artifact")

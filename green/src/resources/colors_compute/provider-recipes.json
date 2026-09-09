@@ -126,6 +126,14 @@
     },
     "private_filter": true,
     "registration_external": true,
+    "role_options": {
+      "image": "aws-image-id",
+      "size": "aws-instance-type"
+    },
+    "role_size_legacy": [
+      "aws-instance-type-{role}",
+      "{role}-aws-instance-type"
+    ],
     "static_private_ip": false,
     "subnet_cidr_options": [
       "aws-subnet-cidr"
@@ -261,6 +269,13 @@
     },
     "private_filter": true,
     "registration_external": false,
+    "role_options": {
+      "size": "azure-vm-size"
+    },
+    "role_size_legacy": [
+      "azure-vm-size-{role}",
+      "{role}-azure-vm-size"
+    ],
     "static_private_ip": false,
     "subnet_cidr_options": [
       "azure-subnet-cidr"
@@ -270,10 +285,20 @@
     "application_reserved_ip": true,
     "bindings": {
       "deployment_tag": {
-        "path": "derived.deployment_tag"
+        "first": [
+          {
+            "path": "shared.params.deployment_tag"
+          },
+          {
+            "path": "derived.deployment_tag"
+          }
+        ]
       },
       "endpoint_count": {
         "path": "derived.endpoint_count"
+      },
+      "firewall_groups": {
+        "path": "derived.firewall_groups"
       },
       "firewall_name": {
         "path": "derived.firewall_name"
@@ -332,6 +357,15 @@
       "region": {
         "path": "opts.digitalocean-region"
       },
+      "role_private_ingress": {
+        "path": "derived.role_private_ingress"
+      },
+      "role_public_ingress": {
+        "path": "derived.role_public_ingress"
+      },
+      "role_tags": {
+        "path": "derived.role_tags"
+      },
       "size": {
         "path": "opts.digitalocean-size"
       },
@@ -353,7 +387,14 @@
       "tags": {
         "list": [
           {
-            "path": "derived.deployment_tag"
+            "first": [
+              {
+                "path": "shared.params.deployment_tag"
+              },
+              {
+                "path": "derived.deployment_tag"
+              }
+            ]
           }
         ]
       },
@@ -369,8 +410,20 @@
     ],
     "external_key_kind": "ids",
     "firewall_format": "digitalocean",
-    "network_cidr_options": [],
+    "network_cidr_options": [
+      "digitalocean-vpc-cidr"
+    ],
     "network_mode": "discovered",
+    "network_modes": [
+      "discovered",
+      "created"
+    ],
+    "network_stages": {
+      "created": {
+        "shared": "shared-created",
+        "shared-keygen": "shared-created-keygen"
+      }
+    },
     "planning_provider_id": "1000000",
     "planning_shared": {
       "key_name": "example",
@@ -390,6 +443,24 @@
     },
     "private_filter": true,
     "registration_external": false,
+    "role_firewall_param": "firewall_id",
+    "role_firewalls": true,
+    "role_options": {
+      "image": "digitalocean-image",
+      "size": "digitalocean-size"
+    },
+    "role_size_legacy": [
+      "digitalocean-size-{role}",
+      "{role}-digitalocean-size",
+      "digitalocean-{role}-size"
+    ],
+    "role_stages": {
+      "shared": "shared-roles",
+      "shared-created": "shared-created-roles",
+      "shared-created-keygen": "shared-created-roles-keygen",
+      "shared-keygen": "shared-roles-keygen"
+    },
+    "role_tag_param": "deployment_tag",
     "static_private_ip": false,
     "subnet_cidr_options": []
   },
@@ -510,6 +581,14 @@
     },
     "private_filter": true,
     "registration_external": false,
+    "role_options": {
+      "image": "google-image-id",
+      "size": "google-machine-type"
+    },
+    "role_size_legacy": [
+      "google-machine-type-{role}",
+      "{role}-google-machine-type"
+    ],
     "static_private_ip": false,
     "subnet_cidr_options": []
   },
@@ -649,6 +728,14 @@
     },
     "private_filter": false,
     "registration_external": false,
+    "role_options": {
+      "image": "hcloud-image",
+      "size": "hcloud-server-type"
+    },
+    "role_size_legacy": [
+      "hcloud-server-type-{role}",
+      "{role}-hcloud-server-type"
+    ],
     "static_private_ip": true,
     "subnet_cidr_options": [
       "hcloud-subnet-cidr"
@@ -794,6 +881,14 @@
     },
     "private_filter": false,
     "registration_external": false,
+    "role_options": {
+      "image": "oci-image-id",
+      "size": "oci-shape"
+    },
+    "role_size_legacy": [
+      "oci-shape-{role}",
+      "{role}-oci-shape"
+    ],
     "static_private_ip": false,
     "subnet_cidr_options": []
   },
@@ -805,6 +900,9 @@
       },
       "firewall_group_id": {
         "path": "shared.params.firewall_group_id"
+      },
+      "firewall_groups": {
+        "path": "derived.firewall_groups"
       },
       "firewall_name": {
         "path": "derived.firewall_name"
@@ -860,6 +958,9 @@
       "region": {
         "path": "opts.vultr-region"
       },
+      "role_ingress": {
+        "path": "derived.role_ingress"
+      },
       "ssh_key_id": {
         "path": "derived.ssh_key_id"
       },
@@ -889,6 +990,7 @@
     "endpoint_credentials": [],
     "external_key_kind": "ids",
     "firewall_format": "vultr",
+    "ipv6_ingress": true,
     "network_cidr_options": [
       "vultr-vpc-subnet"
     ],
@@ -912,6 +1014,20 @@
     },
     "private_filter": true,
     "registration_external": false,
+    "role_firewall_param": "firewall_group_id",
+    "role_firewalls": true,
+    "role_options": {
+      "image": "vultr-os-id",
+      "size": "vultr-plan"
+    },
+    "role_size_legacy": [
+      "vultr-plan-{role}",
+      "{role}-vultr-plan"
+    ],
+    "role_stages": {
+      "shared": "shared-roles",
+      "shared-keygen": "shared-roles-keygen"
+    },
     "static_private_ip": false,
     "subnet_cidr_options": []
   },
@@ -1060,6 +1176,9 @@
     },
     "private_filter": true,
     "registration_external": false,
+    "role_options": {
+      "image": "yandex-image-id"
+    },
     "static_private_ip": false,
     "subnet_cidr_options": []
   }

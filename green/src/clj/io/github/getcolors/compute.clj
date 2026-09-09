@@ -163,3 +163,9 @@
                        [(str "COLORS_PAR_" (str/upper-case (str/replace (name key) "-" "_"))) option])
                      (:backend-config backend)))
        :environment {}})))
+
+(defn check-deployment-drift [& args]
+  (apply (requiring-resolve 'io.github.getcolors.compute-drift/check-deployment-drift) args))
+
+(defn controller-artifact [& args]
+  (apply (requiring-resolve 'io.github.getcolors.compute-controller/controller-artifact) args))

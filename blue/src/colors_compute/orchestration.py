@@ -114,6 +114,7 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         selected = _mode(opts)
         require(doc['key']['mode'] in (None, selected['mode']))
         shared_read = None
+        observed_nodes = {}
         # Read every recorded state before touching local key files or compute.
         for node_id, record in [(None, doc['shared']), *doc['nodes'].items()]:
             state_key = keys['shared'] if node_id is None else state_keys(opts['profile'], [node_id])['nodes'][node_id]
@@ -122,6 +123,8 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
                 read_result = await readable(state_key)
                 if node_id is None:
                     shared_read = read_result
+                else:
+                    observed_nodes[node_id] = {'role': record['role'], 'vpc_ip': read_result['params'].get('vpc_ip')}
         if operation == 'create':
             for node in declarations:
                 if node['node_id'] not in doc['nodes']:
@@ -167,6 +170,10 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
             from .deployment_request import deployment_requests
             assembly = deployment_requests(opts, topology, request, normalized_key)
         shared_request = assembly['shared']
+        if 'roles' in shared_request:
+            desired_ids = {node['node_id'] for node in declarations}
+            shared_request['peers'] = {node_id: peer for node_id, peer in observed_nodes.items()
+                if (operation == 'delete' or node_id in desired_ids) and peer['role'] in shared_request['roles']}
         shared_plan = await call('provider_request', provider_request, opts, 'shared', shared_request)
         doc = await snapshot()
         existing_shared = {}
@@ -182,6 +189,11 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
             node_request = deepcopy(shared_request)
             node_request['node_id'] = node_id
             node_request.pop('name', None)
+            if node.get('role') is not None:
+                node_request['role'] = node['role']
+                if 'roles' in node_request:
+                    require(node['role'] in node_request['roles'])
+                    node_request['security'] = deepcopy(node_request['roles'][node['role']]['security'])
             plan = await call('provider_request', provider_request, opts, 'node', node_request, existing_shared)
             await attempt(node_id, plan['documents'], 'delete')
         if operation == 'delete':
@@ -205,13 +217,18 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
                 return {**values, 'colors-compute/params': params}
             except Exception:
                 return {**values, 'blue/exit': 1, 'blue/err': 'compute node failed'}
-        task = asyncio.create_task(call('run', run, cluster_workflow(declarations, declarations[0]['node_id'], node_step), opts))
+        task = asyncio.create_task(call('run', run, cluster_workflow(declarations, assembly.get('entry_node_id', declarations[0]['node_id']), node_step), opts))
         try:
             result = await asyncio.shield(task)
         except asyncio.CancelledError:
             await task
             raise
         require(result.get('blue/exit') == 0 and 'colors-compute/cluster' in result)
+        if 'roles' in shared_request:
+            shared_request['peers'] = {node['node_id']: {'role': node['role'], 'vpc_ip': node['vpc_ip']}
+                for node in result['colors-compute/cluster']['nodes']}
+            final_plan = await call('provider_request', provider_request, opts, 'shared', shared_request)
+            shared_outputs = (await attempt(None, final_plan['documents'], 'create'))['outputs']
         return {'status': 'ready', 'cluster': result['colors-compute/cluster'], 'shared': shared_outputs, 'key': {k: v for k, v in key.items() if k in ('mode', 'private_key_path', 'fingerprint')}}
     cancelled = None
     try:

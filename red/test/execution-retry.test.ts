@@ -1,0 +1,12 @@
+import {test,expect} from 'bun:test';import {convergeState} from '../src/execution.ts';
+const opts={profile:'demo','provider-compute':'digitalocean','provider-backend':'s3','s3-bucket':'states','s3-region':'us-east-1','compute-prevent-destroy':false};
+const docs={'shared.tf.json':{resource:{digitalocean_vpc:{cluster:{name:'demo'}}}}};
+const state={version:4,serial:1,lineage:'lineage',resources:[{type:'digitalocean_vpc'}],outputs:{params:{value:{provider:'digitalocean'}}}};
+const empty={...state,resources:[],outputs:{}};const plan={format_version:'1.2',planned_values:{},resource_changes:[{change:{actions:['delete']}}]};
+for(const [failures,message,status,attempts] of [[1,'Can not delete VPC with members','destroyed',2],[9,'Can not delete VPC with members','error',4],[1,'unclassified provider failure','error',1],[1,'Can not delete VPC with members fixture-do-token','error',1]] as [number,string,string,number][])test('VPC destroy retry '+message+' '+failures,async()=>{
+ let count=0,applied=false;const calls:string[][]=[],waits:number[]=[];
+ const result=await convergeState(opts,'demo/compute/shared.tfstate',docs,'delete',{status:'present'},{COLORS_PAR_DO_TOKEN:'fixture-do-token'},async(args)=>{calls.push(args);if(args[1]==='state')return {exit:0,out:JSON.stringify(applied?empty:state),err:''};if(args[1]==='show')return {exit:0,out:JSON.stringify(plan),err:''};if(args[1]==='apply'){count++;if(count<=failures)return {exit:1,out:'',err:message};applied=true;}return {exit:0,out:'',err:''};},async delay=>{waits.push(delay);});
+ expect(result).toEqual({status});expect(count).toBe(attempts);expect(waits).toEqual(Array(attempts-1).fill(30000));expect(calls.filter(c=>c[1]==='plan')).toHaveLength(attempts);
+ if(attempts>1){const first=calls.findIndex(c=>c[1]==='apply');expect(calls[first+1]).toEqual(['tofu','state','pull']);expect(calls[first+2][1]).toBe('plan');}
+});
+test('VPC retry refuses uncertain partial state',async()=>{let applied=false;const result=await convergeState(opts,'demo/compute/shared.tfstate',docs,'delete',{status:'present'},{COLORS_PAR_DO_TOKEN:'fixture-do-token'},async args=>{if(args[1]==='state')return {exit:0,out:applied?'invalid':JSON.stringify(state),err:''};if(args[1]==='show')return {exit:0,out:JSON.stringify(plan),err:''};if(args[1]==='apply'){applied=true;return {exit:1,out:'',err:'Can not delete VPC with members'};}return {exit:0,out:'',err:''};},async()=>{throw Error('must not retry');});expect(result).toEqual({status:'error'});});

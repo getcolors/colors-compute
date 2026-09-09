@@ -1,0 +1,849 @@
+[
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "shared",
+        "roles": {
+          "app": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                }
+              ],
+              "private_filter": true
+            }
+          },
+          "db": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                },
+                {
+                  "from_port": 5432,
+                  "id": "db",
+                  "peer_roles": [
+                    "app"
+                  ],
+                  "protocol": "tcp",
+                  "to_port": 5432
+                }
+              ],
+              "private_filter": true
+            }
+          }
+        },
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.0/24"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": true
+        }
+      }
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${vultr_ssh_key.machine.id}",
+                "provider": "vultr",
+                "scope": "account"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${vultr_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "vultr_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared-roles.tf.json": {
+          "locals": {
+            "ingress": {
+              "app:ssh:192.0.2.0/24": {
+                "ip_type": "v4",
+                "port": "22",
+                "protocol": "tcp",
+                "role": "app",
+                "subnet": "192.0.2.0",
+                "subnet_size": 24
+              },
+              "db:ssh:192.0.2.0/24": {
+                "ip_type": "v4",
+                "port": "22",
+                "protocol": "tcp",
+                "role": "db",
+                "subnet": "192.0.2.0",
+                "subnet_size": 24
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
+                "provider": "vultr",
+                "role_firewall_ids": "${ { for role, firewall in vultr_firewall_group.role : role => firewall.id } }",
+                "vpc_id": "${vultr_vpc.network.id}",
+                "vpc_ip_range": "10.42.0.0/16"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_firewall_group": {
+              "role": {
+                "description": "${each.value}",
+                "for_each": {
+                  "app": "example-app-firewall",
+                  "db": "example-db-firewall"
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                }
+              }
+            },
+            "vultr_firewall_rule": {
+              "ingress": {
+                "firewall_group_id": "${vultr_firewall_group.role[each.value.role].id}",
+                "for_each": "${local.ingress}",
+                "ip_type": "${each.value.ip_type}",
+                "port": "${each.value.port}",
+                "protocol": "${each.value.protocol}",
+                "subnet": "${each.value.subnet}",
+                "subnet_size": "${each.value.subnet_size}"
+              }
+            },
+            "vultr_vpc": {
+              "network": {
+                "description": "example",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "region": "ewr",
+                "v4_subnet": "10.42.0.0",
+                "v4_subnet_mask": 16
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_groups": {
+          "app": "example-app-firewall",
+          "db": "example-db-firewall"
+        },
+        "name": "example",
+        "network_address": "10.42.0.0",
+        "network_cidr": "10.42.0.0/16",
+        "network_prefix": 16,
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "ewr",
+        "role_ingress": {
+          "app:ssh:192.0.2.0/24": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "role": "app",
+            "subnet": "192.0.2.0",
+            "subnet_size": 24
+          },
+          "db:ssh:192.0.2.0/24": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "role": "db",
+            "subnet": "192.0.2.0",
+            "subnet_size": 24
+          }
+        }
+      },
+      "provider": "vultr",
+      "stage": "shared-roles-keygen"
+    },
+    "name": "role-shared-initial",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "shared",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "shared",
+        "peers": {
+          "app-0": {
+            "role": "app",
+            "vpc_ip": "10.42.1.12"
+          }
+        },
+        "roles": {
+          "app": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                }
+              ],
+              "private_filter": true
+            }
+          },
+          "db": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                },
+                {
+                  "from_port": 5432,
+                  "id": "db",
+                  "peer_roles": [
+                    "app"
+                  ],
+                  "protocol": "tcp",
+                  "to_port": 5432
+                }
+              ],
+              "private_filter": true
+            }
+          }
+        },
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.0/24"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": true
+        }
+      }
+    ],
+    "expected": {
+      "documents": {
+        "shared-keygen.tf.json": {
+          "output": {
+            "registration": {
+              "value": {
+                "id": "${vultr_ssh_key.machine.id}",
+                "provider": "vultr",
+                "scope": "account"
+              }
+            },
+            "ssh_key_id": {
+              "value": "${vultr_ssh_key.machine.id}"
+            }
+          },
+          "resource": {
+            "vultr_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example",
+                "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+              }
+            }
+          }
+        },
+        "shared-roles.tf.json": {
+          "locals": {
+            "ingress": {
+              "app:ssh:192.0.2.0/24": {
+                "ip_type": "v4",
+                "port": "22",
+                "protocol": "tcp",
+                "role": "app",
+                "subnet": "192.0.2.0",
+                "subnet_size": 24
+              },
+              "db:db:peer:app-0": {
+                "ip_type": "v4",
+                "port": "5432",
+                "protocol": "tcp",
+                "role": "db",
+                "subnet": "10.42.1.12",
+                "subnet_size": 32
+              },
+              "db:ssh:192.0.2.0/24": {
+                "ip_type": "v4",
+                "port": "22",
+                "protocol": "tcp",
+                "role": "db",
+                "subnet": "192.0.2.0",
+                "subnet_size": 24
+              }
+            }
+          },
+          "output": {
+            "params": {
+              "value": {
+                "network_cidr": "${vultr_vpc.network.v4_subnet}/${vultr_vpc.network.v4_subnet_mask}",
+                "provider": "vultr",
+                "role_firewall_ids": "${ { for role, firewall in vultr_firewall_group.role : role => firewall.id } }",
+                "vpc_id": "${vultr_vpc.network.id}",
+                "vpc_ip_range": "10.42.0.0/16"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_firewall_group": {
+              "role": {
+                "description": "${each.value}",
+                "for_each": {
+                  "app": "example-app-firewall",
+                  "db": "example-db-firewall"
+                },
+                "lifecycle": {
+                  "prevent_destroy": true
+                }
+              }
+            },
+            "vultr_firewall_rule": {
+              "ingress": {
+                "firewall_group_id": "${vultr_firewall_group.role[each.value.role].id}",
+                "for_each": "${local.ingress}",
+                "ip_type": "${each.value.ip_type}",
+                "port": "${each.value.port}",
+                "protocol": "${each.value.protocol}",
+                "subnet": "${each.value.subnet}",
+                "subnet_size": "${each.value.subnet_size}"
+              }
+            },
+            "vultr_vpc": {
+              "network": {
+                "description": "example",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "region": "ewr",
+                "v4_subnet": "10.42.0.0",
+                "v4_subnet_mask": 16
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_groups": {
+          "app": "example-app-firewall",
+          "db": "example-db-firewall"
+        },
+        "name": "example",
+        "network_address": "10.42.0.0",
+        "network_cidr": "10.42.0.0/16",
+        "network_prefix": 16,
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "ewr",
+        "role_ingress": {
+          "app:ssh:192.0.2.0/24": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "role": "app",
+            "subnet": "192.0.2.0",
+            "subnet_size": 24
+          },
+          "db:db:peer:app-0": {
+            "ip_type": "v4",
+            "port": "5432",
+            "protocol": "tcp",
+            "role": "db",
+            "subnet": "10.42.1.12",
+            "subnet_size": 32
+          },
+          "db:ssh:192.0.2.0/24": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "role": "db",
+            "subnet": "192.0.2.0",
+            "subnet_size": 24
+          }
+        }
+      },
+      "provider": "vultr",
+      "stage": "shared-roles-keygen"
+    },
+    "name": "role-shared-observed",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-plan-db": "vc2-4c-8gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-db-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "db-0",
+        "role": "db",
+        "roles": {
+          "app": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                }
+              ],
+              "private_filter": true
+            }
+          },
+          "db": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                },
+                {
+                  "from_port": 5432,
+                  "id": "db",
+                  "peer_roles": [
+                    "app"
+                  ],
+                  "protocol": "tcp",
+                  "to_port": 5432
+                }
+              ],
+              "private_filter": true
+            }
+          }
+        },
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.0/24"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 5432,
+              "id": "db",
+              "peer_roles": [
+                "app"
+              ],
+              "protocol": "tcp",
+              "to_port": 5432
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "params": {
+          "provider": "vultr",
+          "role_firewall_ids": {
+            "app": "app-fw",
+            "db": "db-fw"
+          },
+          "vpc_id": "fixture-vpc"
+        },
+        "ssh_key_id": "fixture-key"
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${vultr_instance.node.main_ip}",
+                "name": "${vultr_instance.node.label}",
+                "node_id": "db-0",
+                "provider": "vultr",
+                "provider_id": "${vultr_instance.node.id}",
+                "ssh_key_id": "fixture-key",
+                "sudoer": "root",
+                "user": "root",
+                "vpc_ip": "${vultr_instance.node.internal_ip}"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_instance": {
+              "node": {
+                "firewall_group_id": "db-fw",
+                "label": "example-db-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "os_id": 2284,
+                "plan": "vc2-4c-8gb",
+                "region": "ewr",
+                "ssh_key_ids": [
+                  "fixture-key"
+                ],
+                "vpc_ids": [
+                  "fixture-vpc"
+                ]
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_group_id": "db-fw",
+        "name": "example-db-0",
+        "node_id": "db-0",
+        "os_id": 2284,
+        "plan": "vc2-4c-8gb",
+        "prevent_destroy": true,
+        "region": "ewr",
+        "ssh_key_id": "fixture-key",
+        "ssh_key_ids": [
+          "fixture-key"
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "fixture-vpc"
+        ]
+      },
+      "provider": "vultr",
+      "stage": "node"
+    },
+    "name": "role-node-size",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "compute-role-settings": {
+          "app": {
+            "size": "vc2-4c-8gb"
+          }
+        },
+        "profile": "example",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-app-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "role": "app",
+        "roles": {
+          "app": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                }
+              ],
+              "private_filter": true
+            }
+          },
+          "db": {
+            "security": {
+              "egress": "all",
+              "ingress": [
+                {
+                  "from_port": 22,
+                  "id": "ssh",
+                  "protocol": "tcp",
+                  "sources": [
+                    "192.0.2.0/24"
+                  ],
+                  "to_port": 22
+                },
+                {
+                  "from_port": 5432,
+                  "id": "db",
+                  "peer_roles": [
+                    "app"
+                  ],
+                  "protocol": "tcp",
+                  "to_port": 5432
+                }
+              ],
+              "private_filter": true
+            }
+          }
+        },
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.0/24"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "params": {
+          "provider": "vultr",
+          "role_firewall_ids": {
+            "app": "app-fw",
+            "db": "db-fw"
+          },
+          "vpc_id": "fixture-vpc"
+        },
+        "ssh_key_id": "fixture-key"
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${vultr_instance.node.main_ip}",
+                "name": "${vultr_instance.node.label}",
+                "node_id": "app-0",
+                "provider": "vultr",
+                "provider_id": "${vultr_instance.node.id}",
+                "ssh_key_id": "fixture-key",
+                "sudoer": "root",
+                "user": "root",
+                "vpc_ip": "${vultr_instance.node.internal_ip}"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_instance": {
+              "node": {
+                "firewall_group_id": "app-fw",
+                "label": "example-app-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "os_id": 2284,
+                "plan": "vc2-4c-8gb",
+                "region": "ewr",
+                "ssh_key_ids": [
+                  "fixture-key"
+                ],
+                "vpc_ids": [
+                  "fixture-vpc"
+                ]
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "firewall_group_id": "app-fw",
+        "name": "example-app-0",
+        "node_id": "app-0",
+        "os_id": 2284,
+        "plan": "vc2-4c-8gb",
+        "prevent_destroy": true,
+        "region": "ewr",
+        "ssh_key_id": "fixture-key",
+        "ssh_key_ids": [
+          "fixture-key"
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "fixture-vpc"
+        ]
+      },
+      "provider": "vultr",
+      "stage": "node"
+    },
+    "name": "role-node-neutral-size",
+    "op": "provider_request"
+  }
+]

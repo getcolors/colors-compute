@@ -10,7 +10,7 @@ const documents={'node.tf.json':{resource:{vultr_instance:{node:{label:'demo-0'}
 const state={version:4,serial:1,lineage:'fixture',resources:[{type:'vultr_instance'}],outputs:{params:{value:{provider:'vultr',ip:'192.0.2.1'}}}};
 const empty={...state,resources:[],outputs:{}};
 const plan={format_version:'1.2',planned_values:{},resource_changes:[{change:{actions:['create']}}]};
-class Runner {
+export class Runner {
   calls:string[][]=[];directories:string[]=[];
   constructor(public before='',public after=JSON.stringify(state),public planned:any=plan,public failure=''){}
   run:BackendRunner=async(args,options)=>{
@@ -71,3 +71,5 @@ test('presence recognizes only exact missing object and cancellation cleans sess
   expect(await statePresence(opts,key,env,async()=>({exit:0,out:'{"ETag":"opaque"}',err:''}))).toEqual({status:'present'});
   await expect(convergeState(opts,key,documents,'create',{status:'absent'},env,async(args,options)=>{directory=options.cwd;throw new DOMException('cancelled','AbortError');})).rejects.toThrow('cancelled');expect(existsSync(directory)).toBe(false);
 });
+
+export {opts as executionOpts,env as executionEnv,key as executionKey,documents as executionDocuments,state as executionState,empty as emptyState};

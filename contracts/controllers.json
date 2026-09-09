@@ -1,0 +1,16 @@
+{
+  "digitalocean": {
+    "template": "providers/digitalocean/controller.ansible.yml.template",
+    "version_options": [
+      "kubernetes-controller-version",
+      "digitalocean-cloud-controller-version"
+    ],
+    "network_output": "vpc_id",
+    "credentials": [
+      "COLORS_PAR_DO_TOKEN"
+    ],
+    "namespace": "kube-system",
+    "rollout_resource": "deployment/digitalocean-cloud-controller-manager",
+    "enabled_option": "digitalocean-cloud-controller"
+  }
+}

@@ -65,3 +65,25 @@
     (let [calls (atom []) final (assoc-in (json/parse-string (state-text "aws") true) [:outputs :extra] extra)]
       (is (= {:status "error"} (e/converge-state opts key documents "create" {:status "absent"} environment
                                                 (runner ["" "" "" valid-plan "" (json/generate-string final)] calls)))))))
+(deftest drift-only-accepts-zero-detailed-plan-and-never-applies
+  (doseq [exit [0 1 2 -1]]
+    (let [calls (atom []) result (e/check-state opts key documents environment (runner ["" (state-text "aws") {:exit exit :out "" :err "sensitive diagnostic"}] calls))]
+      (is (= {:status (if (zero? exit) "clean" "error")} result))
+      (is (= ["init" "state" "plan"] (mapv #(second (:argv %)) @calls)))
+      (is (some #{"-detailed-exitcode"} (:argv (last @calls))))
+      (is (every? #(not (.exists (io/file (:cwd %)))) @calls)))))
+(deftest selective-vpc-destroy-retry-replans-and-refuses-unclassified-errors
+  (doseq [[failures message status attempts] [[1 "Can not delete VPC with members" "destroyed" 2] [9 "Can not delete VPC with members" "error" 4] [1 "unclassified provider failure" "error" 1] [1 "Can not delete VPC with members fixture-do-token" "error" 1]]]
+    (let [opts {:profile "demo" :provider-compute "digitalocean" :provider-backend "s3" :s3-bucket "states" :s3-region "us-east-1" :compute-prevent-destroy false}
+          docs {"shared.tf.json" {:resource {:digitalocean_vpc {:cluster {:name "demo"}}}}}
+          state {:version 4 :serial 1 :lineage "lineage" :resources [{:type "digitalocean_vpc"}] :outputs {:params {:value {:provider "digitalocean"}}}}
+          empty (assoc state :resources [] :outputs {}) plan {:format_version "1.2" :planned_values {} :resource_changes [{:change {:actions ["delete"]}}]}
+          calls (atom []) counter (atom 0) applied (atom false) waits (atom [])
+          runner (fn [argv _ _ _] (swap! calls conj (second argv))
+                   (case (second argv)
+                     "state" {:exit 0 :out (json/generate-string (if @applied empty state)) :err ""}
+                     "show" {:exit 0 :out (json/generate-string plan) :err ""}
+                     "apply" (if (<= (swap! counter inc) failures) {:exit 1 :out "" :err message} (do (reset! applied true) {:exit 0 :out "" :err ""}))
+                     {:exit 0 :out "" :err ""}))]
+      (is (= {:status status} (e/converge-state opts "demo/compute/shared.tfstate" docs "delete" {:status "present"} {"COLORS_PAR_DO_TOKEN" "fixture-do-token"} runner #(swap! waits conj %))))
+      (is (= attempts @counter)) (is (= (repeat (dec attempts) 30000) @waits)) (is (= attempts (count (filter #{"plan"} @calls)))))))

@@ -10,7 +10,7 @@ export function plan_deployment(input:Map,topology:Map[],requirements:Map) {
  const opts={...copy(input),'red/event':'build'} as Map,selected=mode(opts);
  if(selected.mode==='managed')selected.public_key='ssh-ed25519 PLACEHOLDER managed-by-colors';
  const key=key_request(opts,selected,{}),assembly=deployment_requests(opts,topology,requirements,key),provider=opts['provider-compute'];
- const recipe=(recipes as Map)[provider],shared=structuredClone(recipe.planning_shared),sharedPlan=provider_request(opts,'shared',assembly.shared);
+ const recipe=(recipes as Map)[provider],shared=planningShared(recipe,opts,requirements),sharedPlan=provider_request(opts,'shared',assembly.shared);
  const declarations=expand(topology);if(declarations.length>245)throw Error('build exceeds documentation address capacity');
  const entry=(registry.compute as Map)[provider],documents:Map={shared:sharedPlan.documents,nodes:{}},results:Map[]=[];
  const cidr=assembly.shared.network.subnet_cidr||assembly.shared.network.cidr||[...recipe.subnet_cidr_options,...recipe.network_cidr_options].map(name=>opts[name]).find(Boolean)||'10.0.0.0/24';
@@ -26,14 +26,21 @@ export function plan_deployment(input:Map,topology:Map[],requirements:Map) {
   if(selected.mode==='managed')params.ssh_identity_file='$HOME/.ssh/'+opts.profile;else if(selected.private_key_path)params.ssh_identity_file=selected.private_key_path;
   results.push(params);
  }
- return {status:'planned',documents,shared,state_keys:state_keys(opts.profile,declarations.map(n=>n.node_id)),cluster:collect(declarations,results,declarations[0].node_id),key:{mode:selected.mode,...(selected.mode==='managed'?{private_key_path:'$HOME/.ssh/'+opts.profile}:selected.private_key_path?{private_key_path:selected.private_key_path}:{})}};
+ if(requirements.roles){const roles=Object.fromEntries(declarations.map(n=>[n.node_id,n.role]));(assembly.shared as Map).peers=Object.fromEntries(results.map(n=>[n.node_id,{role:roles[n.node_id],vpc_ip:n.vpc_ip}]));documents.shared=provider_request(opts,'shared',assembly.shared).documents;}
+ return {status:'planned',documents,shared,state_keys:state_keys(opts.profile,declarations.map(n=>n.node_id)),cluster:collect(declarations,results,assembly.entry_node_id),key:{mode:selected.mode,...(selected.mode==='managed'?{private_key_path:'$HOME/.ssh/'+opts.profile}:selected.private_key_path?{private_key_path:selected.private_key_path}:{})}};
 }
 export function validate_deployment(input:Map,topology:Map[],requirements:Map):true {
  const opts={...copy(input),'red/event':'build'} as Map,selected=mode(opts);
  if(selected.mode==='managed')selected.public_key='ssh-ed25519 PLACEHOLDER managed-by-colors';
  const assembly=deployment_requests(opts,topology,requirements,key_request(opts,selected,{}));
- const shared=structuredClone((recipes as Map)[opts['provider-compute']].planning_shared);
+ const shared=planningShared((recipes as Map)[opts['provider-compute']],opts,requirements);
  provider_request(opts,'shared',assembly.shared);
  for(const node of assembly.nodes)provider_request(opts,'node',node,shared);
  return true;
+}
+
+function planningShared(recipe:Map,opts:Map,requirements:Map):Map{
+ const shared=structuredClone(recipe.planning_shared);
+ if(requirements.roles){shared.params.role_firewall_ids=Object.fromEntries(Object.keys(requirements.roles).map(r=>[r,'build-firewall-'+r]));if(recipe.role_tag_param)shared.params.role_tags=Object.fromEntries(Object.keys(requirements.roles).map(r=>[r,'colors-compute-'+opts.profile+'-'+r]));}
+ return shared;
 }

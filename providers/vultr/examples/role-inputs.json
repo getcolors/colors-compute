@@ -1,0 +1,40 @@
+{
+  "firewall_groups": {
+    "app": "example-app-firewall",
+    "db": "example-db-firewall"
+  },
+  "name": "example",
+  "network_address": "10.42.0.0",
+  "network_cidr": "10.42.0.0/16",
+  "network_prefix": 16,
+  "prevent_destroy": true,
+  "profile": "example",
+  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+  "region": "ewr",
+  "role_ingress": {
+    "app:ssh:192.0.2.0/24": {
+      "protocol": "tcp",
+      "port": "22",
+      "ip_type": "v4",
+      "subnet": "192.0.2.0",
+      "subnet_size": 24,
+      "role": "app"
+    },
+    "db:db:peer:app-0": {
+      "protocol": "tcp",
+      "port": "5432",
+      "ip_type": "v4",
+      "subnet": "10.42.1.12",
+      "subnet_size": 32,
+      "role": "db"
+    },
+    "db:ssh:192.0.2.0/24": {
+      "protocol": "tcp",
+      "port": "22",
+      "ip_type": "v4",
+      "subnet": "192.0.2.0",
+      "subnet_size": 24,
+      "role": "db"
+    }
+  }
+}

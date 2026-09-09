@@ -6,6 +6,7 @@
          '[io.github.getcolors.compute-runtime :as runtime]
          '[io.github.getcolors.compute-request :as request]
          '[io.github.getcolors.compute-deployment-request :as deployment]
+         '[io.github.getcolors.compute-controller :as controller]
          '[io.github.getcolors.compute-planning :as planning]
          '[io.github.getcolors.compute-lifecycle :as lifecycle]
          '[io.github.getcolors.compute-coordination :as coordination]
@@ -31,7 +32,8 @@
      (if (nil? intent) (journal/journal-get opts env runner)
          (journal/journal-put opts intent env runner)))))
 (def operations
-  {"deployment_requests" deployment/deployment-requests
+  {"controller_artifact" controller/controller-artifact
+   "deployment_requests" deployment/deployment-requests
    "plan_deployment" planning/plan-deployment
    "lifecycle" lifecycle/lifecycle
    "provider_request" request/provider-request
