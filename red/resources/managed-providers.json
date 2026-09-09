@@ -17,7 +17,8 @@
         "service.beta.kubernetes.io/do-loadbalancer-name": "{{name}}",
         "service.beta.kubernetes.io/do-loadbalancer-type": "REGIONAL",
         "service.beta.kubernetes.io/do-loadbalancer-protocol": "tcp"
-      }
+      },
+      "http_sources_option": "digitalocean-http-sources"
     },
     "versions": {
       "url": "https://api.digitalocean.com/v2/kubernetes/options",
@@ -44,7 +45,8 @@
       "pod_cidr_option": "vke-pod-cidr",
       "load_balancer_annotations": {
         "service.beta.kubernetes.io/vultr-loadbalancer-protocol": "tcp"
-      }
+      },
+      "http_sources_option": "vultr-http-sources"
     },
     "versions": {
       "url": "https://api.vultr.com/v2/kubernetes/versions",

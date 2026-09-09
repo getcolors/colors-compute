@@ -441,7 +441,10 @@
         "vultr-node-plan": "vc2-2c-4gb",
         "vultr-node-count": 2,
         "compute-prevent-destroy": true,
-        "vke-pod-cidr": "10.244.0.0/16"
+        "vke-pod-cidr": "10.244.0.0/16",
+        "digitalocean-http-sources": [
+          "0.0.0.0/0"
+        ]
       }
     ],
     "expected": {
@@ -451,7 +454,10 @@
         "service.beta.kubernetes.io/do-loadbalancer-protocol": "tcp"
       },
       "storage_class": null,
-      "pod_cidr": "10.244.0.0/16"
+      "pod_cidr": "10.244.0.0/16",
+      "http_sources": [
+        "0.0.0.0/0"
+      ]
     }
   },
   {
@@ -476,7 +482,10 @@
         "vultr-node-plan": "vc2-2c-4gb",
         "vultr-node-count": 2,
         "compute-prevent-destroy": true,
-        "vke-pod-cidr": "10.244.0.0/16"
+        "vke-pod-cidr": "10.244.0.0/16",
+        "digitalocean-http-sources": [
+          "0.0.0.0/0"
+        ]
       }
     ],
     "expected": {
@@ -486,7 +495,10 @@
         "service.beta.kubernetes.io/do-loadbalancer-protocol": "tcp"
       },
       "storage_class": null,
-      "pod_cidr": "10.244.0.0/16"
+      "pod_cidr": "10.244.0.0/16",
+      "http_sources": [
+        "0.0.0.0/0"
+      ]
     }
   },
   {
@@ -511,7 +523,10 @@
         "vultr-node-plan": "vc2-2c-4gb",
         "vultr-node-count": 2,
         "compute-prevent-destroy": true,
-        "vke-pod-cidr": "10.244.0.0/16"
+        "vke-pod-cidr": "10.244.0.0/16",
+        "vultr-http-sources": [
+          "0.0.0.0/0"
+        ]
       }
     ],
     "expected": {
@@ -519,7 +534,10 @@
         "service.beta.kubernetes.io/vultr-loadbalancer-protocol": "tcp"
       },
       "storage_class": null,
-      "pod_cidr": "10.244.0.0/16"
+      "pod_cidr": "10.244.0.0/16",
+      "http_sources": [
+        "0.0.0.0/0"
+      ]
     }
   },
   {
@@ -544,7 +562,10 @@
         "vultr-node-plan": "vc2-2c-4gb",
         "vultr-node-count": 2,
         "compute-prevent-destroy": true,
-        "vke-pod-cidr": "10.244.0.0/16"
+        "vke-pod-cidr": "10.244.0.0/16",
+        "vultr-http-sources": [
+          "0.0.0.0/0"
+        ]
       }
     ],
     "expected": {
@@ -552,7 +573,10 @@
         "service.beta.kubernetes.io/vultr-loadbalancer-protocol": "tcp"
       },
       "storage_class": null,
-      "pod_cidr": "10.244.0.0/16"
+      "pod_cidr": "10.244.0.0/16",
+      "http_sources": [
+        "0.0.0.0/0"
+      ]
     }
   },
   {
@@ -678,6 +702,360 @@
     ],
     "expected": {
       "error": "managed provider lacks required application artifact"
+    }
+  },
+  {
+    "name": "vultr invalid managed sources 0",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "vultr-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": []
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "vultr invalid managed sources 1",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "vultr-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": [
+          "999.0.0.0/8"
+        ]
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "vultr invalid managed sources 2",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "vultr-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": [
+          "192.0.2.1/24"
+        ]
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "vultr invalid managed sources 3",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "vultr-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": "0.0.0.0/0"
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "vultr neutral managed source override",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "vultr-http-sources": null,
+        "compute-http-sources": [
+          "198.51.100.0/24"
+        ]
+      }
+    ],
+    "expected": {
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/vultr-loadbalancer-protocol": "tcp"
+      },
+      "storage_class": null,
+      "pod_cidr": "10.244.0.0/16",
+      "http_sources": [
+        "198.51.100.0/24"
+      ]
+    }
+  },
+  {
+    "name": "digitalocean invalid managed sources 0",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "digitalocean-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": []
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "digitalocean invalid managed sources 1",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "digitalocean-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": [
+          "999.0.0.0/8"
+        ]
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "digitalocean invalid managed sources 2",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "digitalocean-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": [
+          "192.0.2.1/24"
+        ]
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "digitalocean invalid managed sources 3",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "digitalocean-http-sources": [
+          "0.0.0.0/0"
+        ],
+        "compute-http-sources": "0.0.0.0/0"
+      }
+    ],
+    "expected": {
+      "error": ":compute-http-sources must be a non-empty list of IPv4 CIDRs"
+    }
+  },
+  {
+    "name": "digitalocean neutral managed source override",
+    "op": "managed_application_settings",
+    "args": [
+      {
+        "workdir": "/tmp/managed-plan-fixture",
+        "profile": "managed-fixture",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "us-east-1",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com",
+        "digitalocean-region": "ams3",
+        "doks-version": "1.35.1-do.1",
+        "digitalocean-node-size": "s-2vcpu-4gb",
+        "digitalocean-node-count": 2,
+        "vultr-region": "ams",
+        "vultr-vke-version": "v1.35.1",
+        "vultr-node-plan": "vc2-2c-4gb",
+        "vultr-node-count": 2,
+        "compute-prevent-destroy": true,
+        "vke-pod-cidr": "10.244.0.0/16",
+        "digitalocean-http-sources": null,
+        "compute-http-sources": [
+          "198.51.100.0/24"
+        ]
+      }
+    ],
+    "expected": {
+      "load_balancer_annotations": {
+        "service.beta.kubernetes.io/do-loadbalancer-name": "managed-fixture",
+        "service.beta.kubernetes.io/do-loadbalancer-type": "REGIONAL",
+        "service.beta.kubernetes.io/do-loadbalancer-protocol": "tcp"
+      },
+      "storage_class": null,
+      "pod_cidr": "10.244.0.0/16",
+      "http_sources": [
+        "198.51.100.0/24"
+      ]
     }
   }
 ]

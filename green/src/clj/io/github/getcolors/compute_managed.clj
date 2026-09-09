@@ -48,10 +48,16 @@
    (let [{:keys [provider]} (resolve-request opts {})
          observed (if (nil? params) (:params (plan-managed-kubernetes opts)) (access/public-params params provider))
          traits (get-in recipes [(keyword provider) :traits])
+         source-key (if (contains? opts :compute-http-sources) :compute-http-sources (keyword (:http_sources_option traits)))
+         sources (get opts source-key)
+         _ (try
+             (require-valid (and (vector? sources) (seq sources)) "invalid sources")
+             (doseq [source sources] (access/public-params (assoc observed :pod_cidr source) provider))
+             (catch Exception _ (throw (ex-info (str ":" (name source-key) " must be a non-empty list of IPv4 CIDRs") {}))))
          pod-cidr (if (= "observed" (:pod_cidr_source traits)) (:pod_cidr observed) (get opts (keyword (:pod_cidr_option traits))))]
      (when (some? pod-cidr) (access/public-params (assoc observed :pod_cidr pod-cidr) provider))
      (cond-> {:load_balancer_annotations (into {} (map (fn [[key value]] [key (str/replace value "{{name}}" (:name observed))]) (:load_balancer_annotations traits)))
-              :storage_class (:storage_class traits)}
+              :storage_class (:storage_class traits) :http_sources sources}
        (some? pod-cidr) (assoc :pod_cidr pod-cidr)))))
 
 (defn managed-application-artifacts

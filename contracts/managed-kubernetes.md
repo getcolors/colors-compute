@@ -28,7 +28,9 @@ retain the existing secret handling requirements.
 `managed_application_settings` returns provider-selected load-balancer annotations,
 the storage-class override, and the pod CIDR used by application manifests.
 Vultr retains its configured pod range; DigitalOcean uses the observed range.
-These mappings belong in the library's managed provider descriptor.
+These mappings belong in the library's managed provider descriptor. The library
+also validates HTTP source ranges and returns them as `http_sources`.
+`compute-http-sources` overrides the historical provider-specific source key.
 
 `managed_application_artifacts` supplies the selected provider's cleanup and
 ingress verification scripts. Applications can require named artifacts; an

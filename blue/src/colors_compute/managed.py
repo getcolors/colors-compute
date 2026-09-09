@@ -97,6 +97,16 @@ def managed_application_settings(opts, params=None):
     if pod_cidr is not None:
         public_params({**params, 'pod_cidr': pod_cidr}, provider)
         result['pod_cidr'] = pod_cidr
+    source_key = 'compute-http-sources' if 'compute-http-sources' in opts else traits['http_sources_option']
+    sources = opts.get(source_key)
+    try:
+        if not isinstance(sources, list) or not sources:
+            raise ValueError()
+        for source in sources:
+            public_params({**params, 'pod_cidr': source}, provider)
+    except (ValueError, TypeError):
+        raise ValueError(':' + source_key + ' must be a non-empty list of IPv4 CIDRs') from None
+    result['http_sources'] = list(sources)
     return result
 
 

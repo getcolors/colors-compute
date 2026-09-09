@@ -26,6 +26,11 @@ export function managed_application_settings(opts:Map,params?:Map):Map {
  const result:Map={load_balancer_annotations:Object.fromEntries(Object.entries(traits.load_balancer_annotations).map(([key,value])=>[key,String(value).replaceAll('{{name}}',observed.name)])),storage_class:traits.storage_class};
  const podCIDR=traits.pod_cidr_source==='observed'?observed.pod_cidr:opts[traits.pod_cidr_option];
  if(podCIDR!==undefined&&podCIDR!==null){publicParams({...observed,pod_cidr:podCIDR},provider);result.pod_cidr=podCIDR;}
+ const sourceKey=Object.hasOwn(opts,'compute-http-sources')?'compute-http-sources':traits.http_sources_option;
+ const sources=opts[sourceKey];
+ try {require(Array.isArray(sources)&&sources.length>0);for(const source of sources)publicParams({...observed,pod_cidr:source},provider);}
+ catch {throw Error(':'+sourceKey+' must be a non-empty list of IPv4 CIDRs');}
+ result.http_sources=[...sources];
  return result;
 }
 
