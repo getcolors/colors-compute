@@ -20,6 +20,13 @@ def check_output(color, output, cases):
 
 def main():
     cases = json.loads((ROOT / "test/fixtures/contracts.json").read_text())
+    for example in json.loads((ROOT / "test/fixtures/provider-plans.json").read_text()):
+        directory = ROOT / "providers" / example["provider"] / "examples"
+        cases.append({"name": f'packaged {example["provider"]} {example["stage"]}',
+                      "op": "provider_plan",
+                      "args": [example["provider"], example["stage"], json.loads((directory / "inputs.json").read_text())],
+                      "expected": {name: json.loads((directory / source).read_text())
+                                   for name, source in example["files"].items()}})
     fixture = "".join(json.dumps({"op": case["op"], "args": case["args"]}) + "\n" for case in cases)
     for color, command in {
         "green": [os.environ.get("BB", "bb"), "scripts/contract-green.clj"],

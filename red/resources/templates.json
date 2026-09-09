@@ -1,0 +1,2082 @@
+{
+  "aws": {
+    "node": {
+      "node.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "instance_id": "${aws_instance.node.id}",
+              "ip": "${aws_instance.node.public_ip}",
+              "name": "${aws_instance.node.tags[\"Name\"]}",
+              "node_id": "{{node_id}}",
+              "provider": "aws",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "{{sudoer}}",
+              "user": "{{user}}",
+              "vpc_ip": "${aws_instance.node.private_ip}"
+            }
+          }
+        },
+        "provider": {
+          "aws": {
+            "region": "{{region}}"
+          }
+        },
+        "resource": {
+          "aws_instance": {
+            "node": {
+              "ami": "{{image_id}}",
+              "associate_public_ip_address": true,
+              "availability_zone": "{{availability_zone}}",
+              "instance_type": "{{instance_type}}",
+              "key_name": "{{key_name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "root_block_device": {
+                "encrypted": true,
+                "volume_size": "{{root_volume_size_gb}}",
+                "volume_type": "gp3"
+              },
+              "subnet_id": "{{subnet_id}}",
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_security_group_ids": "{{security_group_ids}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "aws": {
+              "source": "hashicorp/aws",
+              "version": "6.31.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "provider": "aws",
+              "security_group_id": "${aws_security_group.network.id}",
+              "subnet_id": "${aws_subnet.public.id}",
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          }
+        },
+        "provider": {
+          "aws": {
+            "region": "{{region}}"
+          }
+        },
+        "resource": {
+          "aws_internet_gateway": {
+            "gateway": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route": {
+            "internet": {
+              "destination_cidr_block": "0.0.0.0/0",
+              "gateway_id": "${aws_internet_gateway.gateway.id}",
+              "route_table_id": "${aws_route_table.public.id}"
+            }
+          },
+          "aws_route_table": {
+            "public": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route_table_association": {
+            "public": {
+              "route_table_id": "${aws_route_table.public.id}",
+              "subnet_id": "${aws_subnet.public.id}"
+            }
+          },
+          "aws_security_group": {
+            "network": {
+              "description": "Deployment node access",
+              "name": "{{firewall_name}}",
+              "tags": {
+                "Name": "{{firewall_name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_subnet": {
+            "public": {
+              "availability_zone": "{{availability_zone}}",
+              "cidr_block": "{{subnet_cidr}}",
+              "map_public_ip_on_launch": true,
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_vpc": {
+            "network": {
+              "cidr_block": "{{vpc_cidr}}",
+              "enable_dns_hostnames": true,
+              "enable_dns_support": true,
+              "tags": {
+                "Name": "{{name}}"
+              }
+            }
+          },
+          "aws_vpc_security_group_egress_rule": {
+            "egress": {
+              "cidr_ipv4": "${each.value.cidr}",
+              "for_each": "{{egress}}",
+              "from_port": "${each.value.from_port}",
+              "ip_protocol": "${each.value.protocol}",
+              "security_group_id": "${aws_security_group.network.id}",
+              "to_port": "${each.value.to_port}"
+            }
+          },
+          "aws_vpc_security_group_ingress_rule": {
+            "ingress": {
+              "cidr_ipv4": "${each.value.cidr}",
+              "for_each": "{{ingress}}",
+              "from_port": "${each.value.from_port}",
+              "ip_protocol": "${each.value.protocol}",
+              "security_group_id": "${aws_security_group.network.id}",
+              "to_port": "${each.value.to_port}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "aws": {
+              "source": "hashicorp/aws",
+              "version": "6.31.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "key_name": {
+            "value": "${aws_key_pair.machine.key_name}"
+          },
+          "ssh_key_id": {
+            "value": "${aws_key_pair.machine.id}"
+          }
+        },
+        "resource": {
+          "aws_key_pair": {
+            "machine": {
+              "key_name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "provider": "aws",
+              "security_group_id": "${aws_security_group.network.id}",
+              "subnet_id": "${aws_subnet.public.id}",
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          }
+        },
+        "provider": {
+          "aws": {
+            "region": "{{region}}"
+          }
+        },
+        "resource": {
+          "aws_internet_gateway": {
+            "gateway": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route": {
+            "internet": {
+              "destination_cidr_block": "0.0.0.0/0",
+              "gateway_id": "${aws_internet_gateway.gateway.id}",
+              "route_table_id": "${aws_route_table.public.id}"
+            }
+          },
+          "aws_route_table": {
+            "public": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route_table_association": {
+            "public": {
+              "route_table_id": "${aws_route_table.public.id}",
+              "subnet_id": "${aws_subnet.public.id}"
+            }
+          },
+          "aws_security_group": {
+            "network": {
+              "description": "Deployment node access",
+              "name": "{{firewall_name}}",
+              "tags": {
+                "Name": "{{firewall_name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_subnet": {
+            "public": {
+              "availability_zone": "{{availability_zone}}",
+              "cidr_block": "{{subnet_cidr}}",
+              "map_public_ip_on_launch": true,
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_vpc": {
+            "network": {
+              "cidr_block": "{{vpc_cidr}}",
+              "enable_dns_hostnames": true,
+              "enable_dns_support": true,
+              "tags": {
+                "Name": "{{name}}"
+              }
+            }
+          },
+          "aws_vpc_security_group_egress_rule": {
+            "egress": {
+              "cidr_ipv4": "${each.value.cidr}",
+              "for_each": "{{egress}}",
+              "from_port": "${each.value.from_port}",
+              "ip_protocol": "${each.value.protocol}",
+              "security_group_id": "${aws_security_group.network.id}",
+              "to_port": "${each.value.to_port}"
+            }
+          },
+          "aws_vpc_security_group_ingress_rule": {
+            "ingress": {
+              "cidr_ipv4": "${each.value.cidr}",
+              "for_each": "{{ingress}}",
+              "from_port": "${each.value.from_port}",
+              "ip_protocol": "${each.value.protocol}",
+              "security_group_id": "${aws_security_group.network.id}",
+              "to_port": "${each.value.to_port}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "aws": {
+              "source": "hashicorp/aws",
+              "version": "6.31.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    }
+  },
+  "azure": {
+    "node": {
+      "node.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${azurerm_public_ip.node.ip_address}",
+              "name": "${azurerm_linux_virtual_machine.node.name}",
+              "nic_id": "${azurerm_network_interface.node.id}",
+              "node_id": "{{node_id}}",
+              "provider": "azure",
+              "ssh_key_id": null,
+              "subnet_id": "{{subnet_id}}",
+              "sudoer": "ubuntu",
+              "user": "ubuntu",
+              "vm_id": "${azurerm_linux_virtual_machine.node.id}",
+              "vpc_ip": "${azurerm_network_interface.node.private_ip_address}"
+            }
+          }
+        },
+        "provider": {
+          "azurerm": {
+            "features": {},
+            "subscription_id": "{{subscription_id}}"
+          }
+        },
+        "resource": {
+          "azurerm_linux_virtual_machine": {
+            "node": {
+              "admin_ssh_key": {
+                "public_key": "{{public_key}}",
+                "username": "ubuntu"
+              },
+              "admin_username": "ubuntu",
+              "disable_password_authentication": true,
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "{{location}}",
+              "name": "{{name}}",
+              "network_interface_ids": [
+                "${azurerm_network_interface.node.id}"
+              ],
+              "os_disk": {
+                "caching": "ReadWrite",
+                "disk_size_gb": "{{disk_size_gb}}",
+                "storage_account_type": "Standard_LRS"
+              },
+              "resource_group_name": "{{resource_group_name}}",
+              "size": "{{vm_size}}",
+              "source_image_reference": "{{image_reference}}"
+            }
+          },
+          "azurerm_network_interface": {
+            "node": {
+              "ip_configuration": {
+                "name": "primary",
+                "private_ip_address_allocation": "Dynamic",
+                "public_ip_address_id": "${azurerm_public_ip.node.id}",
+                "subnet_id": "{{subnet_id}}"
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "{{location}}",
+              "name": "{{nic_name}}",
+              "resource_group_name": "{{resource_group_name}}"
+            }
+          },
+          "azurerm_public_ip": {
+            "node": {
+              "allocation_method": "Static",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "{{location}}",
+              "name": "{{public_ip_name}}",
+              "resource_group_name": "{{resource_group_name}}",
+              "sku": "Standard"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "azurerm": {
+              "source": "hashicorp/azurerm",
+              "version": "4.30.0"
+            }
+          }
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_id": "${azurerm_network_security_group.network.id}",
+              "location": "${azurerm_resource_group.deployment.location}",
+              "provider": "azure",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "subnet_id": "${azurerm_subnet.network.id}",
+              "vpc_id": "${azurerm_virtual_network.network.id}",
+              "vpc_ip_range": "{{network_cidr}}"
+            }
+          }
+        },
+        "provider": {
+          "azurerm": {
+            "features": {},
+            "subscription_id": "{{subscription_id}}"
+          }
+        },
+        "resource": {
+          "azurerm_network_security_group": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "${azurerm_resource_group.deployment.location}",
+              "name": "{{firewall_name}}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}"
+            }
+          },
+          "azurerm_network_security_rule": {
+            "deny_inbound": {
+              "access": "Deny",
+              "destination_address_prefix": "*",
+              "destination_port_range": "*",
+              "direction": "Inbound",
+              "name": "colors-deny-inbound",
+              "network_security_group_name": "${azurerm_network_security_group.network.name}",
+              "priority": 4096,
+              "protocol": "*",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "source_address_prefix": "*",
+              "source_port_range": "*"
+            },
+            "ingress": {
+              "access": "Allow",
+              "destination_address_prefix": "*",
+              "destination_port_range": "${each.value.port}",
+              "direction": "Inbound",
+              "for_each": "${local.ingress}",
+              "name": "${each.key}",
+              "network_security_group_name": "${azurerm_network_security_group.network.name}",
+              "priority": "${each.value.priority}",
+              "protocol": "${each.value.protocol}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "source_address_prefixes": "${each.value.sources}",
+              "source_port_range": "*"
+            }
+          },
+          "azurerm_resource_group": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "{{location}}",
+              "name": "{{resource_group_name}}"
+            }
+          },
+          "azurerm_subnet": {
+            "network": {
+              "address_prefixes": [
+                "{{subnet_cidr}}"
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{subnet_name}}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "virtual_network_name": "${azurerm_virtual_network.network.name}"
+            }
+          },
+          "azurerm_subnet_network_security_group_association": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "network_security_group_id": "${azurerm_network_security_group.network.id}",
+              "subnet_id": "${azurerm_subnet.network.id}"
+            }
+          },
+          "azurerm_virtual_network": {
+            "network": {
+              "address_space": [
+                "{{network_cidr}}"
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "${azurerm_resource_group.deployment.location}",
+              "name": "{{network_name}}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "azurerm": {
+              "source": "hashicorp/azurerm",
+              "version": "4.30.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_id": "${azurerm_network_security_group.network.id}",
+              "location": "${azurerm_resource_group.deployment.location}",
+              "provider": "azure",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "subnet_id": "${azurerm_subnet.network.id}",
+              "vpc_id": "${azurerm_virtual_network.network.id}",
+              "vpc_ip_range": "{{network_cidr}}"
+            }
+          }
+        },
+        "provider": {
+          "azurerm": {
+            "features": {},
+            "subscription_id": "{{subscription_id}}"
+          }
+        },
+        "resource": {
+          "azurerm_network_security_group": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "${azurerm_resource_group.deployment.location}",
+              "name": "{{firewall_name}}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}"
+            }
+          },
+          "azurerm_network_security_rule": {
+            "deny_inbound": {
+              "access": "Deny",
+              "destination_address_prefix": "*",
+              "destination_port_range": "*",
+              "direction": "Inbound",
+              "name": "colors-deny-inbound",
+              "network_security_group_name": "${azurerm_network_security_group.network.name}",
+              "priority": 4096,
+              "protocol": "*",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "source_address_prefix": "*",
+              "source_port_range": "*"
+            },
+            "ingress": {
+              "access": "Allow",
+              "destination_address_prefix": "*",
+              "destination_port_range": "${each.value.port}",
+              "direction": "Inbound",
+              "for_each": "${local.ingress}",
+              "name": "${each.key}",
+              "network_security_group_name": "${azurerm_network_security_group.network.name}",
+              "priority": "${each.value.priority}",
+              "protocol": "${each.value.protocol}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "source_address_prefixes": "${each.value.sources}",
+              "source_port_range": "*"
+            }
+          },
+          "azurerm_resource_group": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "{{location}}",
+              "name": "{{resource_group_name}}"
+            }
+          },
+          "azurerm_subnet": {
+            "network": {
+              "address_prefixes": [
+                "{{subnet_cidr}}"
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{subnet_name}}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}",
+              "virtual_network_name": "${azurerm_virtual_network.network.name}"
+            }
+          },
+          "azurerm_subnet_network_security_group_association": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "network_security_group_id": "${azurerm_network_security_group.network.id}",
+              "subnet_id": "${azurerm_subnet.network.id}"
+            }
+          },
+          "azurerm_virtual_network": {
+            "network": {
+              "address_space": [
+                "{{network_cidr}}"
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "${azurerm_resource_group.deployment.location}",
+              "name": "{{network_name}}",
+              "resource_group_name": "${azurerm_resource_group.deployment.name}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "azurerm": {
+              "source": "hashicorp/azurerm",
+              "version": "4.30.0"
+            }
+          }
+        }
+      }
+    }
+  },
+  "digitalocean": {
+    "node": {
+      "node.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "droplet_id": "${digitalocean_droplet.node.id}",
+              "ip": "${digitalocean_droplet.node.ipv4_address}",
+              "name": "${digitalocean_droplet.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "digitalocean",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "root",
+              "user": "root",
+              "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
+              "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_droplet": {
+            "node": {
+              "image": "{{image}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{name}}",
+              "region": "{{region}}",
+              "size": "{{size}}",
+              "ssh_keys": "{{ssh_key_ids}}",
+              "tags": "{{tags}}",
+              "vpc_uuid": "{{vpc_id}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "data": {
+          "digitalocean_vpc": {
+            "network": {
+              "region": "{{region}}"
+            }
+          }
+        },
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "firewall_id": "${digitalocean_firewall.network.id}",
+              "provider": "digitalocean",
+              "vpc_id": "${data.digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.public_ingress}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${data.digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.private_ingress}"
+                  }
+                ]
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.deployment.name}"
+              ]
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "ssh_key_id": {
+            "value": "${digitalocean_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "digitalocean_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared.tf.json": {
+        "data": {
+          "digitalocean_vpc": {
+            "network": {
+              "region": "{{region}}"
+            }
+          }
+        },
+        "locals": {
+          "private_ingress": "{{private_ingress}}",
+          "public_ingress": "{{public_ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "deployment_tag": "${digitalocean_tag.deployment.name}",
+              "firewall_id": "${digitalocean_firewall.network.id}",
+              "provider": "digitalocean",
+              "vpc_id": "${data.digitalocean_vpc.network.id}",
+              "vpc_ip_range": "${data.digitalocean_vpc.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "digitalocean": {}
+        },
+        "resource": {
+          "digitalocean_firewall": {
+            "network": {
+              "dynamic": {
+                "inbound_rule": [
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": "${inbound_rule.value.source_addresses}"
+                    },
+                    "for_each": "${local.public_ingress}"
+                  },
+                  {
+                    "content": {
+                      "port_range": "${try(inbound_rule.value.port_range, null)}",
+                      "protocol": "${inbound_rule.value.protocol}",
+                      "source_addresses": [
+                        "${data.digitalocean_vpc.network.ip_range}"
+                      ]
+                    },
+                    "for_each": "${local.private_ingress}"
+                  }
+                ]
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "outbound_rule": "{{outbound_rules}}",
+              "tags": [
+                "${digitalocean_tag.deployment.name}"
+              ]
+            }
+          },
+          "digitalocean_tag": {
+            "deployment": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{deployment_tag}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "digitalocean": {
+              "source": "digitalocean/digitalocean",
+              "version": "2.51.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    }
+  },
+  "google": {
+    "node": {
+      "node.tf.json": {
+        "locals": {
+          "public_key": "{{public_key}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${google_compute_address.node.address}",
+              "metadata": {
+                "address_id": "${google_compute_address.node.id}",
+                "instance_id": "${google_compute_instance.node.instance_id}",
+                "self_link": "${google_compute_instance.node.self_link}",
+                "subnetwork_id": "{{subnetwork_id}}",
+                "zone": "{{zone}}"
+              },
+              "name": "${google_compute_instance.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "google",
+              "sudoer": "ubuntu",
+              "user": "ubuntu",
+              "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
+            }
+          }
+        },
+        "provider": {
+          "google": {
+            "project": "{{project}}",
+            "region": "{{region}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "google_compute_address": {
+            "node": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{name}}",
+              "region": "{{region}}"
+            }
+          },
+          "google_compute_instance": {
+            "node": {
+              "boot_disk": [
+                {
+                  "initialize_params": [
+                    {
+                      "image": "{{image}}",
+                      "size": "{{boot_disk_size}}",
+                      "type": "pd-balanced"
+                    }
+                  ]
+                }
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "machine_type": "{{machine_type}}",
+              "metadata": {
+                "block-project-ssh-keys": "true",
+                "enable-oslogin": "false",
+                "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+              },
+              "name": "{{name}}",
+              "network_interface": [
+                {
+                  "access_config": [
+                    {
+                      "nat_ip": "${google_compute_address.node.address}"
+                    }
+                  ],
+                  "subnetwork": "{{subnetwork_id}}"
+                }
+              ],
+              "tags": [
+                "{{network_tag}}"
+              ],
+              "zone": "{{zone}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "google": {
+              "source": "hashicorp/google",
+              "version": "6.0.0"
+            }
+          }
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_ids": "${ {for key, rule in google_compute_firewall.ingress : key => rule.id} }",
+              "network_cidr": "{{network_cidr}}",
+              "network_id": "${google_compute_network.network.id}",
+              "network_tag": "{{network_tag}}",
+              "provider": "google",
+              "subnetwork_id": "${google_compute_subnetwork.network.id}"
+            }
+          }
+        },
+        "provider": {
+          "google": {
+            "project": "{{project}}",
+            "region": "{{region}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "google_compute_firewall": {
+            "ingress": {
+              "allow": [
+                {
+                  "ports": "${each.value.ports}",
+                  "protocol": "${each.value.protocol}"
+                }
+              ],
+              "direction": "INGRESS",
+              "for_each": "${local.ingress}",
+              "name": "${each.value.name}",
+              "network": "${google_compute_network.network.id}",
+              "source_ranges": "${each.value.source_ranges}",
+              "target_tags": [
+                "{{network_tag}}"
+              ]
+            }
+          },
+          "google_compute_network": {
+            "network": {
+              "auto_create_subnetworks": false,
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}"
+            }
+          },
+          "google_compute_subnetwork": {
+            "network": {
+              "ip_cidr_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "network": "${google_compute_network.network.id}",
+              "region": "{{region}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "google": {
+              "source": "hashicorp/google",
+              "version": "6.0.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_ids": "${ {for key, rule in google_compute_firewall.ingress : key => rule.id} }",
+              "network_cidr": "{{network_cidr}}",
+              "network_id": "${google_compute_network.network.id}",
+              "network_tag": "{{network_tag}}",
+              "provider": "google",
+              "subnetwork_id": "${google_compute_subnetwork.network.id}"
+            }
+          }
+        },
+        "provider": {
+          "google": {
+            "project": "{{project}}",
+            "region": "{{region}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "google_compute_firewall": {
+            "ingress": {
+              "allow": [
+                {
+                  "ports": "${each.value.ports}",
+                  "protocol": "${each.value.protocol}"
+                }
+              ],
+              "direction": "INGRESS",
+              "for_each": "${local.ingress}",
+              "name": "${each.value.name}",
+              "network": "${google_compute_network.network.id}",
+              "source_ranges": "${each.value.source_ranges}",
+              "target_tags": [
+                "{{network_tag}}"
+              ]
+            }
+          },
+          "google_compute_network": {
+            "network": {
+              "auto_create_subnetworks": false,
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}"
+            }
+          },
+          "google_compute_subnetwork": {
+            "network": {
+              "ip_cidr_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "network": "${google_compute_network.network.id}",
+              "region": "{{region}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "google": {
+              "source": "hashicorp/google",
+              "version": "6.0.0"
+            }
+          }
+        }
+      }
+    }
+  },
+  "hcloud": {
+    "node": {
+      "node.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${hcloud_server.node.ipv4_address}",
+              "name": "${hcloud_server.node.name}",
+              "network_attachment_id": "${hcloud_server_network.node.id}",
+              "node_id": "{{node_id}}",
+              "provider": "hcloud",
+              "server_id": "${hcloud_server.node.id}",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "root",
+              "user": "root",
+              "vpc_id": "${hcloud_server_network.node.network_id}",
+              "vpc_ip": "${hcloud_server_network.node.ip}"
+            }
+          }
+        },
+        "provider": {
+          "hcloud": {}
+        },
+        "resource": {
+          "hcloud_server": {
+            "node": {
+              "firewall_ids": "{{firewall_ids}}",
+              "image": "{{image}}",
+              "labels": "{{labels}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "location": "{{location}}",
+              "name": "{{name}}",
+              "public_net": {
+                "ipv4_enabled": true,
+                "ipv6_enabled": false
+              },
+              "server_type": "{{server_type}}",
+              "ssh_keys": "{{ssh_key_ids}}"
+            }
+          },
+          "hcloud_server_network": {
+            "node": {
+              "ip": "{{private_ip}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "network_id": "{{network_id}}",
+              "server_id": "${hcloud_server.node.id}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "hcloud": {
+              "source": "hetznercloud/hcloud",
+              "version": "1.54.0"
+            }
+          }
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "firewall_id": "${hcloud_firewall.network.id}",
+              "provider": "hcloud",
+              "subnet_cidr": "${hcloud_network_subnet.network.ip_range}",
+              "subnet_id": "${hcloud_network_subnet.network.id}",
+              "vpc_id": "${hcloud_network.network.id}",
+              "vpc_ip_range": "${hcloud_network.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "hcloud": {}
+        },
+        "resource": {
+          "hcloud_firewall": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "rule": "{{public_rules}}"
+            }
+          },
+          "hcloud_network": {
+            "network": {
+              "ip_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}"
+            }
+          },
+          "hcloud_network_subnet": {
+            "network": {
+              "ip_range": "{{subnet_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "network_id": "${hcloud_network.network.id}",
+              "network_zone": "{{network_zone}}",
+              "type": "cloud"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "hcloud": {
+              "source": "hetznercloud/hcloud",
+              "version": "1.54.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "ssh_key_id": {
+            "value": "${hcloud_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "hcloud_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "firewall_id": "${hcloud_firewall.network.id}",
+              "provider": "hcloud",
+              "subnet_cidr": "${hcloud_network_subnet.network.ip_range}",
+              "subnet_id": "${hcloud_network_subnet.network.id}",
+              "vpc_id": "${hcloud_network.network.id}",
+              "vpc_ip_range": "${hcloud_network.network.ip_range}"
+            }
+          }
+        },
+        "provider": {
+          "hcloud": {}
+        },
+        "resource": {
+          "hcloud_firewall": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{firewall_name}}",
+              "rule": "{{public_rules}}"
+            }
+          },
+          "hcloud_network": {
+            "network": {
+              "ip_range": "{{network_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}"
+            }
+          },
+          "hcloud_network_subnet": {
+            "network": {
+              "ip_range": "{{subnet_cidr}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "network_id": "${hcloud_network.network.id}",
+              "network_zone": "{{network_zone}}",
+              "type": "cloud"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "hcloud": {
+              "source": "hetznercloud/hcloud",
+              "version": "1.54.0"
+            }
+          }
+        }
+      }
+    }
+  },
+  "oci": {
+    "node": {
+      "node-image-pinned.tf.json": {
+        "locals": {
+          "image_id": "{{image_id}}"
+        }
+      },
+      "node.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "instance_id": "${oci_core_instance.node.id}",
+              "ip": "${oci_core_instance.node.public_ip}",
+              "metadata": {
+                "availability_domain": "${oci_core_instance.node.availability_domain}",
+                "image_id": "${local.image_id}"
+              },
+              "name": "${oci_core_instance.node.display_name}",
+              "node_id": "{{node_id}}",
+              "provider": "oci",
+              "sudoer": "{{sudoer}}",
+              "uid": "{{uid}}",
+              "user": "{{user}}",
+              "vpc_ip": "${oci_core_instance.node.private_ip}"
+            }
+          }
+        },
+        "provider": {
+          "oci": {
+            "config_file_profile": "{{config_file_profile}}"
+          }
+        },
+        "resource": {
+          "oci_core_instance": {
+            "node": {
+              "availability_domain": "{{availability_domain}}",
+              "compartment_id": "{{compartment_id}}",
+              "create_vnic_details": {
+                "assign_public_ip": true,
+                "nsg_ids": "{{nsg_ids}}",
+                "subnet_id": "{{subnet_id}}"
+              },
+              "display_name": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "metadata": {
+                "ssh_authorized_keys": "{{public_key}}"
+              },
+              "shape": "{{shape}}",
+              "shape_config": {
+                "memory_in_gbs": "{{memory_in_gbs}}",
+                "ocpus": "{{ocpus}}"
+              },
+              "source_details": {
+                "boot_volume_size_in_gbs": "{{boot_volume_size_in_gbs}}",
+                "boot_volume_vpus_per_gb": "{{boot_volume_vpus_per_gb}}",
+                "source_id": "${local.image_id}",
+                "source_type": "image"
+              }
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "oci": {
+              "source": "oracle/oci",
+              "version": "8.4.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "node-discovery": {
+      "node-image-discovery.tf.json": {
+        "data": {
+          "oci_core_images": {
+            "ubuntu": {
+              "compartment_id": "{{compartment_id}}",
+              "operating_system": "Canonical Ubuntu",
+              "operating_system_version": "24.04",
+              "shape": "{{shape}}",
+              "sort_by": "TIMECREATED",
+              "sort_order": "DESC"
+            }
+          }
+        },
+        "locals": {
+          "image_id": "${data.oci_core_images.ubuntu.images[0].id}"
+        }
+      },
+      "node.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "instance_id": "${oci_core_instance.node.id}",
+              "ip": "${oci_core_instance.node.public_ip}",
+              "metadata": {
+                "availability_domain": "${oci_core_instance.node.availability_domain}",
+                "image_id": "${local.image_id}"
+              },
+              "name": "${oci_core_instance.node.display_name}",
+              "node_id": "{{node_id}}",
+              "provider": "oci",
+              "sudoer": "{{sudoer}}",
+              "uid": "{{uid}}",
+              "user": "{{user}}",
+              "vpc_ip": "${oci_core_instance.node.private_ip}"
+            }
+          }
+        },
+        "provider": {
+          "oci": {
+            "config_file_profile": "{{config_file_profile}}"
+          }
+        },
+        "resource": {
+          "oci_core_instance": {
+            "node": {
+              "availability_domain": "{{availability_domain}}",
+              "compartment_id": "{{compartment_id}}",
+              "create_vnic_details": {
+                "assign_public_ip": true,
+                "nsg_ids": "{{nsg_ids}}",
+                "subnet_id": "{{subnet_id}}"
+              },
+              "display_name": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "metadata": {
+                "ssh_authorized_keys": "{{public_key}}"
+              },
+              "shape": "{{shape}}",
+              "shape_config": {
+                "memory_in_gbs": "{{memory_in_gbs}}",
+                "ocpus": "{{ocpus}}"
+              },
+              "source_details": {
+                "boot_volume_size_in_gbs": "{{boot_volume_size_in_gbs}}",
+                "boot_volume_vpus_per_gb": "{{boot_volume_vpus_per_gb}}",
+                "source_id": "${local.image_id}",
+                "source_type": "image"
+              }
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "oci": {
+              "source": "oracle/oci",
+              "version": "8.4.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "data": {
+          "oci_core_subnet": {
+            "existing": {
+              "subnet_id": "{{subnet_id}}"
+            }
+          }
+        },
+        "output": {
+          "params": {
+            "value": {
+              "nsg_ids": [
+                "${oci_core_network_security_group.network.id}"
+              ],
+              "provider": "oci",
+              "subnet_id": "${data.oci_core_subnet.existing.id}",
+              "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+            }
+          }
+        },
+        "provider": {
+          "oci": {
+            "config_file_profile": "{{config_file_profile}}"
+          }
+        },
+        "resource": {
+          "oci_core_network_security_group": {
+            "network": {
+              "compartment_id": "{{compartment_id}}",
+              "display_name": "{{firewall_name}}",
+              "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+            }
+          },
+          "oci_core_network_security_group_security_rule": {
+            "rules": {
+              "destination": "${each.value.direction == \"EGRESS\" ? each.value.cidr : null}",
+              "destination_type": "${each.value.direction == \"EGRESS\" ? \"CIDR_BLOCK\" : null}",
+              "direction": "${each.value.direction}",
+              "dynamic": {
+                "tcp_options": {
+                  "content": {
+                    "destination_port_range": {
+                      "max": "${tcp_options.value.to_port}",
+                      "min": "${tcp_options.value.from_port}"
+                    }
+                  },
+                  "for_each": "${each.value.protocol == \"6\" ? [each.value] : []}"
+                },
+                "udp_options": {
+                  "content": {
+                    "destination_port_range": {
+                      "max": "${udp_options.value.to_port}",
+                      "min": "${udp_options.value.from_port}"
+                    }
+                  },
+                  "for_each": "${each.value.protocol == \"17\" ? [each.value] : []}"
+                }
+              },
+              "for_each": "{{rules}}",
+              "network_security_group_id": "${oci_core_network_security_group.network.id}",
+              "protocol": "${each.value.protocol}",
+              "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+              "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
+              "stateless": false
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "oci": {
+              "source": "oracle/oci",
+              "version": "8.4.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared.tf.json": {
+        "data": {
+          "oci_core_subnet": {
+            "existing": {
+              "subnet_id": "{{subnet_id}}"
+            }
+          }
+        },
+        "output": {
+          "params": {
+            "value": {
+              "nsg_ids": [
+                "${oci_core_network_security_group.network.id}"
+              ],
+              "provider": "oci",
+              "subnet_id": "${data.oci_core_subnet.existing.id}",
+              "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+            }
+          }
+        },
+        "provider": {
+          "oci": {
+            "config_file_profile": "{{config_file_profile}}"
+          }
+        },
+        "resource": {
+          "oci_core_network_security_group": {
+            "network": {
+              "compartment_id": "{{compartment_id}}",
+              "display_name": "{{firewall_name}}",
+              "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
+            }
+          },
+          "oci_core_network_security_group_security_rule": {
+            "rules": {
+              "destination": "${each.value.direction == \"EGRESS\" ? each.value.cidr : null}",
+              "destination_type": "${each.value.direction == \"EGRESS\" ? \"CIDR_BLOCK\" : null}",
+              "direction": "${each.value.direction}",
+              "dynamic": {
+                "tcp_options": {
+                  "content": {
+                    "destination_port_range": {
+                      "max": "${tcp_options.value.to_port}",
+                      "min": "${tcp_options.value.from_port}"
+                    }
+                  },
+                  "for_each": "${each.value.protocol == \"6\" ? [each.value] : []}"
+                },
+                "udp_options": {
+                  "content": {
+                    "destination_port_range": {
+                      "max": "${udp_options.value.to_port}",
+                      "min": "${udp_options.value.from_port}"
+                    }
+                  },
+                  "for_each": "${each.value.protocol == \"17\" ? [each.value] : []}"
+                }
+              },
+              "for_each": "{{rules}}",
+              "network_security_group_id": "${oci_core_network_security_group.network.id}",
+              "protocol": "${each.value.protocol}",
+              "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+              "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
+              "stateless": false
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "oci": {
+              "source": "oracle/oci",
+              "version": "8.4.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    }
+  },
+  "vultr": {
+    "node": {
+      "node.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${vultr_instance.node.main_ip}",
+              "name": "${vultr_instance.node.label}",
+              "node_id": "{{node_id}}",
+              "provider": "vultr",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "{{sudoer}}",
+              "user": "{{user}}",
+              "vpc_ip": "${vultr_instance.node.internal_ip}"
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_instance": {
+            "node": {
+              "firewall_group_id": "{{firewall_group_id}}",
+              "label": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "os_id": "{{os_id}}",
+              "plan": "{{plan}}",
+              "region": "{{region}}",
+              "ssh_key_ids": "{{ssh_key_ids}}",
+              "vpc_ids": "{{vpc_ids}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "provider": "vultr",
+              "vpc_id": "${vultr_vpc.network.id}",
+              "vpc_ip_range": "{{network_cidr}}"
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_firewall_group": {
+            "network": {
+              "description": "{{firewall_name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              }
+            }
+          },
+          "vultr_firewall_rule": {
+            "ingress": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "for_each": "${local.ingress}",
+              "ip_type": "${each.value.ip_type}",
+              "port": "${each.value.port}",
+              "protocol": "${each.value.protocol}",
+              "subnet": "${each.value.subnet}",
+              "subnet_size": "${each.value.subnet_size}"
+            }
+          },
+          "vultr_vpc": {
+            "network": {
+              "description": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}",
+              "v4_subnet": "{{network_address}}",
+              "v4_subnet_mask": "{{network_prefix}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "ssh_key_id": {
+            "value": "${vultr_ssh_key.machine.id}"
+          }
+        },
+        "resource": {
+          "vultr_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "ssh_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared.tf.json": {
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "provider": "vultr",
+              "vpc_id": "${vultr_vpc.network.id}",
+              "vpc_ip_range": "{{network_cidr}}"
+            }
+          }
+        },
+        "provider": {
+          "vultr": {}
+        },
+        "resource": {
+          "vultr_firewall_group": {
+            "network": {
+              "description": "{{firewall_name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              }
+            }
+          },
+          "vultr_firewall_rule": {
+            "ingress": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "for_each": "${local.ingress}",
+              "ip_type": "${each.value.ip_type}",
+              "port": "${each.value.port}",
+              "protocol": "${each.value.protocol}",
+              "subnet": "${each.value.subnet}",
+              "subnet_size": "${each.value.subnet_size}"
+            }
+          },
+          "vultr_vpc": {
+            "network": {
+              "description": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}",
+              "v4_subnet": "{{network_address}}",
+              "v4_subnet_mask": "{{network_prefix}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
+            }
+          }
+        }
+      }
+    }
+  },
+  "yandex": {
+    "node": {
+      "node.tf.json": {
+        "locals": {
+          "public_key": "{{public_key}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+              "metadata": {
+                "address_id": "${yandex_vpc_address.node.id}",
+                "fqdn": "${yandex_compute_instance.node.fqdn}",
+                "instance_id": "${yandex_compute_instance.node.id}",
+                "security_group_ids": "{{security_group_ids}}",
+                "subnet_id": "{{subnet_id}}",
+                "zone": "{{zone}}"
+              },
+              "name": "${yandex_compute_instance.node.name}",
+              "node_id": "{{node_id}}",
+              "provider": "yandex",
+              "sudoer": "ubuntu",
+              "user": "ubuntu",
+              "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
+            }
+          }
+        },
+        "provider": {
+          "yandex": {
+            "cloud_id": "{{cloud_id}}",
+            "folder_id": "{{folder_id}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "yandex_compute_instance": {
+            "node": {
+              "allow_stopping_for_update": "{{allow_stopping_for_update}}",
+              "boot_disk": [
+                {
+                  "initialize_params": [
+                    {
+                      "image_id": "{{image_id}}",
+                      "size": "{{disk_size}}"
+                    }
+                  ]
+                }
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "metadata": {
+                "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+              },
+              "name": "{{name}}",
+              "network_interface": [
+                {
+                  "nat": true,
+                  "nat_ip_address": "${yandex_vpc_address.node.external_ipv4_address[0].address}",
+                  "security_group_ids": "{{security_group_ids}}",
+                  "subnet_id": "{{subnet_id}}"
+                }
+              ],
+              "platform_id": "{{platform_id}}",
+              "resources": [
+                {
+                  "core_fraction": "{{core_fraction}}",
+                  "cores": "{{cores}}",
+                  "memory": "{{memory}}"
+                }
+              ],
+              "zone": "{{zone}}"
+            }
+          },
+          "yandex_vpc_address": {
+            "node": {
+              "external_ipv4_address": [
+                {
+                  "zone_id": "{{zone}}"
+                }
+              ],
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{name}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "yandex": {
+              "source": "yandex-cloud/yandex",
+              "version": "0.120.0"
+            }
+          }
+        }
+      }
+    },
+    "shared": {
+      "shared.tf.json": {
+        "locals": {
+          "egress": "{{egress}}",
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "network_cidr": "{{network_cidr}}",
+              "network_id": "${yandex_vpc_network.network.id}",
+              "provider": "yandex",
+              "security_group_id": "${yandex_vpc_security_group.network.id}",
+              "subnet_id": "${yandex_vpc_subnet.network.id}",
+              "zone": "{{zone}}"
+            }
+          }
+        },
+        "provider": {
+          "yandex": {
+            "cloud_id": "{{cloud_id}}",
+            "folder_id": "{{folder_id}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "yandex_vpc_network": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}"
+            }
+          },
+          "yandex_vpc_security_group": {
+            "network": {
+              "dynamic": {
+                "egress": {
+                  "content": {
+                    "description": "${egress.key}",
+                    "from_port": "${egress.value.from_port}",
+                    "protocol": "${egress.value.protocol}",
+                    "to_port": "${egress.value.to_port}",
+                    "v4_cidr_blocks": "${egress.value.cidr_blocks}"
+                  },
+                  "for_each": "${local.egress}"
+                },
+                "ingress": {
+                  "content": {
+                    "description": "${ingress.key}",
+                    "from_port": "${ingress.value.from_port}",
+                    "protocol": "${ingress.value.protocol}",
+                    "to_port": "${ingress.value.to_port}",
+                    "v4_cidr_blocks": "${ingress.value.cidr_blocks}"
+                  },
+                  "for_each": "${local.ingress}"
+                }
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "network_id": "${yandex_vpc_network.network.id}"
+            }
+          },
+          "yandex_vpc_subnet": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "network_id": "${yandex_vpc_network.network.id}",
+              "v4_cidr_blocks": [
+                "{{network_cidr}}"
+              ],
+              "zone": "{{zone}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "yandex": {
+              "source": "yandex-cloud/yandex",
+              "version": "0.120.0"
+            }
+          }
+        }
+      }
+    },
+    "shared-keygen": {
+      "shared.tf.json": {
+        "locals": {
+          "egress": "{{egress}}",
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "network_cidr": "{{network_cidr}}",
+              "network_id": "${yandex_vpc_network.network.id}",
+              "provider": "yandex",
+              "security_group_id": "${yandex_vpc_security_group.network.id}",
+              "subnet_id": "${yandex_vpc_subnet.network.id}",
+              "zone": "{{zone}}"
+            }
+          }
+        },
+        "provider": {
+          "yandex": {
+            "cloud_id": "{{cloud_id}}",
+            "folder_id": "{{folder_id}}",
+            "zone": "{{zone}}"
+          }
+        },
+        "resource": {
+          "yandex_vpc_network": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}"
+            }
+          },
+          "yandex_vpc_security_group": {
+            "network": {
+              "dynamic": {
+                "egress": {
+                  "content": {
+                    "description": "${egress.key}",
+                    "from_port": "${egress.value.from_port}",
+                    "protocol": "${egress.value.protocol}",
+                    "to_port": "${egress.value.to_port}",
+                    "v4_cidr_blocks": "${egress.value.cidr_blocks}"
+                  },
+                  "for_each": "${local.egress}"
+                },
+                "ingress": {
+                  "content": {
+                    "description": "${ingress.key}",
+                    "from_port": "${ingress.value.from_port}",
+                    "protocol": "${ingress.value.protocol}",
+                    "to_port": "${ingress.value.to_port}",
+                    "v4_cidr_blocks": "${ingress.value.cidr_blocks}"
+                  },
+                  "for_each": "${local.ingress}"
+                }
+              },
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "network_id": "${yandex_vpc_network.network.id}"
+            }
+          },
+          "yandex_vpc_subnet": {
+            "network": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{network_name}}",
+              "network_id": "${yandex_vpc_network.network.id}",
+              "v4_cidr_blocks": [
+                "{{network_cidr}}"
+              ],
+              "zone": "{{zone}}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "yandex": {
+              "source": "yandex-cloud/yandex",
+              "version": "0.120.0"
+            }
+          }
+        }
+      }
+    }
+  }
+}

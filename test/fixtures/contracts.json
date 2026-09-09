@@ -1920,7 +1920,7 @@
           "required_providers": {
             "vultr": {
               "source": "vultr/vultr",
-              "version": "~> 2.0"
+              "version": "2.32.0"
             }
           }
         },
@@ -2033,7 +2033,7 @@
         "required_providers": {
           "vultr": {
             "source": "vultr/vultr",
-            "version": "~> 2.0"
+            "version": "2.32.0"
           }
         }
       },
@@ -2125,7 +2125,7 @@
           "required_providers": {
             "vultr": {
               "source": "vultr/vultr",
-              "version": "~> 2.0"
+              "version": "2.32.0"
             }
           }
         },
@@ -2223,7 +2223,7 @@
         "required_providers": {
           "vultr": {
             "source": "vultr/vultr",
-            "version": "~> 2.0"
+            "version": "2.32.0"
           }
         }
       },
@@ -2360,6 +2360,110 @@
           "value": "${vultr_ssh_key.machine.id}"
         }
       }
+    }
+  },
+  {
+    "name": "array selectors are not strings",
+    "op": "validate",
+    "args": [
+      {
+        "provider-compute": [
+          "aws"
+        ],
+        "provider-backend": [
+          "s3"
+        ]
+      }
+    ],
+    "expected": [
+      ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
+      ":provider-backend must be one of r2, s3",
+      ":profile is required"
+    ]
+  },
+  {
+    "name": "missing result identity",
+    "op": "collect",
+    "args": [
+      [
+        {
+          "node_id": "0"
+        }
+      ],
+      [
+        {}
+      ],
+      "0"
+    ],
+    "expected": {
+      "error": "undeclared node: null"
+    }
+  },
+  {
+    "name": "null requested provider uses deployment provider",
+    "op": "collect",
+    "args": [
+      [
+        {
+          "node_id": "0",
+          "provider": null
+        }
+      ],
+      [
+        {
+          "node_id": "0",
+          "provider": "aws",
+          "name": "n",
+          "ip": "192.0.2.10",
+          "user": "ubuntu",
+          "sudoer": "ubuntu"
+        }
+      ],
+      "0"
+    ],
+    "expected": {
+      "provider": "aws",
+      "entry_node_id": "0",
+      "nodes": [
+        {
+          "node_id": "0",
+          "provider": "aws",
+          "name": "n",
+          "ip": "192.0.2.10",
+          "user": "ubuntu",
+          "sudoer": "ubuntu",
+          "role": null,
+          "index": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "array provider cannot select bundled plan",
+    "op": "provider_plan",
+    "args": [
+      [
+        "aws"
+      ],
+      "node",
+      {}
+    ],
+    "expected": {
+      "error": "compute provider templates unavailable: [\"aws\"]"
+    }
+  },
+  {
+    "name": "array stage cannot select bundled plan",
+    "op": "provider_plan",
+    "args": [
+      "aws",
+      [
+        "node"
+      ],
+      {}
+    ],
+    "expected": {
+      "error": "unsupported compute stage: [\"node\"]"
     }
   }
 ]

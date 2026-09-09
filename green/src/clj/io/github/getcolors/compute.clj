@@ -105,6 +105,21 @@
     (sequential? value) (mapv #(render-template % inputs) value)
     :else value))
 
+(def ^:private template-bundle
+  (delay (json/parse-string (slurp (io/resource "colors_compute/templates.json")))))
+
+(defn provider-plan
+  "Load packaged provider-stage documents and render without cloud operations."
+  [provider stage inputs]
+  (let [stages (get @template-bundle provider)]
+    (when-not stages
+      (fail (str "compute provider templates unavailable: " (label provider))))
+    (let [documents (get stages stage)]
+      (when-not documents
+        (fail (str "unsupported compute stage: " (label stage))))
+      (into {} (map (fn [[filename document]]
+                      [filename (render-template document inputs)]) documents)))))
+
 (defn backend-plan
   "Prepare non-secret backend configuration and credential binding names only."
   [opts state-key]

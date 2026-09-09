@@ -38,7 +38,7 @@
         (cond-> [(fn [opts]
            (let [branches (or (seq (:green/branches opts)) [opts])]
              (assoc opts :colors-compute/cluster
-                    (compute/collect requests (mapv :colors-compute/params branches)
+                    (compute/collect requests (vec (keep :colors-compute/params branches))
                                      entry-node-id))))]
           downstream (conj :colors-compute/downstream))
         :colors-compute/downstream [downstream]))

@@ -1,0 +1,66 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "oci": {
+        "source": "oracle/oci",
+        "version": "8.4.0"
+      }
+    }
+  },
+  "provider": {
+    "oci": {
+      "config_file_profile": "{{config_file_profile}}"
+    }
+  },
+  "resource": {
+    "oci_core_instance": {
+      "node": {
+        "availability_domain": "{{availability_domain}}",
+        "compartment_id": "{{compartment_id}}",
+        "display_name": "{{name}}",
+        "shape": "{{shape}}",
+        "shape_config": {
+          "ocpus": "{{ocpus}}",
+          "memory_in_gbs": "{{memory_in_gbs}}"
+        },
+        "create_vnic_details": {
+          "subnet_id": "{{subnet_id}}",
+          "assign_public_ip": true,
+          "nsg_ids": "{{nsg_ids}}"
+        },
+        "source_details": {
+          "source_type": "image",
+          "source_id": "${local.image_id}",
+          "boot_volume_size_in_gbs": "{{boot_volume_size_in_gbs}}",
+          "boot_volume_vpus_per_gb": "{{boot_volume_vpus_per_gb}}"
+        },
+        "metadata": {
+          "ssh_authorized_keys": "{{public_key}}"
+        },
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "{{node_id}}",
+        "provider": "oci",
+        "name": "${oci_core_instance.node.display_name}",
+        "ip": "${oci_core_instance.node.public_ip}",
+        "vpc_ip": "${oci_core_instance.node.private_ip}",
+        "instance_id": "${oci_core_instance.node.id}",
+        "user": "{{user}}",
+        "sudoer": "{{sudoer}}",
+        "uid": "{{uid}}",
+        "metadata": {
+          "image_id": "${local.image_id}",
+          "availability_domain": "${oci_core_instance.node.availability_domain}"
+        }
+      }
+    }
+  }
+}

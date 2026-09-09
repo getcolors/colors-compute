@@ -3,9 +3,9 @@
 from .contract import (
     collect, credential_requirements, expand, state_decision, state_keys, validate,
 )
-from .rendering import backend_plan, render_template
+from .rendering import backend_plan, provider_plan, render_template
 
 __all__ = [
     "collect", "credential_requirements", "expand", "state_decision", "state_keys",
-    "validate", "backend_plan", "render_template",
+    "validate", "backend_plan", "provider_plan", "render_template",
 ]

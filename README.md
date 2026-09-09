@@ -10,6 +10,11 @@ provider template prototypes, and a read-only AutoMQ migration planner. It
 does not yet provide a production create/delete lifecycle. No package or live
 deployment has migrated to it.
 
+All eight provider template sets have passed OpenTofu 1.12.5 schema validation.
+The packaged `provider_plan` API loads those templates in each language.
+This proves rendering and schema compatibility, not provisioning, network
+isolation, backend locking, or safe migration of an existing deployment.
+
 ## Contract and implementation
 
 - [Contract operations](contracts/README.md): provider selection, credentials,
@@ -56,6 +61,7 @@ provider schema checks, which use temporary directories and no credentials.
 
 ```sh
 python3 scripts/registry.py
+python3 scripts/provider_resources.py
 python3 scripts/parity.py
 uv run --directory blue pytest -q
 cd green && bb test

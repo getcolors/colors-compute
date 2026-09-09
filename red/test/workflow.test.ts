@@ -3,6 +3,17 @@ import {run, type StepFn} from 'red/workflow';
 import {clusterWorkflow, expand} from '../src/index.ts';
 const params = (request: Record<string, any>) => ({node_id: request.node_id, provider:'vultr', name:request.node_id, ip:'192.0.2.1', user:'root', sudoer:'root', metadata:{id:request.node_id}});
 const node: StepFn = opts => ({...opts, 'colors-compute/params':params(opts['colors-compute/request'])});
+test('previous results cannot satisfy a new node operation', async () => {
+  const old = params({node_id:'0'});
+  const result = await run(clusterWorkflow(expand([{}]), '0', opts => opts), {
+    'colors-compute/params': old,
+    'colors-compute/cluster': {provider:'vultr',nodes:[old]},
+    'red/branches': [{'colors-compute/params':old}],
+  });
+  expect(result['red/exit']).toBeGreaterThan(0);
+  expect(result['red/err']).toBe('missing node: 0');
+  expect(result['colors-compute/cluster']).toBeUndefined();
+});
 test('SDK fan-out joins reversed completion once in declared order', async () => {
   const requests = expand([{role:'broker',count:3}]);
   const completed: string[] = [];

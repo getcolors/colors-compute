@@ -16,15 +16,15 @@ function fail(message: string): never { throw new Error(message); }
 const entries = registry as unknown as {compute: Record<string, Map>; backend: Record<string, Map>};
 function selections(opts: Map): string[] {
   const errors: string[] = [];
-  if (!Object.hasOwn(entries.compute, opts['provider-compute'])) errors.push(':provider-compute must be one of ' + Object.keys(entries.compute).sort().join(', '));
-  if (!Object.hasOwn(entries.backend, opts['provider-backend'])) errors.push(':provider-backend must be one of ' + Object.keys(entries.backend).sort().join(', '));
+  if (typeof opts['provider-compute'] !== 'string' || !Object.hasOwn(entries.compute, opts['provider-compute'])) errors.push(':provider-compute must be one of ' + Object.keys(entries.compute).sort().join(', '));
+  if (typeof opts['provider-backend'] !== 'string' || !Object.hasOwn(entries.backend, opts['provider-backend'])) errors.push(':provider-backend must be one of ' + Object.keys(entries.backend).sort().join(', '));
   return errors;
 }
 function selected(opts: Map): Map[] {
   return [['compute', 'provider-compute'], ['backend', 'provider-backend']].flatMap(([kind, option]) => {
     const group = entries[kind as keyof typeof entries];
     const name = opts[option];
-    return Object.hasOwn(group, name) ? [group[name]] : [];
+    return typeof name === 'string' && Object.hasOwn(group, name) ? [group[name]] : [];
   });
 }
 export function validate(opts: Map): string[] {
@@ -80,7 +80,7 @@ export function collect(requests: Map[], results: Map[], entry_node_id: string) 
   if (!ids.has(entry_node_id)) fail(`unknown entry node: ${entry_node_id}`);
   const byId = new Map<string, Map>();
   for (const result of results) {
-    if (!ids.has(result.node_id)) fail(`undeclared node: ${result.node_id}`);
+    if (!ids.has(result.node_id)) fail(`undeclared node: ${result.node_id ?? null}`);
     if (byId.has(result.node_id)) fail(`duplicate node: ${result.node_id}`);
     byId.set(result.node_id, result);
   }
@@ -114,3 +114,4 @@ export function state_decision(read: Map, selected: string) {
 
 export {clusterWorkflow} from './workflow.ts';
 export {render_template, backend_plan} from './rendering.ts';
+export {provider_plan} from './providers.ts';

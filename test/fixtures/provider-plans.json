@@ -1,0 +1,183 @@
+[
+  {
+    "files": {
+      "shared.tf.json": "shared-optout/main.tf.json"
+    },
+    "provider": "aws",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared-keygen.tf.json": "shared-keygen/key.tf.json",
+      "shared.tf.json": "shared-keygen/main.tf.json"
+    },
+    "provider": "aws",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node.tf.json": "node/main.tf.json"
+    },
+    "provider": "aws",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared-optout/main.tf.json"
+    },
+    "provider": "vultr",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared-keygen.tf.json": "shared-keygen/key.tf.json",
+      "shared.tf.json": "shared-keygen/main.tf.json"
+    },
+    "provider": "vultr",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node.tf.json": "node/main.tf.json"
+    },
+    "provider": "vultr",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared-optout/shared.tf.json"
+    },
+    "provider": "digitalocean",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared-keygen.tf.json": "shared-keygen/shared-keygen.tf.json",
+      "shared.tf.json": "shared-keygen/shared.tf.json"
+    },
+    "provider": "digitalocean",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node.tf.json": "node/node.tf.json"
+    },
+    "provider": "digitalocean",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared-optout/shared.tf.json"
+    },
+    "provider": "hcloud",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared-keygen.tf.json": "shared-keygen/shared-keygen.tf.json",
+      "shared.tf.json": "shared-keygen/shared.tf.json"
+    },
+    "provider": "hcloud",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node.tf.json": "node/node.tf.json"
+    },
+    "provider": "hcloud",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/main.tf.json"
+    },
+    "provider": "google",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/main.tf.json"
+    },
+    "provider": "google",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node.tf.json": "node/main.tf.json"
+    },
+    "provider": "google",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/main.tf.json"
+    },
+    "provider": "yandex",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/main.tf.json"
+    },
+    "provider": "yandex",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node.tf.json": "node/main.tf.json"
+    },
+    "provider": "yandex",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/shared.tf.json"
+    },
+    "provider": "azure",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/shared.tf.json"
+    },
+    "provider": "azure",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node.tf.json": "node/node.tf.json"
+    },
+    "provider": "azure",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/main.tf.json"
+    },
+    "provider": "oci",
+    "stage": "shared"
+  },
+  {
+    "files": {
+      "shared.tf.json": "shared/main.tf.json"
+    },
+    "provider": "oci",
+    "stage": "shared-keygen"
+  },
+  {
+    "files": {
+      "node-image-pinned.tf.json": "node-pinned/image.tf.json",
+      "node.tf.json": "node-pinned/main.tf.json"
+    },
+    "provider": "oci",
+    "stage": "node"
+  },
+  {
+    "files": {
+      "node-image-discovery.tf.json": "node-discovery/image.tf.json",
+      "node.tf.json": "node-discovery/main.tf.json"
+    },
+    "provider": "oci",
+    "stage": "node-discovery"
+  }
+]

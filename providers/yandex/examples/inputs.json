@@ -1,0 +1,50 @@
+{
+  "cloud_id": "b1g00000000000000000",
+  "folder_id": "b1g00000000000000001",
+  "zone": "ru-central1-a",
+  "network_name": "example-network",
+  "network_cidr": "10.42.0.0/24",
+  "prevent_destroy": true,
+  "node_id": "0",
+  "name": "example-0",
+  "platform_id": "standard-v3",
+  "cores": 2,
+  "memory": 4,
+  "core_fraction": 100,
+  "disk_size": 20,
+  "allow_stopping_for_update": false,
+  "image_id": "fd800000000000000000",
+  "subnet_id": "e9b00000000000000000",
+  "security_group_ids": [
+    "enp00000000000000000"
+  ],
+  "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+  "ingress": {
+    "ssh": {
+      "protocol": "TCP",
+      "from_port": 22,
+      "to_port": 22,
+      "cidr_blocks": [
+        "192.0.2.1/32"
+      ]
+    },
+    "cluster": {
+      "protocol": "TCP",
+      "from_port": 9093,
+      "to_port": 9094,
+      "cidr_blocks": [
+        "10.42.0.0/24"
+      ]
+    }
+  },
+  "egress": {
+    "outbound": {
+      "protocol": "ANY",
+      "from_port": 0,
+      "to_port": 65535,
+      "cidr_blocks": [
+        "0.0.0.0/0"
+      ]
+    }
+  }
+}

@@ -11,7 +11,8 @@
    "collect" compute/collect
    "state_decision" compute/state-decision
    "render_template" compute/render-template
-   "backend_plan" compute/backend-plan})
+   "backend_plan" compute/backend-plan
+   "provider_plan" compute/provider-plan})
 (doseq [line (line-seq (java.io.BufferedReader. *in*))]
   (println (json/generate-string
             (try

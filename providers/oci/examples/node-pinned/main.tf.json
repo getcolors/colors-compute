@@ -1,0 +1,68 @@
+{
+  "terraform": {
+    "required_version": ">= 1.8.0",
+    "required_providers": {
+      "oci": {
+        "source": "oracle/oci",
+        "version": "8.4.0"
+      }
+    }
+  },
+  "provider": {
+    "oci": {
+      "config_file_profile": "DEFAULT"
+    }
+  },
+  "resource": {
+    "oci_core_instance": {
+      "node": {
+        "availability_domain": "example:EU-FRANKFURT-1-AD-1",
+        "compartment_id": "ocid1.compartment.oc1..example",
+        "display_name": "example-broker-0",
+        "shape": "VM.Standard.A1.Flex",
+        "shape_config": {
+          "ocpus": 1,
+          "memory_in_gbs": 6
+        },
+        "create_vnic_details": {
+          "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+          "assign_public_ip": true,
+          "nsg_ids": [
+            "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+          ]
+        },
+        "source_details": {
+          "source_type": "image",
+          "source_id": "${local.image_id}",
+          "boot_volume_size_in_gbs": 50,
+          "boot_volume_vpus_per_gb": 10
+        },
+        "metadata": {
+          "ssh_authorized_keys": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "node_id": "broker-0",
+        "provider": "oci",
+        "name": "${oci_core_instance.node.display_name}",
+        "ip": "${oci_core_instance.node.public_ip}",
+        "vpc_ip": "${oci_core_instance.node.private_ip}",
+        "instance_id": "${oci_core_instance.node.id}",
+        "user": "ubuntu",
+        "sudoer": "ubuntu",
+        "uid": "1001",
+        "metadata": {
+          "image_id": "${local.image_id}",
+          "availability_domain": "${oci_core_instance.node.availability_domain}"
+        }
+      }
+    }
+  }
+}

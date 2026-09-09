@@ -1,0 +1,99 @@
+{
+  "terraform": {
+    "required_providers": {
+      "yandex": {
+        "source": "yandex-cloud/yandex",
+        "version": "0.120.0"
+      }
+    }
+  },
+  "provider": {
+    "yandex": {
+      "cloud_id": "b1g00000000000000000",
+      "folder_id": "b1g00000000000000001",
+      "zone": "ru-central1-a"
+    }
+  },
+  "locals": {
+    "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+  },
+  "resource": {
+    "yandex_vpc_address": {
+      "node": {
+        "name": "example-0",
+        "external_ipv4_address": [
+          {
+            "zone_id": "ru-central1-a"
+          }
+        ],
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    },
+    "yandex_compute_instance": {
+      "node": {
+        "name": "example-0",
+        "zone": "ru-central1-a",
+        "platform_id": "standard-v3",
+        "allow_stopping_for_update": false,
+        "resources": [
+          {
+            "cores": 2,
+            "memory": 4,
+            "core_fraction": 100
+          }
+        ],
+        "boot_disk": [
+          {
+            "initialize_params": [
+              {
+                "image_id": "fd800000000000000000",
+                "size": 20
+              }
+            ]
+          }
+        ],
+        "network_interface": [
+          {
+            "subnet_id": "e9b00000000000000000",
+            "security_group_ids": [
+              "enp00000000000000000"
+            ],
+            "nat": true,
+            "nat_ip_address": "${yandex_vpc_address.node.external_ipv4_address[0].address}"
+          }
+        ],
+        "metadata": {
+          "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+        },
+        "lifecycle": {
+          "prevent_destroy": true
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "yandex",
+        "node_id": "0",
+        "name": "${yandex_compute_instance.node.name}",
+        "ip": "${yandex_compute_instance.node.network_interface[0].nat_ip_address}",
+        "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}",
+        "user": "ubuntu",
+        "sudoer": "ubuntu",
+        "metadata": {
+          "instance_id": "${yandex_compute_instance.node.id}",
+          "fqdn": "${yandex_compute_instance.node.fqdn}",
+          "address_id": "${yandex_vpc_address.node.id}",
+          "subnet_id": "e9b00000000000000000",
+          "security_group_ids": [
+            "enp00000000000000000"
+          ],
+          "zone": "ru-central1-a"
+        }
+      }
+    }
+  }
+}

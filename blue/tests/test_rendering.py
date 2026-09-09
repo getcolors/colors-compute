@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from colors_compute import backend_plan, render_template
+from colors_compute import backend_plan, provider_plan, render_template
 
 
 def test_template_retains_types_and_does_not_interpret_tofu_expressions():
@@ -59,3 +59,21 @@ def test_library_renderer_reproduces_vultr_provider_documents():
         source = json.loads((root / f"{template}.tf.json.template").read_text())
         expected = json.loads((root / f"examples/{mode}/{name}.tf.json").read_text())
         assert render_template(source, inputs) == expected
+
+
+def test_provider_plan_uses_packaged_resources_and_independent_results(monkeypatch, tmp_path):
+    root = Path(__file__).resolve().parents[2] / "providers/vultr"
+    inputs = json.loads((root / "examples/inputs.json").read_text())
+    expected = json.loads((root / "examples/node/main.tf.json").read_text())
+    monkeypatch.chdir(tmp_path)
+    result = provider_plan("vultr", "node", inputs)
+    assert result == {"node.tf.json": expected}
+    result["node.tf.json"]["resource"] = {}
+    assert provider_plan("vultr", "node", inputs)["node.tf.json"]["resource"]
+
+
+def test_provider_plan_refuses_unknown_provider_or_stage():
+    with pytest.raises(ValueError, match="compute provider templates unavailable: no-infra"):
+        provider_plan("no-infra", "node", {})
+    with pytest.raises(ValueError, match="unsupported compute stage: mystery"):
+        provider_plan("vultr", "mystery", {})

@@ -52,3 +52,19 @@ credential binding, backend initialization and locking remain runtime work.
 
 Updated validation: 20 tests / 94 assertions pass; source and test typechecking
 passes. No cloud operations, commits, or pushes were performed.
+
+## Packaged provider plans
+
+Added `provider_plan(provider, stage, inputs)` in `src/providers.ts`, exported
+through the main module and automatically available to the JSONL driver. It
+loads the generated packaged bundle, deep-freezes the template data, selects
+providers/stages by own-property lookup, and renders detached documents using
+the common typed renderer. No provider-specific runtime branching is added.
+
+Validation now passes 23 tests / 106 assertions plus source/test typechecking.
+New tests cover eight bundled providers, invalid/prototype selections, typed
+Vultr output, immutable source templates, and a subprocess that imports a copy
+of the distributable src/resources/package.json outside the repository while
+reusing the already-installed pinned SDK dependencies. Generated bundles were
+not modified; the parent owns their synchronization. This remains a render
+API, not a state or cloud lifecycle implementation.

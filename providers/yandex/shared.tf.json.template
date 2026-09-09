@@ -1,0 +1,87 @@
+{
+  "terraform": {
+    "required_providers": {
+      "yandex": {
+        "source": "yandex-cloud/yandex",
+        "version": "0.120.0"
+      }
+    }
+  },
+  "provider": {
+    "yandex": {
+      "cloud_id": "{{cloud_id}}",
+      "folder_id": "{{folder_id}}",
+      "zone": "{{zone}}"
+    }
+  },
+  "locals": {
+    "ingress": "{{ingress}}",
+    "egress": "{{egress}}"
+  },
+  "resource": {
+    "yandex_vpc_network": {
+      "network": {
+        "name": "{{network_name}}",
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "yandex_vpc_subnet": {
+      "network": {
+        "name": "{{network_name}}",
+        "zone": "{{zone}}",
+        "network_id": "${yandex_vpc_network.network.id}",
+        "v4_cidr_blocks": [
+          "{{network_cidr}}"
+        ],
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    },
+    "yandex_vpc_security_group": {
+      "network": {
+        "name": "{{network_name}}",
+        "network_id": "${yandex_vpc_network.network.id}",
+        "dynamic": {
+          "ingress": {
+            "for_each": "${local.ingress}",
+            "content": {
+              "description": "${ingress.key}",
+              "protocol": "${ingress.value.protocol}",
+              "from_port": "${ingress.value.from_port}",
+              "to_port": "${ingress.value.to_port}",
+              "v4_cidr_blocks": "${ingress.value.cidr_blocks}"
+            }
+          },
+          "egress": {
+            "for_each": "${local.egress}",
+            "content": {
+              "description": "${egress.key}",
+              "protocol": "${egress.value.protocol}",
+              "from_port": "${egress.value.from_port}",
+              "to_port": "${egress.value.to_port}",
+              "v4_cidr_blocks": "${egress.value.cidr_blocks}"
+            }
+          }
+        },
+        "lifecycle": {
+          "prevent_destroy": "{{prevent_destroy}}"
+        }
+      }
+    }
+  },
+  "output": {
+    "params": {
+      "value": {
+        "provider": "yandex",
+        "network_id": "${yandex_vpc_network.network.id}",
+        "subnet_id": "${yandex_vpc_subnet.network.id}",
+        "security_group_id": "${yandex_vpc_security_group.network.id}",
+        "network_cidr": "{{network_cidr}}",
+        "zone": "{{zone}}"
+      }
+    }
+  }
+}

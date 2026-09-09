@@ -27,7 +27,13 @@ export function clusterWorkflow(
     wireFn: (step) => {
       switch (step) {
         case 'colors-compute/fan-out':
-          return [opts => ({...opts}), 'colors-compute/node'];
+          return [opts => {
+            const clean = {...opts};
+            delete clean['colors-compute/cluster'];
+            delete clean['colors-compute/params'];
+            delete clean['red/branches'];
+            return clean;
+          }, 'colors-compute/node'];
         case 'colors-compute/node':
           return [nodeStep, 'colors-compute/join'];
         case 'colors-compute/join':

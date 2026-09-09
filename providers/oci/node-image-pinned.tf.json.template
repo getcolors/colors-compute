@@ -1,0 +1,5 @@
+{
+  "locals": {
+    "image_id": "{{image_id}}"
+  }
+}

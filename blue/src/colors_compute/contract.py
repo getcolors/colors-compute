@@ -116,7 +116,7 @@ def collect(requests: list[dict], results: list[dict], entry_node_id: str) -> di
     for result in results:
         node_id = result.get("node_id")
         if node_id not in expected:
-            raise ValueError(f"undeclared node: {node_id}")
+            raise ValueError(f"undeclared node: {'null' if node_id is None else node_id}")
         if node_id in received:
             raise ValueError(f"duplicate node: {node_id}")
         received[node_id] = result
@@ -133,7 +133,7 @@ def collect(requests: list[dict], results: list[dict], entry_node_id: str) -> di
             if not isinstance(result.get(field), str) or not result[field].strip():
                 raise ValueError(f"incomplete node {node_id}: {field}")
         provider = provider or result["provider"]
-        if result["provider"] != request.get("provider", provider) or result["provider"] != provider:
+        if result["provider"] != (request.get("provider") or provider) or result["provider"] != provider:
             raise ValueError(f"provider mismatch: {node_id}")
         nodes.append({**result, "role": request.get("role"), "index": request.get("index")})
     return {"provider": provider, "entry_node_id": entry_node_id, "nodes": nodes}

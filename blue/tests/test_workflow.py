@@ -79,3 +79,15 @@ async def test_incomplete_success_cannot_reach_ansible():
 def test_invalid_topology_rejected_before_node_calls():
     with pytest.raises(ValueError, match="unknown entry node"):
         cluster_workflow(expand([{"role": None}]), "99", lambda o: o)
+
+
+@pytest.mark.asyncio
+async def test_stale_parent_results_cannot_satisfy_a_new_node_operation():
+    old = params({"node_id": "0"})
+    result = await run(cluster_workflow(expand([{"role": None}]), "0", lambda o: o), {
+        "colors-compute/params": old, "colors-compute/cluster": {"nodes": [old]},
+        "blue/branches": [{"colors-compute/params": old}],
+    })
+    assert result["blue/exit"] > 0
+    assert result["blue/err"] == "missing node: 0"
+    assert "colors-compute/cluster" not in result

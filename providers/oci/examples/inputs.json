@@ -1,0 +1,53 @@
+{
+  "config_file_profile": "DEFAULT",
+  "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+  "compartment_id": "ocid1.compartment.oc1..example",
+  "firewall_name": "example",
+  "rules": {
+    "ssh-admin": {
+      "direction": "INGRESS",
+      "protocol": "6",
+      "cidr": "192.0.2.0/24",
+      "from_port": 22,
+      "to_port": 22
+    },
+    "private-peer": {
+      "direction": "INGRESS",
+      "protocol": "6",
+      "cidr": "10.42.1.0/24",
+      "from_port": 9092,
+      "to_port": 9092
+    },
+    "dns": {
+      "direction": "EGRESS",
+      "protocol": "17",
+      "cidr": "0.0.0.0/0",
+      "from_port": 53,
+      "to_port": 53
+    },
+    "outbound": {
+      "direction": "EGRESS",
+      "protocol": "all",
+      "cidr": "0.0.0.0/0",
+      "from_port": null,
+      "to_port": null
+    }
+  },
+  "name": "example-broker-0",
+  "node_id": "broker-0",
+  "availability_domain": "example:EU-FRANKFURT-1-AD-1",
+  "shape": "VM.Standard.A1.Flex",
+  "ocpus": 1,
+  "memory_in_gbs": 6,
+  "nsg_ids": [
+    "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+  ],
+  "boot_volume_size_in_gbs": 50,
+  "boot_volume_vpus_per_gb": 10,
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only",
+  "prevent_destroy": true,
+  "image_id": "ocid1.image.oc1.eu-frankfurt-1.example",
+  "user": "ubuntu",
+  "sudoer": "ubuntu",
+  "uid": "1001"
+}

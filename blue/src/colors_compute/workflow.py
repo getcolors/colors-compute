@@ -37,7 +37,8 @@ def cluster_workflow(requests: list[dict], entry_node_id: str,
 
     def join(opts):
         branches = opts.get("blue/branches") or [opts]
-        result = collect(declared, [branch.get("colors-compute/params") or {} for branch in branches], entry_node_id)
+        result = collect(declared, [branch["colors-compute/params"] for branch in branches
+                                    if branch.get("colors-compute/params") is not None], entry_node_id)
         return {**opts, "colors-compute/cluster": result}
 
     def wire_fn(step, _run_opts):

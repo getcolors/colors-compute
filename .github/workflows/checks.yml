@@ -3,6 +3,25 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  provider-schema:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [aws, azure, digitalocean, google, hcloud, oci, vultr, yandex]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: opentofu/setup-opentofu@v2
+        with:
+          tofu_version: '1.12.5'
+          tofu_wrapper: false
+      - name: Validate provider examples without credentials or remote state
+        env:
+          COMPUTE_SCHEMA_PROVIDER: ${{ matrix.provider }}
+        run: python3 "providers/$COMPUTE_SCHEMA_PROVIDER/check.py" --tofu "$(command -v tofu)"
   contracts:
     runs-on: ubuntu-latest
     steps:
@@ -20,6 +39,7 @@ jobs:
       - run: bun install --frozen-lockfile
         working-directory: red
       - run: python3 scripts/registry.py
+      - run: python3 scripts/provider_resources.py
       - run: python3 scripts/parity.py
       - run: uv run --directory blue pytest -q
       - run: bb test

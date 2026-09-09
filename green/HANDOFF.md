@@ -56,3 +56,15 @@ Validation: `bb test` passes 13 tests / 83 assertions. JSONL smoke checks verify
 false-value rendering, Terraform expression preservation, and R2 planning that
 does not echo a supplied secret. Runtime binding/cache protection, actual
 backend initialization, lock behavior, and lifecycle execution remain pending.
+
+## Packaged provider planning update (2026-09-09)
+
+Implemented `compute/provider-plan` using the classpath resource
+`colors_compute/templates.json` and existing `render-template`; no working-tree
+provider lookup is used. Exposed JSONL `provider_plan` in the Green driver.
+Tests cover actual Vultr node/shared-keygen documents, typed lifecycle values,
+preserved OpenTofu expressions, missing provider/stage and missing inputs.
+`bb test` passed: 14 tests, 90 assertions. Driver selection diagnostics also
+passed from `/tmp`, outside the repository working directory. This remains
+pure rendering and makes no runtime provisioning claim. Template resource
+packaging and cross-color bundle generation remain owned by the parent task.

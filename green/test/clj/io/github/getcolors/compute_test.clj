@@ -93,3 +93,23 @@
   (doseq [key [nil true "" "a/" "/a" "a//b" "../a" "a/./b" "a b" "a\nb"]]
     (is (thrown-with-msg? Exception #"invalid state key"
                           (c/backend-plan {:provider-backend "s3" :s3-bucket "example" :s3-region "eu"} key)))))
+
+(deftest packaged-provider-plan
+  (let [inputs (json/parse-string (slurp (io/file "../providers/vultr/examples/inputs.json")) true)
+        plan (c/provider-plan "vultr" "node" inputs)
+        expected (json/parse-string (slurp (io/file "../providers/vultr/examples/node/main.tf.json")))]
+    (is (= {"node.tf.json" expected} plan))
+    (is (= "${vultr_instance.node.main_ip}"
+           (get-in plan ["node.tf.json" "output" "params" "value" "ip"])))
+    (is (true? (get-in plan ["node.tf.json" "resource" "vultr_instance" "node" "lifecycle" "prevent_destroy"])))
+    (is (= {"shared-keygen.tf.json"
+            (json/parse-string (slurp (io/file "../providers/vultr/examples/shared-keygen/key.tf.json")))
+            "shared.tf.json"
+            (json/parse-string (slurp (io/file "../providers/vultr/examples/shared-keygen/main.tf.json")))}
+           (json/parse-string (json/generate-string (c/provider-plan "vultr" "shared-keygen" inputs))))))
+  (is (thrown-with-msg? Exception #"^compute provider templates unavailable: unknown$"
+                        (c/provider-plan "unknown" "unknown" {})))
+  (is (thrown-with-msg? Exception #"^unsupported compute stage: absent$"
+                        (c/provider-plan "vultr" "absent" {})))
+  (is (thrown-with-msg? Exception #"^missing template input: "
+                        (c/provider-plan "vultr" "node" {}))))

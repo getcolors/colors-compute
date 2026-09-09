@@ -1,8 +1,19 @@
 """Deterministic template and backend plans without credential access."""
 from copy import deepcopy
+from importlib.resources import files
+import json
 import re
 
 from .contract import _missing, registry
+
+
+def provider_plan(provider: str, stage: str, inputs: dict) -> dict:
+    templates = json.loads(files("colors_compute").joinpath("templates.json").read_text())
+    if not isinstance(provider, str) or provider not in templates:
+        raise ValueError("compute provider templates unavailable: " + (provider if isinstance(provider, str) else json.dumps(provider, separators=(",", ":"))))
+    if not isinstance(stage, str) or stage not in templates[provider]:
+        raise ValueError("unsupported compute stage: " + (stage if isinstance(stage, str) else json.dumps(stage, separators=(",", ":"))))
+    return render_template(templates[provider][stage], inputs)
 
 
 def render_template(value, inputs: dict):
