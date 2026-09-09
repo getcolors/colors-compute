@@ -144,3 +144,8 @@
         {:condition {:if_none_match "*"}
          :document {:schema_version 1 :identity identity :revision 1 :write_id (:write_id event)
                     :lock {:state "held" :run_id (:run_id event)} :topology_declared false :nodes {}}}))))
+
+(defn valid-document?
+  "Validate an untrusted complete journal without exposing field contents."
+  [document]
+  (try (boolean (document? document)) (catch Exception _ false)))

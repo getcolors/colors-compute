@@ -27,6 +27,8 @@ isolation, backend locking, or safe migration of an existing deployment.
   files, exact subprocess environments, strict state reads and failure refusal.
 - [Coordination transitions](contracts/coordination.md): pure conditional-write
   plans for ownership and node attempts, with strict schemas and immutable results.
+- [Conditional journal transport](contracts/object-transport.md): private AWS CLI
+  sessions for confirmed missing keys and conditional S3/R2 writes.
 - [Coordination design](contracts/coordination-design.md): remaining deployment
   ownership and crash recovery requirements before any provider mutation.
 - [Migration review](migration/README.md): an AutoMQ state-address inventory
@@ -80,11 +82,15 @@ The native backend probes use OpenTofu 1.12.5 and synthetic credentials only:
 ```sh
 python3 scripts/backend_probe.py --tofu /path/to/tofu --blue-runner
 python3 scripts/backend_http_probe.py --tofu /path/to/tofu --bb /path/to/bb --bun /path/to/bun
+python3 scripts/journal_http_probe.py --aws /path/to/aws --bb /path/to/bb --bun /path/to/bun
 ```
 
 The second probe starts a loopback-only S3 server, refuses writes, and exercises
 each native reader. It verifies R2 credential selection even when ambient AWS
-keys, session tokens and invalid profile selectors are present.
+keys, session tokens and invalid profile selectors are present. The journal
+probe uses HTTPS and a temporary trusted certificate to test conditional writes
+with the actual AWS CLI in every color. It requires AWS CLI 2 with conditional
+PutObject support, verified locally with 2.35.11, and OpenSSL.
 
 Run the commands from the repository root except the explicit directory changes.
 `BUN`, `BB`, and `PYTHON` may select executables for parity. Provider-specific

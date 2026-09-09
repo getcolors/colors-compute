@@ -4,6 +4,7 @@
                          [io.github.getcolors.compute-test]
                          [io.github.getcolors.compute-workflow-test]
                          [io.github.getcolors.compute-runtime-test]
-                         [io.github.getcolors.compute-coordination-test])
-               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-workflow-test 'io.github.getcolors.compute-runtime-test 'io.github.getcolors.compute-coordination-test)]
+                         [io.github.getcolors.compute-coordination-test]
+                         [io.github.getcolors.compute-journal-test])
+               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-workflow-test 'io.github.getcolors.compute-runtime-test 'io.github.getcolors.compute-coordination-test 'io.github.getcolors.compute-journal-test)]
                        (System/exit (if (pos? (+ fail error)) 1 0)))}}}

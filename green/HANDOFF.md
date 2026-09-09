@@ -137,3 +137,41 @@ of secret extension fields, and unsafe JSON node-key rejection. No coordinator
 transport, CAS execution, distributed-lock evidence, node dispatch, provider
 lifecycle, retry/recovery takeover, or package migration is implemented here.
 A returned intention never grants permission to dispatch before CAS confirmation.
+
+## Conditional journal object transport
+
+Implemented `io.github.getcolors.compute-journal/journal-get` and `journal-put`
+per `contracts/object-transport.md`. Both use optional explicit environment and
+the existing four-argument native runner. `coordination/valid-document?` now
+exposes the reducer's strict document validator for transport reuse.
+
+Get derives the coordination key and distinguishes only exact GetObject
+NoSuchKey service errors from uncertain failures. Put validates strict reducer
+intent/document/identity before creating a session, performs one conditional
+write, and distinguishes only exact PutObject conditional service failures.
+It never retries or dispatches provider work. Parser support includes the
+AWS CLI 2.35.11 error prefix and reached-max-retries suffix observed by the
+parent's actual CLI loopback probe, plus the legacy error prefix.
+
+R2 sessions use isolated private INI credentials/config and remove copied AWS
+variables except the trusted CA bundle; S3 preserves ambient authentication.
+Directories/files are 0700/0600, documents are limited to 2 MiB, invalid UTF-8
+and malformed JSON are refused, cleanup runs on failures/cancellation, and
+known bound credentials are never returned. Get documents remain untrusted
+until the reducer validates them; callers must not log arbitrary returned data.
+
+Validation: fake-runner tests cover permissions, exact argv/environment,
+conditional ETags, NoSuchKey vs denial/missing bucket, conflicts vs ambiguous
+failure, legacy/modern AWS CLI errors, size limits, credential injection,
+secret-output refusal, cleanup failure, cancellation, and strict put inputs.
+Actual CLI signing/CAS loopback validation is owned by the parent. No live
+cloud credentials, journal writes, provider operations, commits, or pushes
+were performed by this subagent.
+
+Journal secret-boundary follow-up: before invoking the runner, serialized
+intention and command arguments are rejected if they contain known bound R2
+credentials, including raw and JSON-escaped representations. Existing output
+ETag/document protection remains. Tests prove secret-bearing write IDs, ETags,
+and endpoint arguments never reach a subprocess, and UTF-8 BOMs in document
+or CLI metadata are rejected. Full suite: 37 tests / 403 assertions passed.
+The parent reports all three native HTTPS conditional-object probes passed.

@@ -134,3 +134,36 @@ color, including 54 coordination fixtures; registry and packaged template
 consistency. The all-color native OpenTofu loopback probe passes with only
 GET/HEAD requests. CI now runs the local-state and loopback probes. These
 changes have not migrated a package or accessed a live cloud deployment.
+
+## Conditional transport progress
+
+The library now implements journal get and conditional put in every color via
+AWS CLI 2. The API derives the coordination key from profile and validates each
+write's document, condition and selected backend identity. S3 retains the
+ambient credential chain. R2 uses isolated private credentials/config files in
+a separate backend process. Unknown errors remain errors; only an exact
+GetObject NoSuchKey service error proves absence. Conditional conflicts do not
+authorize work. An error after a write remains ambiguous until readback.
+
+The actual AWS CLI HTTPS loopback probe passed for Blue, Green and Red. Each
+color made seven requests: missing read, two competing acquisitions, readback,
+conditional update, stale update refusal, and final readback. Exactly one
+acquisition won. R2 signed with its own key and sent no ambient AWS session
+token. This is local integration evidence, not a live R2/S3 contention test.
+The probe's initial HTTP/1.0 server failed to handle upload continuation; the
+server now uses HTTP/1.1. Two abandoned synthetic temporary directories were
+removed after that failed probe; no real credentials or resources were involved.
+
+Native testing exposed AWS CLI 2.35.11's newer error prefix and retry-count
+suffix. All parsers now accept those exact formats plus the legacy form.
+Review added strict UTF-8/BOM rejection and known bound-credential guards for
+arguments, write intentions and returned data. Shared parity now covers 248
+cases per color, including 37 transport cases. Blue has 186 passing tests;
+Green has 37 tests / 403 assertions. Red passes 100 tests / 415 assertions and typechecking.
+
+Remaining next step: a single coordinator that serializes these conditional
+writes, reads back ambiguous outcomes using write_id, owns all child processes,
+and persists intents before invoking the Colors fan-out. The current transport
+and reducer must not be used as a claim that this orchestration already exists.
+Shared key preparation, provider mutation, retries, scale-down, deletion and
+all package migrations still follow. Cluster packages remain first.

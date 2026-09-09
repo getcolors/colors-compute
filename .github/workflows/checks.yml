@@ -49,6 +49,10 @@ jobs:
         run: |
           python3 scripts/backend_probe.py --tofu "$(command -v tofu)" --blue-runner
           python3 scripts/backend_http_probe.py
+      - name: Check conditional journal writes against local HTTPS storage
+        run: |
+          aws --version
+          python3 scripts/journal_http_probe.py
       - run: uv run --directory blue pytest -q
       - run: bb test
         working-directory: green

@@ -1,0 +1,1149 @@
+[
+  {
+    "name": "journal read existing",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{\"untrusted\":true}"
+    ],
+    "expected": {
+      "status": "present",
+      "etag": "opaque-etag",
+      "document": {
+        "untrusted": true
+      }
+    }
+  },
+  {
+    "name": "journal NoSuchKey modern=False",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\nAn error occurred (NoSuchKey) when calling the GetObject operation: synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "absent"
+    }
+  },
+  {
+    "name": "journal NoSuchKey modern=True",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\naws: [ERROR]: An error occurred (NoSuchKey) when calling the GetObject operation (reached max retries: 0): synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "absent"
+    }
+  },
+  {
+    "name": "journal NoSuchBucket modern=False",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\nAn error occurred (NoSuchBucket) when calling the GetObject operation: synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal NoSuchBucket modern=True",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\naws: [ERROR]: An error occurred (NoSuchBucket) when calling the GetObject operation (reached max retries: 0): synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal AccessDenied modern=False",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\nAn error occurred (AccessDenied) when calling the GetObject operation: synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal AccessDenied modern=True",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\naws: [ERROR]: An error occurred (AccessDenied) when calling the GetObject operation (reached max retries: 0): synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal 404 modern=False",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\nAn error occurred (404) when calling the GetObject operation: synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal 404 modern=True",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "\naws: [ERROR]: An error occurred (404) when calling the GetObject operation (reached max retries: 0): synthetic"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal message code is not absence",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "An error occurred (AccessDenied) when calling the GetObject operation: An error occurred (NoSuchKey) when calling the GetObject operation:"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal wrong operation is not absence",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "An error occurred (NoSuchKey) when calling the PutObject operation:"
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid body ''",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      ""
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid body 'null'",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "null"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid body '[]'",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "[]"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid body '{\"a\":1} trailing'",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{\"a\":1} trailing"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid metadata ''",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "",
+        "err": ""
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid metadata '{}'",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{}",
+        "err": ""
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid metadata '{\"ETag\":null}'",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":null}",
+        "err": ""
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid metadata '{\"ETag\":[]}'",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":[]}",
+        "err": ""
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid metadata '{\"ETag\":\" \"}'",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\" \"}",
+        "err": ""
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal create conditional",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "written",
+      "etag": "opaque-etag"
+    }
+  },
+  {
+    "name": "journal replace conditional",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{}",
+      {
+        "condition": {
+          "if_match": "old-etag"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "written",
+      "etag": "opaque-etag"
+    }
+  },
+  {
+    "name": "journal put PreconditionFailed",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "aws: [ERROR]: An error occurred (PreconditionFailed) when calling the PutObject operation (reached max retries: 0): synthetic"
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "conflict"
+    }
+  },
+  {
+    "name": "journal put ConditionalRequestConflict",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "aws: [ERROR]: An error occurred (ConditionalRequestConflict) when calling the PutObject operation (reached max retries: 0): synthetic"
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "conflict"
+    }
+  },
+  {
+    "name": "journal put AccessDenied",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "aws: [ERROR]: An error occurred (AccessDenied) when calling the PutObject operation (reached max retries: 0): synthetic"
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal put NoSuchKey",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 255,
+        "out": "",
+        "err": "aws: [ERROR]: An error occurred (NoSuchKey) when calling the PutObject operation (reached max retries: 0): synthetic"
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal timeout ambiguous",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": -1,
+        "out": "",
+        "err": ""
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal unconditional refused",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{}",
+      {
+        "condition": {},
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal identity mismatch refused",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "other",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal journal extra field refused",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{}",
+      {
+        "condition": {
+          "if_none_match": "*"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {},
+          "secret": "must-not-escape"
+        }
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal R2 missing credentials refused",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "r2",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://example.invalid"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal invalid UTF8",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      {
+        "bytes_base64": "eyJiYWQiOiL/In0="
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal UTF8 BOM",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      {
+        "bytes_base64": "77u/e30="
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal UTF16",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "s3-bucket": "states",
+        "s3-region": "eu-west-1"
+      },
+      {},
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      {
+        "bytes_base64": "//57AH0A"
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal R2 document credential echo refused",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "r2",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://example.invalid"
+      },
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-accessvalue",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secretvalue"
+      },
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "{\"echo\": \"fixture-secretvalue\"}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal R2 ETag credential echo refused",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "r2",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://example.invalid"
+      },
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-accessvalue",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secretvalue"
+      },
+      {
+        "exit": 0,
+        "out": "{\"ETag\": \"fixture-secretvalue\"}",
+        "err": ""
+      },
+      "{\"untrusted\":true}"
+    ],
+    "expected": {
+      "status": "error"
+    }
+  },
+  {
+    "name": "journal R2 condition credential refused",
+    "op": "journal_case",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "r2",
+        "r2-bucket": "states",
+        "r2-endpoint": "https://example.invalid"
+      },
+      {
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-accessvalue",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secretvalue"
+      },
+      {
+        "exit": 0,
+        "out": "{\"ETag\":\"opaque-etag\"}",
+        "err": ""
+      },
+      "",
+      {
+        "condition": {
+          "if_match": "fixture-secretvalue"
+        },
+        "document": {
+          "schema_version": 1,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "r2",
+              "bucket": "states",
+              "region": "auto",
+              "endpoint": "https://example.invalid"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "topology_declared": false,
+          "nodes": {}
+        }
+      }
+    ],
+    "expected": {
+      "status": "error"
+    }
+  }
+]

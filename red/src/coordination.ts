@@ -7,7 +7,7 @@ const safe = (value: unknown) => match(value,/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$/)
 const nonblank = (value: unknown) => typeof value === 'string' && !!value.trim();
 const integer = (value: unknown, min: number, max: number) => typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
 const roleValid = (value: unknown) => value === null || match(value,/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
-function identityValid(value: unknown): value is Map {
+export function identityValid(value: unknown): value is Map {
   if (!fields(value,['profile','provider','backend']) || !safe(value.profile) || typeof value.provider !== 'string' || !Object.hasOwn(registry.compute,value.provider)) return false;
   const backend=value.backend;
   if (!fields(backend,['kind','bucket','region'],['endpoint']) || !match(backend.bucket,/^[a-z0-9][a-z0-9.-]{0,62}$/) || !safe(backend.region)) return false;
@@ -41,7 +41,7 @@ function observationValid(value: unknown): value is Map {
   if(value.status === 'absent' || value.status === 'error') return fields(value,['status']);
   return value.status === 'present' && fields(value,['status','etag','document']) && nonblank(value.etag);
 }
-function documentValid(value: unknown): value is Map {
+export function documentValid(value: unknown): value is Map {
   if (!fields(value,['schema_version','identity','revision','write_id','lock','topology_declared','nodes']) || value.schema_version !== 1 || !identityValid(value.identity) || !integer(value.revision,1,Number.MAX_SAFE_INTEGER) || !safe(value.write_id)) return false;
   if (!fields(value.lock,['state','run_id']) || !((value.lock.state === 'held' && safe(value.lock.run_id)) || (value.lock.state === 'idle' && value.lock.run_id === null))) return false;
   if (typeof value.topology_declared !== 'boolean' || !object(value.nodes)) return false;
@@ -63,7 +63,7 @@ function documentValid(value: unknown): value is Map {
   if(roles.has(null) && roles.size !== 1) return false;
   return [...roles.values()].every(indices => indices.sort((a,b)=>a-b).every((index,position)=>index === position));
 }
-function identityEqual(a: Map,b: Map) {
+export function identityEqual(a: Map,b: Map) {
   return a.profile===b.profile && a.provider===b.provider && ['kind','bucket','region','endpoint'].every(key=>a.backend[key]===b.backend[key]);
 }
 function fail(message: string): never {throw new Error(message);}

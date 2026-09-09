@@ -117,3 +117,4 @@ export {render_template, backend_plan} from './rendering.ts';
 export {provider_plan} from './providers.ts';
 export {readState, type BackendRunner, type StateRead} from './backend.ts';
 export {coordination} from './coordination.ts';
+export {journalGet,journalPut,type JournalGetResult,type JournalPutResult} from './journal.ts';

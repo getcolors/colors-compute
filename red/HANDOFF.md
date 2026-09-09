@@ -125,3 +125,44 @@ line terminator. New regression tests reject LF, CR, CRLF, Unicode line separato
 and paragraph separator suffixes. Focused contract/rendering tests pass (17
 cases, 97 assertions) and typechecking passes. Coordination already used exact
 matched-string comparison and needed no corresponding change.
+
+## Conditional journal object transport
+
+Added `journalGet(opts, environment?, runner?)` and
+`journalPut(opts, intent, environment?, runner?)`, using the existing native
+120-second exact-environment runner. Operations invoke only AWS CLI GetObject
+or conditional PutObject for the derived profile coordination key. Put validates
+strict reducer document/identity/condition schemas before execution. Get returns
+a bounded untrusted JSON object, which must pass reducer validation before use.
+
+R2 uses private 0600 credentials/config files under a fresh 0700 directory,
+removes inherited AWS variables except AWS_CA_BUNDLE, and supplies only the
+backend's access/secret pair to its CLI child. S3 retains the ambient credential
+chain. Both remove COLORS_PAR variables and disable pager, prompts and retries.
+Documents are limited to 2 MiB; diagnostics and bound credential echoes cannot
+escape through results. Cleanup runs on success, failure and thrown execution.
+Only exact service-error prefixes on the expected operation classify absence or
+conditional conflict. Unknown or ambiguous failures return error with no retry.
+
+Eight new journal tests / 91 assertions and source/test typechecking pass.
+Tests inspect permissions, credential placement, AWS isolation, missing-key vs
+other errors, conditional conflicts, malformed/oversized documents, strict
+write schemas and cleanup. Actual AWS CLI loopback signing/CAS evidence is
+parent-owned work; these fake-runner tests do not establish live S3/R2 behavior.
+No cloud operations, commits or pushes were performed by this subtask.
+
+Journal runner AbortError cancellation is propagated after cleanup; ordinary
+execution errors remain generic. A cancellation regression test brings journal
+coverage to 9 tests / 93 assertions, all passing with typechecking.
+
+AWS CLI 2.35.11 service-error formatting is now supported: exact optional
+`aws: [ERROR]: ` prefix and optional numeric `(reached max retries: N)` suffix.
+Legacy formatting remains supported; wrong operations, misleading substrings
+and unknown suffixes still fail closed. Journal tests now pass 10 cases / 99
+assertions, and typechecking passes. Parent owns the actual loopback probe.
+
+Journal body decoding now uses a fatal UTF-8 decoder and retains a leading BOM
+so JSON parsing refuses it. Tests reject malformed UTF-8, UTF-16 and UTF-8 BOM
+bodies while proving cleanup. Verified TextDecoder ignoreBOM:true retains U+FEFF.
+Focused journal tests pass: 11 cases / 106 assertions. Unchanged broad checks
+were not rerun for this isolated decoding correction.
