@@ -104,7 +104,77 @@ All checks passed on 2026-09-09 with OpenTofu 1.12.5 and exactly pinned
 `0C0AF313E5FD9F80`. Provider caches and generated locks were temporary. Packaging
 must still establish reviewed dependency-lock distribution.
 
-Schema checks prove configuration/provider-schema compatibility only. Live
-permissions, AMI boot/login behavior, network traffic, remote state locking,
-shared ownership, retry/delete behavior, and replacement-free migration remain
-unverified. No AWS resources were created.
+These schema checks prove configuration/provider-schema compatibility only.
+The separate live Green validation below additionally exercises one AWS
+configuration through the shared compute runtime.
+
+## Live AutoMQ validation — 2026-09-10
+
+The Green AutoMQ package successfully created an AWS deployment with profile
+`automq-aws` using colors-compute
+`87ec5661fc8807159419d90d437247f3503469c7`. The test used `us-east-1a`, three
+`t3.large` instances, Canonical Ubuntu 24.04 AMI `ami-025d99823a4caad37`,
+40 GiB encrypted gp3 root disks, VPC `10.73.0.0/16`, and subnet
+`10.73.1.0/24`. Each node used the library-owned regional SSH keypair and the
+image's `ubuntu` login with sudo privileges.
+
+The deployment created the library's shared network and security resources,
+then ran three copies of the same node operation through Green fan-out and
+join. A deployment-owned S3 backend was bootstrapped before remote-state reads
+and used for the conditional compute journal and separate shared/node states.
+AutoMQ separately created its S3 data/ops buckets and scoped IAM identity.
+DNS was disabled for this test; clients used public IPs and a deployment-owned
+private certificate authority.
+
+The completed create passed the package's on-host and external acceptance
+stages, including record round trips, object-store checks, authentication and
+ACL refusals, broker failover with pre-failure record survival, consumer-offset
+preservation, controller re-authentication, and a producer workload. This
+exercises the configured public client and private cluster paths; it is not a
+throughput benchmark or a production availability assessment.
+
+Live execution exposed and fixed two compute integration issues: Green's
+coordinator tried to serialize workflow callbacks, and OpenTofu returned a
+synthetic initial state with an empty lineage on a confirmed-absent backend.
+The first failed shared attempt was recovered only after an explicit,
+operation-bound library recovery confirmed absent state and zero matching AWS
+VPCs, subnets, gateways, route tables, security groups, and keypairs.
+
+The first successful create used local checkouts. AutoMQ source was published
+as `e3beeaf08472fc3ab4e5121eca876e1f0bb6f8e9`, with copied launcher pins published
+as `debb50b6bcadd38ab14efa91fe325d79623cad9c`. A second complete create using
+those immutable pins, with no working-tree overrides, passed all stages and
+16 external acceptance gates with zero failures. An independently produced
+50-record sentinel remained byte-for-byte identical across reconvergence
+(SHA256 `5cc2ef77184dc7ff31424088d6a7bd955906bd6cfd284cb7f34631230c26e04a`).
+
+During the published-pin acceptance run, a controlled stop of node 2 left its
+partition writable within one second after the stop command completed. All
+100 exact pre-outage records survived, the broker rejoined with zero lag,
+per-partition consumer offsets were preserved, and restarting controller 1
+successfully exercised re-authentication. These are observed outcomes of this
+single test, not availability guarantees.
+
+A delete attempted without disabling the protection guard refused with exit 2
+before destruction. Authorized deletion then passed using the published launcher
+without working-tree overrides. All three AutoMQ containers were independently
+confirmed absent before removing application storage. The package deleted its
+S3 buckets and IAM user, then compute destroyed nodes before shared resources,
+removed the owned local SSH keypair, retired its journal, and finalized the
+managed S3 backend. The profile SSH aliases were also confirmed absent. A second delete passed through only the
+start and backend-finalize stages, with the backend already absent.
+
+The final independent inventory checked the recorded resource IDs, including
+all three root EBS volume IDs and the VPC's implicit routes, security groups,
+network interfaces, and network ACLs. It reported zero remaining resources,
+zero remaining billable resources, and all recorded volumes absent. Evidence
+is retained in the deployment's `evidence/resources-after-delete.json`. The
+observed destroy sequence took approximately 129 seconds for host cleanup,
+15 seconds for application storage, 302 seconds for compute, and 24 seconds
+for backend finalization; these are one-run observations.
+
+Blue and Red passed their automated suites and cross-color parity, but have
+not been exercised live in this validation. External-key adoption, other AMIs
+or regions, interrupted AWS applies, and legacy state migration remain outside
+this run's evidence. The supported IPv4/network scope and replacement guards
+above still apply.
