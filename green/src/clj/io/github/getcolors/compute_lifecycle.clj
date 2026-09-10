@@ -69,7 +69,7 @@
               (or (not= suffix "declare") (coordination/topology (:topology event)))
               (or (not= suffix "key-intent") (contains? #{"managed" "external"} (:mode event)))
               (or (not= suffix "key-prepared") (nil? (:fingerprint event)) (fingerprint? (:fingerprint event)))
-              (or (not (contains? event :evidence)) (= "readable-state" (:evidence event)))))))
+              (or (not (contains? event :evidence)) (= "readable-state" (:evidence event)) (and (= suffix "shared-retry") (= "verified-provider-absence" (:evidence event))))))))
 (defn- transition [doc event suffix]
   (let [node-key (when (:node_id event) (keyword (:node_id event))) node (get-in doc [:nodes node-key])
         unique? (not-any? #(= (:operation_id event) (:operation_id %)) (records doc))

@@ -42,6 +42,13 @@
                {:status (if (= "NoSuchKey" (journal/service-code result "GetObject")) "absent" "error")})))))
      (catch InterruptedException error (throw error))
      (catch Exception _ {:status "error"}))))
+(defn- virgin-state? [output]
+  (try
+    (let [state (journal/parse-one output)]
+      (and (map? state) (every? #{:version :terraform_version :serial :lineage :outputs :resources :check_results} (keys state))
+           (= 4 (:version state)) (= 0 (:serial state)) (= "" (:lineage state))
+           (= {} (:outputs state)) (= [] (:resources state)) (nil? (:check_results state))))
+    (catch Exception _ false)))
 (defn- state [output]
   (let [document (journal/parse-one output) out (get-in document [:outputs :params])
         params (if (contains? (:outputs document) :params) (when (map? out) (:value out)) {})]
@@ -113,7 +120,8 @@
                                       (string? (:err result)) (<= (count (:err result)) 1048576) (str/includes? (:err result) (:error_text retry-policy))
                                       (not (journal/bound-secret? (:err result) secrets))))}))) (:out result))))]
                 (execute ["init" "-input=false" "-no-color" "-reconfigure" (str "-backend-config=" credential-file)] 120000)
-                (let [before (execute ["state" "pull"] 120000)
+                (let [raw-before (execute ["state" "pull"] 120000)
+                      before (if (and (= {:status "absent"} presence) (virgin-state? raw-before)) "" raw-before)
                       current (when (nonblank? before) (state before))]
                   (require-valid (or current (= "absent" (:status presence))))
                   (require-valid (or (nil? current) (empty-state? (:document current)) (= provider (get-in current [:params :provider]))))

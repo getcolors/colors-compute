@@ -73,3 +73,8 @@ test('presence recognizes only exact missing object and cancellation cleans sess
 });
 
 export {opts as executionOpts,env as executionEnv,key as executionKey,documents as executionDocuments,state as executionState,empty as emptyState};
+test('virgin backend state requires confirmed absence',async()=>{
+ const virgin={version:4,terraform_version:'1.12.5',serial:0,lineage:'',resources:[],outputs:{}};
+ const runner=new Runner(JSON.stringify(virgin));expect((await convergeState(opts,key,documents,'create',{status:'absent'},env,runner.run)).status).toBe('ready');
+ for(const [observed,s] of [['present',virgin],['absent',{...virgin,serial:1}],['absent',{...virgin,resources:[{}]}],['absent',{...virgin,outputs:{foreign:{}}}]] as const){const r=new Runner(JSON.stringify(s));expect(await convergeState(opts,key,documents,'create',{status:observed},env,r.run)).toEqual({status:'error'});expect(r.calls.some(c=>c[1]==='plan')).toBe(false);}
+});

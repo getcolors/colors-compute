@@ -1,0 +1,7 @@
+import {test,expect} from 'bun:test';
+import {recover_absent_aws_shared} from '../src/recovery.ts';
+const opts={profile:'demo','provider-compute':'aws','provider-backend':'s3','s3-bucket':'states','s3-region':'us-east-1','aws-region':'us-east-1'};
+function owner(){return {doc:{status:'active',key:{phase:'prepared'},shared:{phase:'failed',operation:'create',operation_id:'attempt'},nodes:{'0':{phase:'declared'}}},transitions:[] as any[],released:false,async acquire(){},async snapshot(){return {document:this.doc};},async transition(...args:any[]){this.transitions.push(args);},async release(){this.released=true;}};}
+const runner=(count:number)=>async(args:string[])=>args[1]==='s3api'?{exit:1,out:'',err:'An error occurred (NoSuchKey) when calling the GetObject operation: missing'}:{exit:0,out:String(count),err:''};
+test('explicit failed attempt recovery records scanned absence',async()=>{const o=owner();expect(await recover_absent_aws_shared(opts,'attempt',{},runner(0),()=>o)).toEqual({status:'recovered'});expect(o.transitions).toEqual([['shared-retry',{evidence:'verified-provider-absence'}]]);expect(o.released).toBe(true);});
+test('surviving resources and wrong attempt refuse recovery',async()=>{for(const [id,count] of [['attempt',1],['wrong',0]] as const){const o=owner();await expect(recover_absent_aws_shared(opts,id,{},runner(count),()=>o)).rejects.toThrow();expect(o.transitions).toEqual([]);expect(o.released).toBe(true);}});

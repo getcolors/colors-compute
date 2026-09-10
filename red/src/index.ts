@@ -154,3 +154,5 @@ export {managed_application_artifacts,managed_application_settings,managed_error
 export {power_deployment} from "./power.ts";
 
 export {bootstrap_backend,finalize_backend} from "./managed-backend.ts";
+
+export {recover_absent_aws_shared} from "./recovery.ts";

@@ -87,3 +87,12 @@
                      {:exit 0 :out "" :err ""}))]
       (is (= {:status status} (e/converge-state opts "demo/compute/shared.tfstate" docs "delete" {:status "present"} {"COLORS_PAR_DO_TOKEN" "fixture-do-token"} runner #(swap! waits conj %))))
       (is (= attempts @counter)) (is (= (repeat (dec attempts) 30000) @waits)) (is (= attempts (count (filter #{"plan"} @calls)))))))
+(deftest virgin-backend-requires-confirmed-absence
+  (let [virgin {:version 4 :terraform_version "1.12.5" :serial 0 :lineage "" :resources [] :outputs {}}
+        calls (atom [])]
+    (is (= "ready" (:status (e/converge-state opts key documents "create" {:status "absent"} environment
+      (runner ["" (json/generate-string virgin) "" valid-plan "" (state-text "aws")] calls)))))
+    (doseq [[presence state] [["present" virgin] ["absent" (assoc virgin :serial 1)] ["absent" (assoc virgin :resources [{}])] ["absent" (assoc virgin :outputs {:foreign {}})]]]
+      (let [calls (atom [])]
+        (is (= {:status "error"} (e/converge-state opts key documents "create" {:status presence} environment (runner ["" (json/generate-string state)] calls))))
+        (is (not-any? #(= "plan" (second (:argv %))) @calls))))))

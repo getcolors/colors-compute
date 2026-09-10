@@ -68,7 +68,7 @@ function eventValid(event:unknown):event is Map {
   if(name==='declare'&&!topology(event.topology))return false;
   if(name==='key-intent'&&!['managed','external'].includes(event.mode))return false;
   if(name==='key-prepared'&&event.fingerprint!==null&&!fingerprint(event.fingerprint))return false;
-  if(Object.hasOwn(event,'evidence')&&event.evidence!=='readable-state')return false;
+  if(Object.hasOwn(event,'evidence')&&event.evidence!=='readable-state'&&!(name==='shared-retry'&&event.evidence==='verified-provider-absence'))return false;
   return true;
 }
 function fail(message:string):never{throw new Error(message);}

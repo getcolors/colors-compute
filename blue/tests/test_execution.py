@@ -159,3 +159,13 @@ async def test_shared_outputs_flatten_key_references():
     state['outputs']['ssh_key_id'] = {'value': 'key-reference', 'sensitive': False, 'type': 'string'}
     result = await converge_state(OPTS, KEY, DOCUMENTS, 'create', {'status': 'absent'}, ENV, Runner(after=json.dumps(state)))
     assert result['outputs']['ssh_key_id'] == 'key-reference'
+
+@pytest.mark.asyncio
+async def test_virgin_backend_state_requires_confirmed_absence():
+    virgin = {'version': 4, 'terraform_version': '1.12.5', 'serial': 0, 'lineage': '', 'resources': [], 'outputs': {}}
+    runner = Runner(before=json.dumps(virgin))
+    assert (await converge_state(OPTS, KEY, DOCUMENTS, 'create', {'status': 'absent'}, ENV, runner))['status'] == 'ready'
+    for observed, state in [('present', virgin), ('absent', {**virgin, 'serial': 1}), ('absent', {**virgin, 'resources': [{}]}), ('absent', {**virgin, 'outputs': {'foreign': {}}})]:
+        runner = Runner(before=json.dumps(state))
+        assert await converge_state(OPTS, KEY, DOCUMENTS, 'create', {'status': observed}, ENV, runner) == {'status': 'error'}
+        assert not any(c[1] == 'plan' for c in runner.calls)

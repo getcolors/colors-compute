@@ -92,3 +92,10 @@ journal shared attempt remains active throughout; there is no second node
 operation or blind replay of an old saved plan. The existing timeout applies to
 each subprocess. Tests inject a sleep function to avoid real waiting (seconds
 in Python, milliseconds in Red/Green); native callers use the fixed delay.
+
+On a freshly initialized remote backend, OpenTofu 1.12.5 can emit an empty
+version-4 state with serial zero and an empty lineage. Execution recognizes
+that exact initial envelope only when an independent state-presence read has
+already confirmed the object absent. The same envelope from a present state,
+nonzero serial, resources, outputs, or unexpected fields remains a refusal.
+Existing state decoders continue to require a nonempty lineage.

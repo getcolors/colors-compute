@@ -116,7 +116,7 @@ def _event(value):
         return False
     if name == 'key-prepared' and value['fingerprint'] is not None and not _fingerprint(value['fingerprint']):
         return False
-    return 'evidence' not in value or value['evidence'] == 'readable-state'
+    return 'evidence' not in value or value['evidence'] == 'readable-state' or (name == 'shared-retry' and value['evidence'] == 'verified-provider-absence')
 
 
 def lifecycle(observation, identity, event):

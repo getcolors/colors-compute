@@ -117,6 +117,17 @@ def _documents(documents, provider):
     return True
 
 
+def _virgin_state(output):
+    try:
+        state = json.loads(output)
+        return (isinstance(state, dict) and set(state) <= {'version', 'terraform_version', 'serial', 'lineage', 'outputs', 'resources', 'check_results'}
+                and type(state.get('version')) is int and state['version'] == 4
+                and type(state.get('serial')) is int and state['serial'] == 0 and state.get('lineage') == ''
+                and state.get('outputs') == {} and state.get('resources') == [] and state.get('check_results') is None)
+    except (ValueError, TypeError):
+        return False
+
+
 async def _converge_state(opts, state_key, documents, operation, presence, environment=None, runner=None, sleeper=None, decoder=None):
     """Execute one approved plan; caller must hold committed coordinator intent."""
     try:
@@ -176,6 +187,8 @@ async def _converge_state(opts, state_key, documents, operation, presence, envir
                 return result.out
             await run(['init', '-input=false', '-no-color', '-reconfigure', f'-backend-config={credential_file}'])
             before = await run(['state', 'pull'])
+            if presence == {'status': 'absent'} and _virgin_state(before):
+                before = ''
             if before.strip():
                 state, params = _state(before)
                 if _empty(state):

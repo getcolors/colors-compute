@@ -31,6 +31,7 @@ export async function statePresence(opts:Map,key:string,environment:Env=process.
     return {status:'present' as const};
   });
 }
+const virginState=(output:string)=>{try{const s=JSON.parse(output);return object(s)&&Object.keys(s).every(k=>['version','terraform_version','serial','lineage','outputs','resources','check_results'].includes(k))&&s.version===4&&s.serial===0&&s.lineage===''&&object(s.outputs)&&Object.keys(s.outputs).length===0&&Array.isArray(s.resources)&&s.resources.length===0&&s.check_results==null;}catch{return false;}};
 const state=parseStateEnvelope;
 const empty=(state:Map)=>state.resources.length===0&&Object.keys(state.outputs).length===0;
 function validPlan(output:string,operation:string):boolean {
@@ -98,7 +99,8 @@ export async function convergeStateDecoded(opts:Map,key:string,documents:unknown
       const result=await runner(command,{cwd:directory!,env,timeoutMs});if(result.exit!==0){const error:any=new Error('execution failed');error.retryable=!!(retry&&args[0]==='apply'&&typeof result.err==='string'&&result.err.length<=1048576&&result.err.includes(retry.error_text)&&!containsSecret(result.err,secrets));throw error;}return result.out;
     };
     await execute(['init','-input=false','-no-color','-reconfigure',`-backend-config=${credentialFile}`]);
-    const before=await execute(['state','pull']);
+    let before=await execute(['state','pull']);
+    if(presence.status==='absent'&&virginState(before))before='';
     if(before.trim()) {
       const current=state(before);
       if(empty(current.document)){if(operation==='delete')return {status:'destroyed'};}
