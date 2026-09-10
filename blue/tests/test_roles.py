@@ -59,7 +59,7 @@ def test_ipv6_public_ingress_and_explicit_capability_refusal():
     result = plan_deployment(OPTS, TOPOLOGY, req)
     assert result['documents']['shared']['shared-roles.tf.json']['locals']['ingress']['app:ssh-v6:2001:db8::/32']['ip_type'] == 'v6'
     with pytest.raises(ValueError, match='role firewall'):
-        plan_deployment({**OPTS, 'provider-compute': 'aws'}, TOPOLOGY, REQ)
+        plan_deployment({**OPTS, 'provider-compute': 'azure'}, TOPOLOGY, REQ)
 
 @pytest.mark.asyncio
 async def test_native_fanout_then_peer_gate_preserves_observed_peers_on_reconverge():
@@ -120,3 +120,23 @@ def test_untrusted_peer_identity_and_extra_fields_refused(peers):
 def test_malformed_nested_role_policies_fail_closed(roles):
     with pytest.raises(ValueError):
         deployment_requests(OPTS, TOPOLOGY, {**REQ, 'roles': roles}, BASE['key'])
+
+def test_aws_role_security_groups_and_observed_peer_rules():
+    aws_opts, _, base = next(c['args'][:3] for c in CASES if c['args'][0]['provider-compute'] == 'aws' and c['args'][1] == 'shared')
+    opts = {**aws_opts, 'aws-instance-type-db': 't3.large', 'compute-role-settings': {'app': {'size': 't3.xlarge'}}}
+    requirements = {**REQ, 'network': base['network']}
+    result = plan_deployment(opts, TOPOLOGY, requirements)
+    shared = result['documents']['shared']['shared-roles.tf.json']
+    assert set(shared['resource']['aws_security_group']['role']['for_each']) == {'app', 'db'}
+    ingress = shared['resource']['aws_vpc_security_group_ingress_rule']['ingress']
+    assert ingress['for_each']['db:db:peer:app-0']['cidr'] == result['cluster']['nodes'][-1]['vpc_ip'] + '/32'
+    assert ingress['for_each']['db:db:peer:app-0']['role'] == 'db'
+    assert 'app:db:peer:app-0' not in ingress['for_each']
+    for role, size in [('db', 't3.large'), ('app', 't3.xlarge')]:
+        node = result['documents']['nodes'][role + '-0']['node.tf.json']['resource']['aws_instance']['node']
+        assert node['instance_type'] == size
+        assert node['vpc_security_group_ids'] == ['build-firewall-' + role]
+    request = deployment_requests(opts, TOPOLOGY, requirements, base['key'])['shared']
+    initial = provider_request(opts, 'shared', request)
+    assert initial['stage'] == 'shared-roles-keygen'
+    assert not any(':peer:' in key for key in initial['inputs']['role_ingress'])

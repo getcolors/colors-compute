@@ -31,9 +31,9 @@ def render(value, inputs):
 
 def check():
     inputs = json.loads((ROOT / 'examples/inputs.json').read_text())
-    for mode in ('shared-keygen', 'shared-optout', 'node'):
-        templates = {'main.tf.json': 'node' if mode == 'node' else 'shared'}
-        if mode == 'shared-keygen':
+    for mode in ('shared-keygen', 'shared-optout', 'node', 'shared-roles-keygen', 'shared-roles-optout'):
+        templates = {'main.tf.json': 'node' if mode == 'node' else 'shared-roles' if mode.startswith('shared-roles') else 'shared'}
+        if mode in ('shared-keygen', 'shared-roles-keygen'):
             templates['key.tf.json'] = 'shared-keygen'
         for output, template in templates.items():
             source = json.loads((ROOT / f'{template}.tf.json.template').read_text())
@@ -71,7 +71,7 @@ def main():
         # Schema checks need registry access but no ambient provider/backend credentials.
         env = {key: value for key, value in os.environ.items()
                if key in ('PATH', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NIX_SSL_CERT_FILE', 'LANG')}
-        for mode in ('shared-keygen', 'shared-optout', 'node'):
+        for mode in ('shared-keygen', 'shared-optout', 'node', 'shared-roles-keygen', 'shared-roles-optout'):
             with tempfile.TemporaryDirectory(prefix='colors-compute-aws-') as directory:
                 env['HOME'] = directory
                 env['AWS_EC2_METADATA_DISABLED'] = 'true'

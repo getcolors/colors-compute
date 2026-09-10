@@ -304,6 +304,257 @@
           "required_version": ">= 1.8.0"
         }
       }
+    },
+    "shared-roles": {
+      "shared-roles.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "network_cidr": "${aws_vpc.network.cidr_block}",
+              "provider": "aws",
+              "role_firewall_ids": "${ { for role, group in aws_security_group.role : role => group.id } }",
+              "subnet_id": "${aws_subnet.public.id}",
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          }
+        },
+        "provider": {
+          "aws": {
+            "region": "{{region}}"
+          }
+        },
+        "resource": {
+          "aws_internet_gateway": {
+            "gateway": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route": {
+            "internet": {
+              "destination_cidr_block": "0.0.0.0/0",
+              "gateway_id": "${aws_internet_gateway.gateway.id}",
+              "route_table_id": "${aws_route_table.public.id}"
+            }
+          },
+          "aws_route_table": {
+            "public": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route_table_association": {
+            "public": {
+              "route_table_id": "${aws_route_table.public.id}",
+              "subnet_id": "${aws_subnet.public.id}"
+            }
+          },
+          "aws_security_group": {
+            "role": {
+              "description": "Deployment role access",
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}",
+              "tags": {
+                "Name": "${each.value}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_subnet": {
+            "public": {
+              "availability_zone": "{{availability_zone}}",
+              "cidr_block": "{{subnet_cidr}}",
+              "map_public_ip_on_launch": true,
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_vpc": {
+            "network": {
+              "cidr_block": "{{vpc_cidr}}",
+              "enable_dns_hostnames": true,
+              "enable_dns_support": true,
+              "tags": {
+                "Name": "{{name}}"
+              }
+            }
+          },
+          "aws_vpc_security_group_egress_rule": {
+            "egress": {
+              "cidr_ipv4": "0.0.0.0/0",
+              "for_each": "{{firewall_groups}}",
+              "ip_protocol": "-1",
+              "security_group_id": "${aws_security_group.role[each.key].id}"
+            }
+          },
+          "aws_vpc_security_group_ingress_rule": {
+            "ingress": {
+              "cidr_ipv4": "${each.value.cidr}",
+              "for_each": "{{role_ingress}}",
+              "from_port": "${each.value.from_port}",
+              "ip_protocol": "${each.value.protocol}",
+              "security_group_id": "${aws_security_group.role[each.value.role].id}",
+              "to_port": "${each.value.to_port}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "aws": {
+              "source": "hashicorp/aws",
+              "version": "6.31.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
+    },
+    "shared-roles-keygen": {
+      "shared-keygen.tf.json": {
+        "output": {
+          "key_name": {
+            "value": "${aws_key_pair.machine.key_name}"
+          },
+          "registration": {
+            "value": {
+              "id": "${aws_key_pair.machine.id}",
+              "provider": "aws",
+              "scope": "region"
+            }
+          },
+          "ssh_key_id": {
+            "value": "${aws_key_pair.machine.id}"
+          }
+        },
+        "resource": {
+          "aws_key_pair": {
+            "machine": {
+              "key_name": "{{profile}}",
+              "public_key": "{{public_key}}"
+            }
+          }
+        }
+      },
+      "shared-roles.tf.json": {
+        "output": {
+          "params": {
+            "value": {
+              "network_cidr": "${aws_vpc.network.cidr_block}",
+              "provider": "aws",
+              "role_firewall_ids": "${ { for role, group in aws_security_group.role : role => group.id } }",
+              "subnet_id": "${aws_subnet.public.id}",
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          }
+        },
+        "provider": {
+          "aws": {
+            "region": "{{region}}"
+          }
+        },
+        "resource": {
+          "aws_internet_gateway": {
+            "gateway": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route": {
+            "internet": {
+              "destination_cidr_block": "0.0.0.0/0",
+              "gateway_id": "${aws_internet_gateway.gateway.id}",
+              "route_table_id": "${aws_route_table.public.id}"
+            }
+          },
+          "aws_route_table": {
+            "public": {
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_route_table_association": {
+            "public": {
+              "route_table_id": "${aws_route_table.public.id}",
+              "subnet_id": "${aws_subnet.public.id}"
+            }
+          },
+          "aws_security_group": {
+            "role": {
+              "description": "Deployment role access",
+              "for_each": "{{firewall_groups}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "${each.value}",
+              "tags": {
+                "Name": "${each.value}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_subnet": {
+            "public": {
+              "availability_zone": "{{availability_zone}}",
+              "cidr_block": "{{subnet_cidr}}",
+              "map_public_ip_on_launch": true,
+              "tags": {
+                "Name": "{{name}}"
+              },
+              "vpc_id": "${aws_vpc.network.id}"
+            }
+          },
+          "aws_vpc": {
+            "network": {
+              "cidr_block": "{{vpc_cidr}}",
+              "enable_dns_hostnames": true,
+              "enable_dns_support": true,
+              "tags": {
+                "Name": "{{name}}"
+              }
+            }
+          },
+          "aws_vpc_security_group_egress_rule": {
+            "egress": {
+              "cidr_ipv4": "0.0.0.0/0",
+              "for_each": "{{firewall_groups}}",
+              "ip_protocol": "-1",
+              "security_group_id": "${aws_security_group.role[each.key].id}"
+            }
+          },
+          "aws_vpc_security_group_ingress_rule": {
+            "ingress": {
+              "cidr_ipv4": "${each.value.cidr}",
+              "for_each": "{{role_ingress}}",
+              "from_port": "${each.value.from_port}",
+              "ip_protocol": "${each.value.protocol}",
+              "security_group_id": "${aws_security_group.role[each.value.role].id}",
+              "to_port": "${each.value.to_port}"
+            }
+          }
+        },
+        "terraform": {
+          "required_providers": {
+            "aws": {
+              "source": "hashicorp/aws",
+              "version": "6.31.0"
+            }
+          },
+          "required_version": ">= 1.8.0"
+        }
+      }
     }
   },
   "azure": {

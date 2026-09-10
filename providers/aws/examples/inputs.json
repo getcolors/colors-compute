@@ -41,5 +41,25 @@
   "user": "ubuntu",
   "sudoer": "ubuntu",
   "ssh_key_id": "example",
-  "prevent_destroy": true
+  "prevent_destroy": true,
+  "firewall_groups": {
+    "app": "example-app-firewall",
+    "db": "example-db-firewall"
+  },
+  "role_ingress": {
+    "app:ssh:192.0.2.0/24": {
+      "role": "app",
+      "protocol": "tcp",
+      "from_port": 22,
+      "to_port": 22,
+      "cidr": "192.0.2.0/24"
+    },
+    "db:postgres:peer:app-0": {
+      "role": "db",
+      "protocol": "tcp",
+      "from_port": 5432,
+      "to_port": 5432,
+      "cidr": "10.42.1.5/32"
+    }
+  }
 }

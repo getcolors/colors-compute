@@ -257,10 +257,10 @@
                    (let [roles (:roles request)
                          rendered (into {} (map (fn [[role policy]]
                            (let [role-name (clojure.core/name role) role-request (assoc request :role role-name :security (:security policy))
-                                 validation-shared (assoc shared :ssh_key_id (or primary "validation-key")
-                                   :params {:provider provider :vpc_id "validation-vpc"
+                                 validation-shared (assoc (merge (:planning_shared recipe) shared) :ssh_key_id (or primary "validation-key")
+                                   :params (merge (get-in recipe [:planning_shared :params]) {:provider provider :vpc_id "validation-vpc"
                                             :role_firewall_ids (zipmap (keys roles) (repeat "validation-firewall"))
-                                            :role_tags (zipmap (keys roles) (repeat "validation-tag"))})]
+                                            :role_tags (zipmap (keys roles) (repeat "validation-tag"))}))]
                              (provider-request opts "node" role-request validation-shared)
                              [role (rules (:firewall_format recipe) role-request network-cidr profile)])) roles))]
                      {:role_ingress (into {} (mapcat (fn [[role value]] (map (fn [[id rule]] [(str (clojure.core/name role) ":" id) (assoc rule :role (clojure.core/name role))]) (:ingress value))) rendered))

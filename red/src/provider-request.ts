@@ -184,7 +184,7 @@ export function provider_request(opts:Map,stage:string,request:Map,shared:Map|nu
    const roleIngress:Map={},rolePublic:Map={},rolePrivate:Map={};
    for(const [r,policy] of Object.entries(roles).sort() as [string,Map][]){
     const roleRequest={...structuredClone(request),role:r,security:structuredClone(policy.security)};
-    const validationShared={...structuredClone(shared),ssh_key_id:primary||'validation-key',params:{provider,vpc_id:'validation-vpc',role_firewall_ids:Object.fromEntries(Object.keys(roles).map(r=>[r,'validation-firewall'])),role_tags:Object.fromEntries(Object.keys(roles).map(r=>[r,'validation-tag']))}};
+    const validationShared={...structuredClone(recipe.planning_shared??{}),...structuredClone(shared),ssh_key_id:primary||'validation-key',params:{...structuredClone(recipe.planning_shared?.params??{}),provider,vpc_id:'validation-vpc',role_firewall_ids:Object.fromEntries(Object.keys(roles).map(r=>[r,'validation-firewall'])),role_tags:Object.fromEntries(Object.keys(roles).map(r=>[r,'validation-tag']))}};
     provider_request(opts,'node',roleRequest,validationShared);
     const rendered=rules(recipe.firewall_format,roleRequest,networkCIDR,profile);rolePublic[r]=rendered.public_ingress;rolePrivate[r]=rendered.private_ingress;
     for(const [id,rule] of Object.entries(rendered.ingress))roleIngress[r+':'+id]={...rule as Map,role:r};

@@ -302,8 +302,8 @@ def provider_request(opts, stage, request, shared=None):
             role_request = {**deepcopy(request), 'role': role_name, 'security': deepcopy(policy['security'])}
             # Validate every role through the same policy validator. Node-stage
             # rendering uses synthetic shared references, never cloud calls.
-            validation_shared = {**deepcopy(shared), 'ssh_key_id': primary or 'validation-key',
-                'params': {'provider': provider, 'vpc_id': 'validation-vpc',
+            validation_shared = {**deepcopy(recipe.get('planning_shared', {})), **deepcopy(shared), 'ssh_key_id': primary or 'validation-key',
+                'params': {**deepcopy(recipe.get('planning_shared', {}).get('params', {})), 'provider': provider, 'vpc_id': 'validation-vpc',
                     'role_firewall_ids': {r: 'validation-firewall' for r in roles},
                     'role_tags': {r: 'validation-tag' for r in roles}}}
             provider_request(opts, 'node', role_request, validation_shared)

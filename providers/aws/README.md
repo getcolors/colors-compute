@@ -22,6 +22,11 @@ the profile as its regional key name, and outputs `ssh_key_id` and `key_name`.
 Opt-out omits this fragment and requires an existing operator-owned regional
 key name as a node input. The node never registers or deletes that key.
 
+Role-policy deployments select `shared-roles.tf.json.template` instead of the
+homogeneous shared template. They create one security group per role and attach
+observed peer `/32` ingress rules only to their declared target role; each node
+uses its matching group. See [role requests](../../contracts/roles.md).
+
 Render `node.tf.json.template` into each node's isolated state directory. It
 owns exactly `aws_instance.node`; it has no resource count or shared resource
 creation. Its outputs include stable node identity, observed Name tag, instance

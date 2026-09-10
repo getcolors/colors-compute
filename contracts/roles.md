@@ -67,3 +67,13 @@ Build uses deterministic documentation addresses to render the final peer-rule
 configuration without inspecting keys, credentials or live state. Changing an
 existing homogeneous deployment to role groups changes resource ownership and
 may require a reviewed migration; the normal replacement refusal still applies.
+
+AWS supports the same role request contract through `shared-roles` and
+`shared-roles-keygen`. Each role owns an `aws_security_group.role[role]`; separate
+ingress rules attach only to the target role's group, with observed peer `/32`
+addresses. Each group permits outbound IPv4 traffic. Shared outputs expose
+`role_firewall_ids`, and each node receives only its role's group. Network and
+key ownership stay in the shared state. IPv6 ingress remains unsupported for
+AWS's current IPv4-only network adapter. Provider schema validation covers both
+managed-key and external-key role configurations; this extension has not yet
+been exercised in a live role-based AWS deployment.

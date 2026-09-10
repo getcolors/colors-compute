@@ -98,6 +98,12 @@
       },
       "vpc_cidr": {
         "path": "derived.network_cidr"
+      },
+      "firewall_groups": {
+        "path": "derived.firewall_groups"
+      },
+      "role_ingress": {
+        "path": "derived.role_ingress"
       }
     },
     "endpoint_credentials": [],
@@ -137,7 +143,13 @@
     "static_private_ip": false,
     "subnet_cidr_options": [
       "aws-subnet-cidr"
-    ]
+    ],
+    "role_firewalls": true,
+    "role_firewall_param": "security_group_id",
+    "role_stages": {
+      "shared": "shared-roles",
+      "shared-keygen": "shared-roles-keygen"
+    }
   },
   "azure": {
     "application_reserved_ip": false,
