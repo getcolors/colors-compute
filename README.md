@@ -36,6 +36,8 @@ isolation, backend locking, or safe migration of an existing deployment.
   key references, and deterministic builds.
 - [Provider request resolution](contracts/provider-request.md): library-owned
   configuration bindings and firewall capabilities.
+- [Managed S3 backend buckets](contracts/managed-backend.md): explicit ownership,
+  bootstrap before state access, and disposal after full deployment retirement.
 - [Deployment orchestration](contracts/orchestration.md): guarded operations,
   failed sibling settlement, and complete inventories.
 - [OpenTofu execution](contracts/tofu-runtime.md): private saved plans, replacement

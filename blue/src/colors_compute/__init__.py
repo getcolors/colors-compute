@@ -45,3 +45,6 @@ __all__.append("controller_artifact")
 
 from .power import power_deployment
 __all__.append("power_deployment")
+
+from .managed_backend import bootstrap_backend, finalize_backend
+__all__ += ["bootstrap_backend", "finalize_backend"]

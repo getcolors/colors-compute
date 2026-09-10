@@ -37,3 +37,9 @@ Dependency injection replaces coordinator construction, SSH preparation/cleanup,
 request assembly/rendering, state presence/read/convergence, or native workflow
 execution in tests. Production defaults use library implementations. Dependencies
 are trusted application code, never profile input. No test injects cloud writes.
+
+When `s3-bucket-mode=managed`, orchestration bootstraps the owned backend before
+state access and rechecks its lifecycle after acquiring the journal. It retains
+the bucket on compute deletion; the application calls `finalize_backend` after
+all of its other stateful stages have been destroyed. See
+[managed backend ownership](managed-backend.md).

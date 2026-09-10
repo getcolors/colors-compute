@@ -179,3 +179,11 @@
     (c/transition! instance "retire")
     (is (= "idle" (get-in (c/release! instance) [:document :lock :state])))
     (is (lifecycle/valid-document? (:document (c/snapshot instance))))))
+
+(deftest coordinator-ignores-workflow-runtime-values
+  (let [storage (store)
+        supplied (assoc opts :green.workflow/inherited {:callback (fn [_] nil)} :application-secret (Object.))
+        owner (c/coordinator supplied {} (:read storage) (:write storage) (ids) {:event-prefix "lifecycle/"})]
+    (c/acquire! owner)
+    (is (= "active" (get-in (c/snapshot owner) [:document :status])))
+    (c/release! owner)))

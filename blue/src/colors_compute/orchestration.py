@@ -16,6 +16,7 @@ from .registration import registration_preflight
 from .ssh import prepare_keypair, cleanup_keypair, _mode
 from .workflow import cluster_workflow
 from .planning import validate_deployment
+from .managed_backend import bootstrap_backend
 
 
 async def orchestrate(opts, topology, request, environment=None, dependencies=None):
@@ -93,6 +94,7 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         require(declarations is not None and opts.get('blue/event', 'create') in ('create', 'delete') and opts.get('blue/dry-run') is not True)
         if request.get('private') is True:
             declarations = [{**node, 'private': True} for node in declarations]
+        await call('bootstrap_backend', bootstrap_backend, opts, env)
         legacy_keys = request.get('legacy_state_keys', [])
         require(isinstance(legacy_keys, list) and len(legacy_keys) == len(set(legacy_keys)))
         for legacy_key in legacy_keys:
@@ -105,6 +107,7 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         require('compute-require-existing-state' not in opts or type(opts['compute-require-existing-state']) is bool)
         await coordinator.acquire(require_existing=operation == 'create' and opts.get('compute-require-existing-state', False))
         acquired = True
+        await call('bootstrap_backend', bootstrap_backend, opts, env)
         doc = await snapshot()
         if operation == 'delete' and doc['status'] == 'retired':
             return {'status': 'destroyed'}

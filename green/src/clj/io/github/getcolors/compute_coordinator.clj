@@ -67,7 +67,10 @@
   ([opts environment read-object write-object id-factory options]
    (let [reduce-fn (get options :reducer reducer/coordination)
          event-prefix (get options :event-prefix "")
-         opts (detached opts)
+         ;; Workflow options contain runtime callbacks; only backend identity
+         ;; belongs in this private transport snapshot.
+         opts (detached (select-keys opts [:profile :provider-compute :provider-backend
+                                            :s3-bucket :s3-region :r2-bucket :r2-endpoint]))
          environment (json/parse-string (json/generate-string environment))
          backend (get-in (compute/backend-plan opts (str (:profile opts) "/compute/coordination.json"))
                          [:config :terraform :backend :s3])

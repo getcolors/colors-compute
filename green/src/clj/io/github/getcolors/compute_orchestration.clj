@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-orchestration
   "Deployment journal ownership around the real Colors fan-out and join."
   (:require [green.workflow :as engine]
+            [io.github.getcolors.compute-managed-backend :as managed-backend]
             [io.github.getcolors.compute :as compute]
             [io.github.getcolors.compute-coordination :as coordination]
             [io.github.getcolors.compute-coordinator :as coordinator]
@@ -59,6 +60,7 @@
                      operation (get opts :green/event :create) operation (if (keyword? operation) (name operation) operation)
                      declarations (if (true? (:private requirements)) (mapv #(assoc % :private true) declarations) declarations)]
                  (require-valid (and (seq declarations) (contains? #{"create" "delete"} operation) (not (true? (:green/dry-run opts)))))
+                 (call :bootstrap-backend managed-backend/bootstrap-backend! opts environment)
                  (let [legacy-keys (get requirements :legacy_state_keys [])]
                    (require-valid (and (vector? legacy-keys) (= (count legacy-keys) (count (set legacy-keys)))))
                    (doseq [legacy legacy-keys]
@@ -70,6 +72,7 @@
                  (reset! owner (call :coordinator (fn [opts env] (coordinator/coordinator opts env nil nil nil {:event-prefix "lifecycle/"})) opts environment))
                  (require-valid (or (not (contains? opts :compute-require-existing-state)) (boolean? (:compute-require-existing-state opts))))
                  (coordinator/acquire! @owner (and (= operation "create") (true? (:compute-require-existing-state opts)))) (reset! acquired true)
+                 (call :bootstrap-backend managed-backend/bootstrap-backend! opts environment)
                  (let [initial (snapshot)]
                    (if (and (= operation "delete") (= "retired" (:status initial))) {:status "destroyed"}
                        (do

@@ -1,3 +1,4 @@
+import {bootstrap_backend} from './managed-backend.ts';
 import {copy} from './copy.ts';
 import {validate_deployment} from './planning.ts';
 import {run} from 'red/workflow';
@@ -42,13 +43,14 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
  const execute=async()=>{
   let declarations=expand(topology);require(declarations.length&&declarations.length<=1000&&['create','delete'].includes(opts['red/event']??'create')&&opts['red/dry-run']!==true);
   if(request.private===true)declarations=declarations.map(node=>({...node,private:true}));
+  await call('bootstrap_backend',bootstrap_backend,opts,env);
   const legacy=request.legacy_state_keys??[];require(Array.isArray(legacy)&&new Set(legacy).size===legacy.length);
   for(const key of legacy){const observed=await call('state_presence',statePresence,opts,key,env,undefined,true);require(observed.status==='absent'&&Object.keys(observed).length===1);}
   const operation=opts['red/event']??'create';require(operation!=='delete'||opts['compute-prevent-destroy']===false);
   keys=state_keys(opts.profile,declarations.map(node=>node.node_id));
   coordinator=deps.coordinator?deps.coordinator(opts,{environment:env,eventPrefix:'lifecycle/'}):new Coordinator(opts,{environment:env,eventPrefix:'lifecycle/'});
   require(!Object.hasOwn(opts,'compute-require-existing-state')||typeof opts['compute-require-existing-state']==='boolean');
-  await coordinator.acquire(operation==='create'&&(opts['compute-require-existing-state']??false));acquired=true;let doc=await snapshot();
+  await coordinator.acquire(operation==='create'&&(opts['compute-require-existing-state']??false));acquired=true;await call('bootstrap_backend',bootstrap_backend,opts,env);let doc=await snapshot();
   if(operation==='delete'&&doc.status==='retired')return {status:'destroyed'};
   if(operation==='create'&&doc.status==='retired'){await coordinator.transition('recreate');doc=await snapshot();}
   require(operation==='create'?doc.status==='active':['active','deleting'].includes(doc.status));

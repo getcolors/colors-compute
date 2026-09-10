@@ -152,3 +152,5 @@ export {controller_artifact} from './controller.ts';
 export {managed_application_artifacts,managed_application_settings,managed_errors,plan_managed_kubernetes,managed_kubernetes,read_managed_kubernetes,managed_kubeconfig_path} from "./managed.ts";
 
 export {power_deployment} from "./power.ts";
+
+export {bootstrap_backend,finalize_backend} from "./managed-backend.ts";
