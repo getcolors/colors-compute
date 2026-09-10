@@ -70,7 +70,7 @@ Remaining verification includes other regions/images, external-key adoption,
 interrupted AWS applies, and reviewed legacy-state migration. The IPv4 network
 scope and replacement guards remain as documented in README.
 
-## AWS role firewalls and Langfuse offline integration — 2026-09-10
+## AWS role firewalls — 2026-09-10
 
 Published compute commit `09ec539e75dc21c4dafb019eb8f9da276e695f6f` adds
 AWS role shared stages in all three colors. Each role owns a security group;
@@ -85,11 +85,35 @@ Green 107 tests with 1,331 assertions, Red 316 tests plus typecheck, and 478
 parity cases in each color. New fixtures check role sizing, group attachment,
 and exact peer rule isolation.
 
-Langfuse's integration using this compute pin passed local deployment build
-and create dry-run checks for six AWS nodes, role-specific sizes, encrypted
-60 GiB root disks, role security groups, and managed S3 state configuration.
-This is offline evidence only: no Langfuse resources were provisioned, and
-live execution was awaiting a Cloudflare token at this handoff. AutoMQ's
-completed Green live lifecycle above remains the live evidence for the
-homogeneous AWS configuration. A live role-policy create/converge/delete
-cycle, including private peer connectivity, still needs verification.
+## Green Langfuse live validation — 2026-09-10
+
+The subsequent Green Langfuse live run completed create, reconvergence,
+16 public acceptance checks, 10 continuity checks, recovery rehearsal, and
+full deletion. It used compute `09ec539e75dc21c4dafb019eb8f9da276e695f6f`
+and a final Langfuse launcher pinned to
+`d59cca7b7466c82bd541e115121678fd217cec15`. Six instances across four roles
+used five `t3.xlarge` and one `t3.small`, with encrypted 60 GiB gp3 root disks
+in `us-east-1a`. The app owned three S3 buckets and three scoped IAM users;
+the library owned managed SSH registration and the managed S3 state backend.
+
+Independent actual AWS checks verified each node and NIC had only its own role
+security group, HTTP ingress exactly matched current Cloudflare IPv4 ranges,
+and database/replication rules matched only the declared live private `/32`
+peers. SSH remained configured as `0.0.0.0/0` on port 22. The direct health
+snapshot following recovery also passed before teardown. This establishes
+live role-policy integration beyond the prior homogeneous AutoMQ proof.
+
+Full deletion passed with host cleanup before application storage removal,
+then nodes before shared networking, and managed backend finalization after
+compute retirement. Compute took 518.277 seconds; backend finalization took
+28.930 seconds. The independent final inventory checked exact recorded EBS
+volume IDs and VPC dependencies and reported zero remaining resources, zero
+remaining billable resources, and all six recorded root volumes absent.
+The [deployment evidence](https://github.com/getcolors/langfuse-aws/tree/main/evidence)
+contains the network audit and final resource inventory. See [README](README.md)
+for the exact configuration and observed ingress rules.
+
+Only Green was exercised live. Blue/Red live AWS execution, other regions,
+external-key adoption, interrupted AWS applies, and legacy migration remain
+unverified. Functional success in this single availability zone does not
+establish production availability or performance guarantees.

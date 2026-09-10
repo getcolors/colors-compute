@@ -205,12 +205,51 @@ provider 6.31.0. The complete library suites passed: Blue 511 tests, Green 107
 tests with 1,331 assertions, Red 316 tests plus typecheck, and 478 parity cases
 in each color. These are offline render, contract, and provider-schema checks.
 
-Langfuse's AWS integration using this published compute pin passed local build
-and create dry-run checks for profile `langfuse-aws`: six nodes across app,
-Neon, ClickHouse, and Redis roles, role-specific instance sizes, encrypted
-60 GiB root disks, role security groups, and managed S3 state configuration.
-The application owns its separate S3 storage lifecycle. This validates package
-integration offline; no Langfuse AWS live success is claimed. Live execution
-was pending a Cloudflare token at this handoff. The completed AutoMQ lifecycle
-above used the homogeneous shared configuration and does not establish live
-role-firewall behavior.
+## Live Langfuse role-firewall validation — 2026-09-10
+
+After offline validation, Green Langfuse completed live create, reconvergence,
+public acceptance, continuity checks, recovery rehearsal, and deletion using
+compute `09ec539e75dc21c4dafb019eb8f9da276e695f6f`. The deployment profile
+was `langfuse-aws`, with the published Langfuse package pinned to
+`d59cca7b7466c82bd541e115121678fd217cec15` for the final launcher. This is
+additional live evidence for role-policy AWS deployments; the earlier AutoMQ
+validation above exercised the homogeneous shared configuration.
+
+Six Ubuntu 24.04 instances ran in `us-east-1a` using AMI
+`ami-025d99823a4caad37`: one app, one Neon, and three ClickHouse nodes on
+`t3.xlarge`, plus Redis on `t3.small`. All six root volumes were encrypted
+60 GiB gp3 volumes with deletion on termination enabled. The deployment used
+VPC `10.74.0.0/16`, subnet `10.74.1.0/24`, a managed regional SSH keypair,
+and a managed S3 backend. Langfuse separately owned three S3 buckets and three
+scoped IAM users for Neon storage, application data, and backups. Cloudflare
+proxied the public HTTPS endpoint.
+
+An independent read-only AWS audit verified that every instance and network
+interface attached only its role's security group. App ports 80 and 443
+matched the current 15 Cloudflare IPv4 ranges exactly. Neon port 55433 and
+Redis port 6379 admitted only the app's private `/32`. ClickHouse port 8123
+admitted only the app; port 9000 admitted the app and three replicas; ports
+9009, 9181, and 9234 admitted only the three replicas. No other ingress or
+IPv6 sources were present. SSH port 22 retained the configured `0.0.0.0/0`
+source. These assertions and actual attachments are recorded in the public
+[deployment network evidence](https://github.com/getcolors/langfuse-aws/blob/main/evidence/network-isolation.json).
+
+Public acceptance passed 16 checks, continuity passed 10 checks, and the
+package recovery rehearsal passed. A direct health snapshot after the drill
+also passed before deletion. These are functional results for one deployment
+in one availability zone, not production availability or throughput guarantees.
+
+Authorized deletion completed host cleanup before removing application storage,
+then destroyed all six nodes before the shared network and finalized the managed
+backend after compute retirement. Observed durations were 62.343 seconds for
+host cleanup, 16.189 seconds for application storage, 518.277 seconds for compute,
+and 28.930 seconds for backend finalization. An independent exact-ID inventory,
+including the six recorded root EBS volumes and implicit VPC dependencies,
+reported `remaining_resource_count=0`, `remaining_billable_resource_count=0`,
+and `all_recorded_volumes_absent=true`. See the
+[final resource evidence](https://github.com/getcolors/langfuse-aws/blob/main/evidence/resources-after-delete.json).
+
+This completes live Green role-policy lifecycle evidence. Blue and Red remain
+validated by automated suites and parity, without live AWS runs. Other regions,
+external-key adoption, interrupted AWS applies, and legacy migration remain
+outside this validation.
