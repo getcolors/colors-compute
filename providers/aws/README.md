@@ -25,7 +25,11 @@ key name as a node input. The node never registers or deletes that key.
 Role-policy deployments select `shared-roles.tf.json.template` instead of the
 homogeneous shared template. They create one security group per role and attach
 observed peer `/32` ingress rules only to their declared target role; each node
-uses its matching group. See [role requests](../../contracts/roles.md).
+uses its matching group. The shared output `role_firewall_ids` maps role names
+to group IDs. Before nodes exist, peer ingress is omitted; after the node join,
+the runtime reconverges shared rules with observed private addresses. It does
+not grant blanket VPC ingress. Role groups allow outbound IPv4 traffic. See
+[role requests](../../contracts/roles.md).
 
 Render `node.tf.json.template` into each node's isolated state directory. It
 owns exactly `aws_instance.node`; it has no resource count or shared resource
@@ -48,6 +52,8 @@ library runtime and are not implemented by these templates.
 | `profile`, `name`, `firewall_name` | Validated deployment identity and resource display names |
 | `vpc_cidr`, `subnet_cidr` | Canonical IPv4 CIDRs; subnet contained in VPC |
 | `ingress`, `egress` | Maps keyed by stable rule identities; values contain `protocol`, `from_port`, `to_port`, `cidr` |
+| `firewall_groups` | Role-to-group-name map, role shared configuration only |
+| `role_ingress` | Stable rule map with target `role`, `protocol`, `from_port`, `to_port`, and IPv4 `cidr` |
 | `public_key` | Validated public key content, managed-key shared fragment only |
 | `node_id`, `image_id`, `instance_type` | Stable node identity, regional AMI ID, instance type |
 | `subnet_id`, `security_group_ids` | Resolved shared subnet ID and security group ID list |
@@ -62,7 +68,8 @@ IPv6, security-group source references, existing network discovery, multiple
 subnets, private-only nodes, and additional volumes need explicit extensions.
 There are no hardcoded application ports or default ingress rules. Examples
 show SSH restricted to a documentation CIDR and a private peer rule as data.
-Egress is also supplied as data, rather than implicitly allowing all traffic.
+Homogeneous-template egress is supplied as data. The role template permits all
+outbound IPv4 traffic for each role group.
 Standalone security group rules are deliberately used without inline rules,
 as the [AWS provider documentation](https://registry.terraform.io/providers/hashicorp/aws/5.36.0/docs/resources/vpc_security_group_ingress_rule)
 warns against mixing the two ownership models.
@@ -99,7 +106,8 @@ python3 colors-compute/providers/aws/check.py --tofu /absolute/path/to/tofu
 The checker verifies deterministic representative renders, typed fields, and
 single-node/shared ownership separation. The second command additionally runs
 `fmt -check`, `init -backend=false -input=false -no-color`, and
-`validate -no-color` for shared keygen, shared opt-out, and node configurations.
+`validate -no-color` for five configurations: shared keygen, shared opt-out,
+role shared keygen, role shared opt-out, and node.
 Each runs in a temporary directory with an isolated HOME, an allowlisted
 environment without cloud credentials, and AWS metadata disabled. No plan,
 apply, destroy, account query, or state access runs.
@@ -183,3 +191,26 @@ not been exercised live in this validation. External-key adoption, other AMIs
 or regions, interrupted AWS applies, and legacy state migration remain outside
 this run's evidence. The supported IPv4/network scope and replacement guards
 above still apply.
+
+## Role-firewall validation — 2026-09-10
+
+Commit `09ec539e75dc21c4dafb019eb8f9da276e695f6f` publishes AWS role
+firewalls in all three colors. Role-specific instance overrides such as
+`aws-instance-type-app` and `aws-instance-type-clickhouse` use the existing
+role request contract. The added fixtures exercise distinct role sizing,
+node-to-role security-group attachment, and exact peer `/32` ingress.
+
+The five configurations above passed the checker with OpenTofu 1.12.5 and AWS
+provider 6.31.0. The complete library suites passed: Blue 511 tests, Green 107
+tests with 1,331 assertions, Red 316 tests plus typecheck, and 478 parity cases
+in each color. These are offline render, contract, and provider-schema checks.
+
+Langfuse's AWS integration using this published compute pin passed local build
+and create dry-run checks for profile `langfuse-aws`: six nodes across app,
+Neon, ClickHouse, and Redis roles, role-specific instance sizes, encrypted
+60 GiB root disks, role security groups, and managed S3 state configuration.
+The application owns its separate S3 storage lifecycle. This validates package
+integration offline; no Langfuse AWS live success is claimed. Live execution
+was pending a Cloudflare token at this handoff. The completed AutoMQ lifecycle
+above used the homogeneous shared configuration and does not establish live
+role-firewall behavior.
