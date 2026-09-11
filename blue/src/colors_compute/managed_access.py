@@ -47,7 +47,7 @@ class AccessDecoder:
         env = os.environ if environment is None else environment
         from .contract import registry
         keys = list(registry()["compute"][opts["provider-compute"]]["tofu-env"])
-        self._secrets = [env.get("COLORS_PAR_" + key.upper().replace("-", "_")) for key in keys + (["r2-access-key-id", "r2-secret-access-key"] if opts.get("provider-backend") == "r2" else [])]
+        self._secrets = [env.get("COLORS_PAR_" + key.upper().replace("-", "_")) for key in keys + list(registry()["backend"].get(opts.get("provider-backend"), {}).get("secrets", []))]
         self._secrets = [value for value in self._secrets if isinstance(value, str) and value]
         self._content = None
 

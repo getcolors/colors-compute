@@ -19,7 +19,7 @@
                  config (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))
                  expected {:profile (:profile opts) :provider (:provider-compute opts)
                            :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket config) :region (:region config)}
-                                      (= "r2" (:provider-backend opts)) (assoc :endpoint (get-in config [:endpoints :s3])))}]
+                                      (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in config [:endpoints :s3])))}]
              (require-valid (and (= "present" (:status observed)) (lifecycle/valid-document? doc)
                                  (= expected (:identity doc))
                                  (= "idle" (get-in doc [:lock :state]))))

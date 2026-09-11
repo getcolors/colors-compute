@@ -15,7 +15,7 @@
     (nil? (entry :compute (:provider-compute opts)))
     (conj (str ":provider-compute must be one of " (str/join ", " (sort (map name (keys (:compute registry)))))))
     (nil? (entry :backend (:provider-backend opts)))
-    (conj ":provider-backend must be one of gcs, r2, s3")))
+    (conj ":provider-backend must be one of gcs, oci, r2, s3")))
 
 (defn validate [opts]
   (into (cond-> (selection-errors opts)
@@ -138,7 +138,7 @@
   [opts state-key]
   (let [selection (:provider-backend opts)
         backend (entry :backend selection)]
-    (when-not backend (fail ":provider-backend must be one of gcs, r2, s3"))
+    (when-not backend (fail ":provider-backend must be one of gcs, oci, r2, s3"))
     (doseq [key (sort (:required backend))]
       (when (missing? (get opts (keyword key))) (fail (str ":" key " is required"))))
     (when-not (and (string? state-key)
@@ -159,7 +159,12 @@
                     :skip_region_validation true
                     :skip_requesting_account_id true
                     :skip_s3_checksum true}))]
-      {:config {:terraform {:backend (if (= "gcs" selection) {:gcs {:bucket (:gcs-bucket opts) :prefix state-key}} {:s3 settings})}}
+      {:config {:terraform {:backend (if (= "oci" selection)
+          {:s3 {:bucket (:oci-bucket opts) :region (:oci-region opts) :key state-key :use_lockfile true
+                :endpoints {:s3 (str "https://" (:oci-namespace opts) ".compat.objectstorage." (:oci-region opts) ".oraclecloud.com")}
+                :use_path_style true :skip_credentials_validation true :skip_metadata_api_check true
+                :skip_region_validation true :skip_requesting_account_id true :skip_s3_checksum true}}
+          (if (= "gcs" selection) {:gcs {:bucket (:gcs-bucket opts) :prefix state-key}} {:s3 settings}))}}
        :credential_bindings
        (into {} (map (fn [[key option]]
                        [(str "COLORS_PAR_" (str/upper-case (str/replace (name key) "-" "_"))) option])

@@ -8,7 +8,7 @@
            :ip "192.0.2.1" :user "ubuntu" :sudoer "ubuntu" :metadata {:zone "a"}})
 (deftest selection-and-credentials
   (is (= [":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex"
-          ":provider-backend must be one of gcs, r2, s3" ":profile is required"] (c/validate {})))
+          ":provider-backend must be one of gcs, oci, r2, s3" ":profile is required"] (c/validate {})))
   (doseq [provider ["aws" "azure" "google" "oci"]]
     (is (= [] (c/credential-requirements {:provider-compute provider :provider-backend "s3"}))))
   (is (= ["COLORS_PAR_R2_ACCESS_KEY_ID" "COLORS_PAR_R2_SECRET_ACCESS_KEY" "COLORS_PAR_VULTR_API_KEY"]
@@ -86,7 +86,7 @@
           :credential_bindings {} :environment {}}
          (c/backend-plan {:provider-backend "s3" :s3-bucket "example" :s3-region "eu-west-1"} "a.tfstate")))
   (doseq [selection [nil false {} [] "unknown"]]
-    (is (thrown-with-msg? Exception #":provider-backend must be one of gcs, r2, s3"
+    (is (thrown-with-msg? Exception #":provider-backend must be one of gcs, oci, r2, s3"
                           (c/backend-plan {:provider-backend selection} "../bad"))))
   (is (thrown-with-msg? Exception #":r2-bucket is required"
                         (c/backend-plan {:provider-backend "r2" :r2-bucket "REPLACE_ME"} "../bad")))

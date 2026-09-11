@@ -31,6 +31,22 @@
       ],
       "secrets": [],
       "tofu-env": {}
+    },
+    "oci": {
+      "required": [
+        "oci-bucket",
+        "oci-region",
+        "oci-namespace"
+      ],
+      "secrets": [
+        "oci-access-key-id",
+        "oci-secret-access-key"
+      ],
+      "backend-config": {
+        "oci-access-key-id": "access_key",
+        "oci-secret-access-key": "secret_key"
+      },
+      "tofu-env": {}
     }
   },
   "compute": {

@@ -19,13 +19,13 @@
        (string? (:provider identity))
        (contains? (:compute compute/registry) (keyword (:provider identity)))
        (let [backend (:backend identity) kind (:kind backend)]
-         (and (contains? #{"gcs" "s3" "r2"} kind)
-              (exact? backend (if (= "r2" kind) #{:kind :bucket :region :endpoint} #{:kind :bucket :region}))
+         (and (contains? #{"gcs" "s3" "r2" "oci"} kind)
+              (exact? backend (if (contains? #{"r2" "oci"} kind) #{:kind :bucket :region :endpoint} #{:kind :bucket :region}))
               (string? (:bucket backend))
               (boolean (re-matches #"[a-z0-9][a-z0-9.-]{0,62}" (:bucket backend)))
               (safe? (:region backend))
               (or (contains? #{"gcs" "s3"} kind)
-                  (and (= "auto" (:region backend))
+                  (and (or (= "oci" kind) (= "auto" (:region backend)))
                        (string? (:endpoint backend))
                        (boolean (re-matches #"https://[a-zA-Z0-9.-]+(:[0-9]{1,5})?/?" (:endpoint backend)))))))))
 

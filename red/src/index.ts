@@ -155,4 +155,4 @@ export {power_deployment} from "./power.ts";
 
 export {bootstrap_backend,finalize_backend} from "./managed-backend.ts";
 
-export {recover_absent_aws_shared} from "./recovery.ts";
+export {recover_absent_aws_shared,recover_absent_oci_nodes} from "./recovery.ts";

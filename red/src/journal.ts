@@ -1,3 +1,4 @@
+import {ociClient,objectPath as ociObjectPath} from './oci.ts';
 import {gcsClient,gcsGet,gcsPut} from './gcs.ts';
 import {chmodSync,mkdtempSync,readFileSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -20,16 +21,16 @@ function configuration(opts:Map) {
   const plan=backend_plan(opts,key);
   const settings=plan.config.terraform.backend.s3;
   if(!nonblank(settings.bucket)||!nonblank(settings.region)) throw new Error('invalid settings');
-  if(opts['provider-backend']==='r2'&&!nonblank(settings.endpoints.s3)) throw new Error('invalid settings');
+  if(['r2','oci'].includes(opts['provider-backend'])&&!nonblank(settings.endpoints.s3)) throw new Error('invalid settings');
   return {key,bucket:settings.bucket,region:settings.region,endpoint:settings.endpoints?.s3};
 }
 export function identity(opts:Map):Map {
   const kind=opts['provider-backend'];
-  return {profile:opts.profile,provider:opts['provider-compute'],backend:{kind,bucket:opts[`${kind}-bucket`],region:kind==='r2'?'auto':opts[`${kind}-region`],...(kind==='r2'?{endpoint:opts['r2-endpoint']}:{})}};
+  return {profile:opts.profile,provider:opts['provider-compute'],backend:{kind,bucket:opts[`${kind}-bucket`],region:kind==='r2'?'auto':opts[`${kind}-region`],...(kind==='oci'?{endpoint:`https://${opts['oci-namespace']}.compat.objectstorage.${opts['oci-region']}.oraclecloud.com`}:{}),...(kind==='r2'?{endpoint:opts['r2-endpoint']}:{})}};
 }
 function secrets(opts:Map,environment:Env):string[] {
-  if(opts['provider-backend']!=='r2')return [];
-  return ['COLORS_PAR_R2_ACCESS_KEY_ID','COLORS_PAR_R2_SECRET_ACCESS_KEY'].map(name=>{
+  if(!['r2','oci'].includes(opts['provider-backend']))return [];
+  return [`COLORS_PAR_${opts['provider-backend'].toUpperCase()}_ACCESS_KEY_ID`,`COLORS_PAR_${opts['provider-backend'].toUpperCase()}_SECRET_ACCESS_KEY`].map(name=>{
     const value=environment[name];
     if(!nonblank(value)||value.trim().toUpperCase()==='REPLACE_ME'||/[\r\n\u2028\u2029]/.test(value))throw new Error('invalid credentials');
     return value;
@@ -84,6 +85,13 @@ export function commonArgs(config:ReturnType<typeof configuration>) {
 
 /** Fetch untrusted journal data. Reducer validation is still required. */
 export async function journalGet(opts:Map,environment:Env=process.env,runner:BackendRunner=executeBackendCommand):Promise<JournalGetResult> {
+  if(opts['provider-backend']==='oci'){try{
+    backend_plan(opts,`${opts.profile}/compute/coordination.json`);state_keys(opts.profile,[]);
+    const result=await (await ociClient(opts,environment,runner))('GET',ociObjectPath(opts,`${opts.profile}/compute/coordination.json`));
+    if(result===null)return {status:'absent'};
+    if(!object(result.data)||!nonblank(result.headers?.etag)||Buffer.byteLength(JSON.stringify(result.data),'utf8')>limit||containsSecret(JSON.stringify(result),['COLORS_PAR_OCI_ACCESS_KEY_ID','COLORS_PAR_OCI_SECRET_ACCESS_KEY'].map(k=>environment[k]).filter((v):v is string=>typeof v==='string'&&!!v)))return {status:'error'};
+    return {status:'present',document:result.data,etag:result.headers.etag};
+  }catch{return {status:'error'};}}
   if(opts['provider-backend']==='gcs'){try{backend_plan(opts,`${opts.profile}/compute/coordination.json`);state_keys(opts.profile,[]);const r=await gcsGet(await gcsClient(environment,runner),opts['gcs-bucket'],`${opts.profile}/compute/coordination.json`,limit);return r?{status:'present',...r}:{status:'absent'};}catch{return {status:'error'};}}
   return session<JournalGetResult>(opts,environment,async(directory,env,values,config)=>{
     const body=join(directory,'body.json');writePrivate(body,'');
@@ -112,6 +120,12 @@ export async function journalPut(opts:Map,intent:unknown,environment:Env=process
   let bodyText:string;
   try{bodyText=JSON.stringify(intent.document);}catch{return {status:'error'};}
   if(Buffer.byteLength(bodyText,'utf8')>limit)return {status:'error'};
+  if(opts['provider-backend']==='oci'){try{
+    if(containsSecret(bodyText,['COLORS_PAR_OCI_ACCESS_KEY_ID','COLORS_PAR_OCI_SECRET_ACCESS_KEY'].map(k=>environment[k]).filter((v):v is string=>typeof v==='string'&&!!v)))return {status:'error'};
+    const headers:Map=condition.if_match?{'if-match':condition.if_match}:{'if-none-match':'*'};headers['content-type']='application/json';
+    const result=await (await ociClient(opts,environment,runner))('PUT',ociObjectPath(opts,`${opts.profile}/compute/coordination.json`),intent.document,{},headers);
+    return result?.conflict?{status:'conflict'}:nonblank(result?.headers?.etag)?{status:'written',etag:result!.headers.etag}:{status:'error'};
+  }catch{return {status:'error'};}}
   if(opts['provider-backend']==='gcs'){try{const generation=condition.if_match??'0';if(!/^\d+$/.test(generation))return {status:'error'};const r=await gcsPut(await gcsClient(environment,runner),opts['gcs-bucket'],`${opts.profile}/compute/coordination.json`,intent.document,generation);return r?.conflict?{status:'conflict'}:r?.generation?{status:'written',etag:r.generation}:{status:'error'};}catch{return {status:'error'};}}
   return session<JournalPutResult>(opts,environment,async(directory,env,values,config)=>{
     if(containsSecret(JSON.stringify(intent),values))return {status:'error'};

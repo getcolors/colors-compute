@@ -42,3 +42,43 @@ async def recover_absent_aws_shared(opts, operation_id, environment=None, runner
         return {'status': 'recovered'}
     finally:
         await owner.release()
+
+
+async def recover_absent_oci_nodes(opts, operations, environment=None, runner=None, coordinator_factory=None):
+    """Recover exact failed OCI operations after native state and resource audits."""
+    from .oci import oci_client, object_path
+    from .backend import _params
+    if opts.get('provider-compute') != 'oci' or opts.get('provider-backend') != 'oci' or not isinstance(operations, dict) or not operations:
+        raise ValueError('recovery requires OCI node operation IDs')
+    env = dict(os.environ if environment is None else environment)
+    owner = (coordinator_factory or Coordinator)(opts, env, event_prefix='lifecycle/')
+    await owner.acquire()
+    try:
+        doc = (await owner.snapshot())['document']
+        if doc['status'] != 'active' or doc['key']['phase'] != 'prepared' or doc['shared']['phase'] != 'ready':
+            raise ValueError('recovery requires owned OCI shared state')
+        request = await oci_client(opts, env, runner)
+        for node_id, operation_id in operations.items():
+            record = doc['nodes'].get(node_id, {})
+            if record.get('phase') != 'failed' or record.get('operation') != 'create' or record.get('operation_id') != operation_id:
+                raise ValueError('recovery does not match failed node create')
+            observed = await request('GET', object_path(opts, record['state_key']))
+            if observed is not None:
+                state = observed.get('data')
+                _params(json.dumps(state))
+                if state['resources'] != [] or state['outputs'] != {}:
+                    raise ValueError('recovery requires absent or empty node state')
+        child = {k: v for k, v in env.items() if not k.startswith(('COLORS_PAR_', 'TF_', 'TOFU_'))}
+        common = ['--auth', 'security_token' if opts.get('oci-auth', 'SecurityToken') == 'SecurityToken' else 'api_key',
+                  '--profile', opts.get('oci-config-file-profile', 'DEFAULT'), '--region', opts['oci-region'],
+                  '--compartment-id', opts['oci-compartment-id'], '--all']
+        for prefix in (['oci', 'compute', 'instance', 'list'], ['oci', 'bv', 'boot-volume', 'list', '--availability-domain', opts['oci-availability-domain']]):
+            result = await (runner or _run)(prefix + common, os.getcwd(), child, 120000)
+            data = json.loads(result.out).get('data') if result.exit == 0 else None
+            if not isinstance(data, list) or any(opts['profile'] in r.get('display-name', '') and r.get('lifecycle-state') != 'TERMINATED' for r in data):
+                raise ValueError('recovery requires absent OCI instances and boot volumes')
+        for node_id in operations:
+            await owner.transition('retry', node_id=node_id, evidence='verified-provider-absence')
+        return {'status': 'recovered', 'nodes': sorted(operations)}
+    finally:
+        await owner.release()

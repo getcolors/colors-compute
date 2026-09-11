@@ -34,7 +34,7 @@
         "network_security_group_id": "${oci_core_network_security_group.network.id}",
         "direction": "${each.value.direction}",
         "protocol": "${each.value.protocol}",
-        "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+        "source": "${each.value.direction == \"INGRESS\" ? (each.value.cidr == \"private\" ? data.oci_core_subnet.existing.cidr_block : each.value.cidr) : null}",
         "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
         "destination": "${each.value.direction == \"EGRESS\" ? each.value.cidr : null}",
         "destination_type": "${each.value.direction == \"EGRESS\" ? \"CIDR_BLOCK\" : null}",

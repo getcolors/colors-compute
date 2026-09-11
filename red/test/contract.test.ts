@@ -7,7 +7,7 @@ test('packaged registry matches the canonical registry', () => {
 test('selection validation is ordered and secrets are backend independent', () => {
   expect(validate({})).toEqual([
     ':provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex',
-    ':provider-backend must be one of gcs, r2, s3', ':profile is required',
+    ':provider-backend must be one of gcs, oci, r2, s3', ':profile is required',
   ]);
   expect(credential_requirements({'provider-compute':'aws', 'provider-backend':'r2'})).toEqual(['COLORS_PAR_R2_ACCESS_KEY_ID', 'COLORS_PAR_R2_SECRET_ACCESS_KEY']);
   expect(credential_requirements({'provider-compute':'azure', 'provider-backend':'s3'})).toEqual([]);

@@ -3,7 +3,8 @@
   (:require [cheshire.core :as json] [clojure.string :as str]
             [io.github.getcolors.compute-coordinator :as coordinator]
             [io.github.getcolors.compute-execution :as execution]
-            [io.github.getcolors.compute-runtime :as runtime])
+            [io.github.getcolors.compute-runtime :as runtime]
+            [io.github.getcolors.compute-oci :as oci])
   (:import [java.nio.file Files] [java.nio.file.attribute FileAttribute]))
 (def scans [["describe-vpcs" "Vpcs" "tag:Name"] ["describe-subnets" "Subnets" "tag:Name"]
             ["describe-internet-gateways" "InternetGateways" "tag:Name"] ["describe-route-tables" "RouteTables" "tag:Name"]
@@ -35,3 +36,38 @@
          (coordinator/transition! owner "shared-retry" {:evidence "verified-provider-absence"})
          {:status "recovered"})
        (finally (coordinator/release! owner))))))
+
+(defn recover-absent-oci-nodes!
+  "Retry explicitly selected failed OCI creates only after state and resource absence."
+  ([opts operations] (recover-absent-oci-nodes! opts operations (into {} (System/getenv))))
+  ([opts operations environment]
+   (recover-absent-oci-nodes! opts operations environment runtime/run-command
+                            (fn [opts env] (coordinator/coordinator opts env nil nil nil {:event-prefix "lifecycle/"}))))
+  ([opts operations environment runner factory]
+   (require-valid (and (= "oci" (:provider-compute opts)) (= "oci" (:provider-backend opts))
+                       (map? operations) (seq operations)) "recovery requires OCI node operation IDs")
+   (let [owner (factory opts environment)]
+    (coordinator/acquire! owner)
+    (try
+     (let [doc (:document (coordinator/snapshot owner))]
+      (require-valid (and (= "active" (:status doc)) (= "prepared" (get-in doc [:key :phase]))
+                          (= "ready" (get-in doc [:shared :phase]))) "recovery requires owned OCI shared state")
+      (doseq [[id operation-id] operations
+              :let [record (get-in doc [:nodes (keyword (name id))])]]
+       (require-valid (and (= "failed" (:phase record)) (= "create" (:operation record)) (= operation-id (:operation_id record))) "recovery does not match failed node create")
+       (let [observed ((oci/client opts environment runner) "GET" (oci/object-path opts (:state_key record)) nil {} {})
+             state (:data observed)]
+        (require-valid (or (nil? observed) (and (runtime/valid-state? state) (= [] (:resources state)) (= {} (:outputs state)))) "recovery requires absent or empty node state")))
+      (let [env (into {} (remove (fn [[k _]] (re-find #"^(COLORS_PAR_|TF_|TOFU_)" k)) environment))
+            common ["--auth" (if (= "SecurityToken" (get opts :oci-auth "SecurityToken")) "security_token" "api_key")
+                    "--profile" (get opts :oci-config-file-profile "DEFAULT") "--region" (:oci-region opts)
+                    "--compartment-id" (:oci-compartment-id opts) "--all"]]
+       (doseq [prefix [["oci" "compute" "instance" "list"] ["oci" "bv" "boot-volume" "list" "--availability-domain" (:oci-availability-domain opts)]]]
+        (let [result (runner (into prefix common) (System/getProperty "user.dir") env 120000)
+              data (when (= 0 (:exit result)) (:data (json/parse-string (:out result) true)))]
+         (require-valid (and (vector? data)
+                             (not-any? #(and (str/includes? (or (:display-name %) "") (:profile opts))
+                                             (not (contains? #{"TERMINATED"} (:lifecycle-state %)))) data)) "recovery requires absent OCI instances and boot volumes"))))
+      (doseq [[id _] operations] (coordinator/transition! owner "retry" {:node_id (name id) :evidence "verified-provider-absence"}))
+      {:status "recovered" :nodes (vec (sort (map name (keys operations))))})
+     (finally (coordinator/release! owner))))))

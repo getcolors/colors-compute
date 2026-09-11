@@ -134,7 +134,7 @@
        (try
          (let [_ (private-file! directory "backend.tf.json" (json/generate-string (:config plan)))
                credential-path (private-file! directory "credentials.tfbackend.json" (json/generate-string credentials))
-               backend-environment (if (= "r2" (:provider-backend opts))
+               backend-environment (if (contains? #{"r2" "oci"} (:provider-backend opts))
                                      (dissoc environment "AWS_PROFILE" "AWS_DEFAULT_PROFILE") environment)
                env (merge (into {} (remove (fn [[key _]]
                                              (some #(str/starts-with? key %) ["TF_" "TOFU_" "COLORS_PAR_"])) backend-environment))

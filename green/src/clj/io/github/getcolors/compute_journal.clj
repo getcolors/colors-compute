@@ -2,6 +2,7 @@
   "AWS CLI conditional journal object transport. No retries or provider dispatch."
   (:require [cheshire.core :as json]
             [io.github.getcolors.compute-gcs :as gcs]
+            [io.github.getcolors.compute-oci :as oci]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [io.github.getcolors.compute :as compute]
@@ -53,7 +54,7 @@
                       (throw (ex-info "invalid backend credential" {})))
                     [option value])) (:bindings settings))))
 (defn- child-environment! [settings credentials directory environment]
-  (let [r2? (= "r2" (:kind settings))
+  (let [r2? (contains? #{"r2" "oci"} (:kind settings))
         cleaned (into {} (remove (fn [[key _]]
                                    (or (str/starts-with? key "COLORS_PAR_")
                                        (and r2? (str/starts-with? key "AWS_") (not= "AWS_CA_BUNDLE" key)))) environment))]
@@ -93,7 +94,7 @@
             (let [condition (:condition intent)
                   expected {:profile (:profile opts) :provider (:provider-compute opts)
                             :backend (cond-> (select-keys settings [:kind :bucket :region])
-                                       (= "r2" (:kind settings)) (assoc :endpoint (:endpoint settings)))}]
+                                       (contains? #{"r2" "oci"} (:kind settings)) (assoc :endpoint (:endpoint settings)))}]
               (when-not (and (exact? intent #{:condition :document})
                              (or (coordination/valid-document? (:document intent)) (lifecycle/valid-document? (:document intent)))
                              (= expected (get-in intent [:document :identity]))
@@ -115,7 +116,7 @@
                                      (or (get-in intent [:condition :if_match]) "*")]
                                     [body])
                                   ["--region" (:region settings) "--output" "json" "--no-cli-pager"]
-                                  (when (= "r2" (:kind settings)) ["--endpoint-url" (:endpoint settings)])))
+                                  (when (contains? #{"r2" "oci"} (:kind settings)) ["--endpoint-url" (:endpoint settings)])))
             _ (when (bound-secret? command credentials)
                 (throw (ex-info "backend credential in command" {})))
             result (runner command (str directory) child-env 120000)]
@@ -131,8 +132,36 @@
                    :else {:status "error"}))) credentials))
       (finally (cleanup! directory)))))
 
+(defn- oci-call-session [opts environment runner intent]
+  (let [settings (settings opts) key (:key settings)
+        request (oci/client opts environment runner)
+        secrets (select-keys environment ["COLORS_PAR_OCI_ACCESS_KEY_ID" "COLORS_PAR_OCI_SECRET_ACCESS_KEY"])
+        expected {:profile (:profile opts) :provider (:provider-compute opts)
+                  :backend (assoc (select-keys settings [:kind :bucket :region]) :endpoint (:endpoint settings))}]
+    (if (nil? intent)
+      (if-let [result (request "GET" (oci/object-path opts key) nil {} {})]
+        (let [document (:data result) etag (get-in result [:headers :etag])]
+          (when-not (and (map? document) (nonblank? etag) (not (bound-secret? result secrets))) (throw (ex-info "invalid OCI journal" {})))
+          (serialized document)
+          {:status "present" :document document :etag etag})
+        {:status "absent"})
+      (let [condition (:condition intent)]
+        (when-not (and (exact? intent #{:condition :document})
+                       (or (coordination/valid-document? (:document intent)) (lifecycle/valid-document? (:document intent)))
+                       (= expected (get-in intent [:document :identity]))
+                       (or (and (exact? condition #{:if_none_match}) (= "*" (:if_none_match condition)))
+                           (and (exact? condition #{:if_match}) (nonblank? (:if_match condition)))))
+          (throw (ex-info "invalid journal intention" {})))
+        (when (bound-secret? intent secrets) (throw (ex-info "backend credential in journal intention" {})))
+        (serialized (:document intent))
+        (let [result (request "PUT" (oci/object-path opts key) (:document intent) {}
+                              (assoc (if (:if_match condition) {:if-match (:if_match condition)} {:if-none-match "*"}) :content-type "application/json"))
+              etag (get-in result [:headers :etag])]
+          (cond (:conflict result) {:status "conflict"} (nonblank? etag) {:status "written" :etag etag} :else {:status "error"}))))))
+
 (defn- call-session [opts environment runner intent]
-  (if (not= "gcs" (:provider-backend opts)) (s3-call-session opts environment runner intent)
+  (if (not= "gcs" (:provider-backend opts))
+    ((if (= "oci" (:provider-backend opts)) oci-call-session s3-call-session) opts environment runner intent)
     (let [settings (settings opts) bucket (:bucket settings) key (:key settings)
           expected {:profile (:profile opts) :provider (:provider-compute opts) :backend (select-keys settings [:kind :bucket :region])}]
       (if (nil? intent)

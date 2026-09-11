@@ -70,12 +70,12 @@
          ;; Workflow options contain runtime callbacks; only backend identity
          ;; belongs in this private transport snapshot.
          opts (detached (select-keys opts [:profile :provider-compute :provider-backend
-                                            :s3-bucket :s3-region :r2-bucket :r2-endpoint :gcs-bucket :gcs-region :google-project]))
+                                            :oci-auth :oci-config-file-profile :oci-bucket :oci-region :oci-namespace :s3-bucket :s3-region :r2-bucket :r2-endpoint :gcs-bucket :gcs-region :google-project]))
          environment (json/parse-string (json/generate-string environment))
          backend (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))
          identity {:profile (:profile opts) :provider (:provider-compute opts)
                    :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket backend) :region (:region backend)}
-                              (= "r2" (:provider-backend opts)) (assoc :endpoint (get-in backend [:endpoints :s3])))}]
+                              (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in backend [:endpoints :s3])))}]
      (reduce-fn {:status "absent"} identity
                           {:type (str event-prefix "acquire") :run_id "validation" :write_id "validation-write" :target_etag nil})
      (->Coordinator (ReentrantLock.) (atom {:phase :new :attempted? false :observation nil :run-id nil :used-ids #{} :active {}})

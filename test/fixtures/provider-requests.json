@@ -908,7 +908,6 @@
           "data": {
             "digitalocean_vpc": {
               "network": {
-                "region": "nyc3",
                 "lifecycle": {
                   "postcondition": [
                     {
@@ -916,7 +915,8 @@
                       "error_message": "Regional discovery must return the default VPC."
                     }
                   ]
-                }
+                },
+                "region": "nyc3"
               }
             }
           },
@@ -2055,7 +2055,7 @@
                     "to_port": null
                   },
                   "peer:private": {
-                    "cidr": "10.42.0.0/16",
+                    "cidr": "private",
                     "direction": "INGRESS",
                     "from_port": 9093,
                     "protocol": "6",
@@ -2071,7 +2071,7 @@
                 },
                 "network_security_group_id": "${oci_core_network_security_group.network.id}",
                 "protocol": "${each.value.protocol}",
-                "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+                "source": "${each.value.direction == \"INGRESS\" ? (each.value.cidr == \"private\" ? data.oci_core_subnet.existing.cidr_block : each.value.cidr) : null}",
                 "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
                 "stateless": false
               }
@@ -2101,7 +2101,7 @@
             "to_port": null
           },
           "peer:private": {
-            "cidr": "10.42.0.0/16",
+            "cidr": "private",
             "direction": "INGRESS",
             "from_port": 9093,
             "protocol": "6",

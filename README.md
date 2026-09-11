@@ -161,3 +161,12 @@ generations before deleting the bucket. External buckets are never deleted.
 OpenTofu uses Google Application Default Credentials. Journal and bucket
 operations use the active `gcloud` account, which must have access to the same
 project. Enable the Cloud Storage API before bootstrapping the bucket.
+
+## OCI state and bucket lifecycle
+
+Select `provider-backend=oci` for an OCI-only deployment. The library creates
+and deletes managed state buckets with the native OCI API. OpenTofu state uses
+OCI's S3 compatibility endpoint, while journal compare-and-swap writes use the
+native API because OCI's compatibility API accepted stale `If-Match` writes in
+a live test. See [managed OCI backend buckets](contracts/managed-oci-backend.md)
+for configuration, ownership checks, cleanup and explicit failed-node recovery.

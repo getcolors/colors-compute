@@ -75,6 +75,8 @@ def _rules(format_name, request, network, name):
             cidr = network if private else source
             if private and format_name == 'digitalocean':
                 cidr = None  # Template binds discovered data source, never a fixture CIDR.
+            elif private and format_name == 'oci':
+                cidr = 'private'
             elif private and cidr is None:
                 _fail('missing compute network CIDR for private ingress')
             expanded.append((rule['id'] + ':' + source, rule, cidr, private))

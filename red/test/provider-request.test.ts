@@ -48,3 +48,11 @@ test('external key references reject null and nonpositive IDs',()=>{
   }
   const args=sample('vultr-node');args[2].key={mode:'external',ids:[1]};expect(execute(args).inputs.ssh_key_ids).toEqual([1]);
 });
+
+test('OCI private ingress uses discovered subnet without a configured CIDR',()=>{
+  const args=sample('oci-shared');args[2].network={mode:'discovered'};args[2].security.private_filter=true;
+  const result=execute(args);const peer=result.inputs.rules['peer:private'];
+  expect(peer.cidr).toBe('private');
+  expect([peer.from_port,peer.to_port]).toEqual([9093,9094]);
+  expect(result.inputs.rules['ssh:192.0.2.1/32'].cidr).toBe('192.0.2.1/32');
+});

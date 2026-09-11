@@ -49,5 +49,7 @@ __all__.append("power_deployment")
 from .managed_backend import bootstrap_backend, finalize_backend
 __all__ += ["bootstrap_backend", "finalize_backend"]
 
-from .recovery import recover_absent_aws_shared
+from .recovery import recover_absent_aws_shared, recover_absent_oci_nodes
 __all__.append("recover_absent_aws_shared")
+
+__all__.append("recover_absent_oci_nodes")

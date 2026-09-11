@@ -71,6 +71,7 @@ function rules(format:string,request:Map,network:string|null,name:string):Map {
     for(const source of [...rule.sources].sort()) {
     const privateSource=source==='private';let range=privateSource?network:source;
     if(privateSource&&format==='digitalocean')range=null;
+    else if(privateSource&&format==='oci')range='private';
     else if(privateSource&&range===null)fail('missing compute network CIDR for private ingress');
     expanded.push([rule.id+':'+source,rule,range,privateSource]);
   }}

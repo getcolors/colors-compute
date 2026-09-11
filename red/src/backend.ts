@@ -70,7 +70,7 @@ export async function readStateDecoded(
     for (const [key,value] of Object.entries(environment)) {
       if (value !== undefined && !/^(TF_|TOFU_|COLORS_PAR_)/.test(key)) env[key] = value;
     }
-    if (opts['provider-backend'] === 'r2') {
+    if (['r2','oci'].includes(opts['provider-backend'])) {
       delete env.AWS_PROFILE;
       delete env.AWS_DEFAULT_PROFILE;
     }

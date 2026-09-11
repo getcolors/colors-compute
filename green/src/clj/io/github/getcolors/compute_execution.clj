@@ -38,7 +38,7 @@
          (let [body (journal/private-file! directory "state.json" "")
                argv (into ["aws" "s3api" "get-object" "--bucket" (:bucket settings) "--key" key body
                            "--region" (:region settings) "--output" "json" "--no-cli-pager"]
-                          (when (= "r2" (:kind settings)) ["--endpoint-url" (:endpoint settings)]))]
+                          (when (contains? #{"r2" "oci"} (:kind settings)) ["--endpoint-url" (:endpoint settings)]))]
            (require-valid (not (journal/bound-secret? argv credentials)))
            (let [result (runner argv (str directory) env 120000)]
              (if (= 0 (:exit result))

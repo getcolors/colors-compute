@@ -37,7 +37,7 @@ def backend_plan(opts: dict, state_key: str) -> dict:
     backend = opts.get("provider-backend")
     backends = registry()["backend"]
     if not isinstance(backend, str) or backend not in backends:
-        raise ValueError(":provider-backend must be one of r2, s3, gcs")
+        raise ValueError(":provider-backend must be one of gcs, oci, r2, s3")
     for key in sorted(backends[backend]["required"]):
         if _missing(opts.get(key)):
             raise ValueError(f":{key} is required")
@@ -46,6 +46,13 @@ def backend_plan(opts: dict, state_key: str) -> dict:
         for part in state_key.split("/")
     ):
         raise ValueError("invalid state key")
+    if backend == 'oci':
+        return {'config': {'terraform': {'backend': {'s3': {
+            'bucket': opts['oci-bucket'], 'region': opts['oci-region'], 'key': state_key, 'use_lockfile': True,
+            'endpoints': {'s3': f"https://{opts['oci-namespace']}.compat.objectstorage.{opts['oci-region']}.oraclecloud.com"},
+            'use_path_style': True, 'skip_credentials_validation': True, 'skip_metadata_api_check': True,
+            'skip_region_validation': True, 'skip_requesting_account_id': True, 'skip_s3_checksum': True}}}},
+            'credential_bindings': {'COLORS_PAR_OCI_ACCESS_KEY_ID': 'access_key', 'COLORS_PAR_OCI_SECRET_ACCESS_KEY': 'secret_key'}, 'environment': {}}
     if backend == 'gcs':
         return {'config': {'terraform': {'backend': {'gcs': {'bucket': opts['gcs-bucket'], 'prefix': state_key}}}},
                 'credential_bindings': {}, 'environment': {}}

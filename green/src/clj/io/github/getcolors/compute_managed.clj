@@ -83,7 +83,7 @@
   (let [backend (compute/backend-settings opts (str (:profile opts) "/compute/managed-kubernetes.tfstate"))]
     {:profile (:profile opts) :provider (:provider-compute opts)
      :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket backend) :region (:region backend)}
-                (= "r2" (:provider-backend opts)) (assoc :endpoint (get-in backend [:endpoints :s3])))}))
+                (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in backend [:endpoints :s3])))}))
 (defn- make-coordinator
   ([opts env] (make-coordinator opts env nil))
   ([opts env read] (coordinator/coordinator opts env read nil nil {:event-prefix "managed/" :reducer managed-journal/managed-coordination})))

@@ -1,8 +1,8 @@
 # OCI compute render contract
 
 These declarative library templates provide shared network-security-group
-ownership and one OCI instance per node state. They do not implement lifecycle
-execution, remote state, or package migration. The provider is pinned to
+ownership and one OCI instance per node state. The shared library executes
+them under its deployment journal and managed backend lifecycle. The provider is pinned to
 `oracle/oci` 8.4.0 and selects the operator's ambient `~/.oci/config` profile
 through `config_file_profile`. No credential values or private-key paths occur
 in the templates.
@@ -15,7 +15,10 @@ It creates `oci_core_network_security_group.network` and stable-keyed
 `oci_core_network_security_group_security_rule.rules` resources. It neither
 creates nor owns the discovered subnet or VCN. Shared outputs return the subnet,
 VCN, and NSG references. Destroy removes only the owned rules and NSG after all
-dependent nodes are gone.
+dependent nodes are gone. Private-source ingress uses the discovered subnet's
+actual CIDR. The request contains the literal `private`; the OCI template alone
+resolves it to `data.oci_core_subnet.existing.cidr_block`. Existing subnet
+security lists also apply, so deployments must audit their inherited rules.
 
 Render `node.tf.json.template` once per node. It owns exactly
 `oci_core_instance.node`, with a flexible shape, configured boot disk, public

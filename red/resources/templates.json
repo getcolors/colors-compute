@@ -3483,7 +3483,7 @@
               "for_each": "{{rules}}",
               "network_security_group_id": "${oci_core_network_security_group.network.id}",
               "protocol": "${each.value.protocol}",
-              "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+              "source": "${each.value.direction == \"INGRESS\" ? (each.value.cidr == \"private\" ? data.oci_core_subnet.existing.cidr_block : each.value.cidr) : null}",
               "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
               "stateless": false
             }
@@ -3563,7 +3563,7 @@
               "for_each": "{{rules}}",
               "network_security_group_id": "${oci_core_network_security_group.network.id}",
               "protocol": "${each.value.protocol}",
-              "source": "${each.value.direction == \"INGRESS\" ? each.value.cidr : null}",
+              "source": "${each.value.direction == \"INGRESS\" ? (each.value.cidr == \"private\" ? data.oci_core_subnet.existing.cidr_block : each.value.cidr) : null}",
               "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
               "stateless": false
             }

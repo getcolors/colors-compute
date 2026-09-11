@@ -58,7 +58,7 @@
   ([opts environment]
   (let [content (atom nil)
         credential-keys (concat (keys (get-in compute/registry [:compute (keyword (:provider-compute opts)) :tofu-env]))
-                     (when (= "r2" (:provider-backend opts)) [:r2-access-key-id :r2-secret-access-key]))
+                     (get-in compute/registry [:backend (keyword (:provider-backend opts)) :secrets]))
         secrets (filter #(and (string? %) (seq %)) (map #(get environment (str "COLORS_PAR_" (str/replace (str/upper-case (name %)) "-" "_"))) credential-keys))]
     {:decode
      (fn [text]

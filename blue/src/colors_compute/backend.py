@@ -88,7 +88,7 @@ async def _read_state(opts, state_key, environment=None, runner=None, include_ou
             credentials[setting] = value
         child_env = {key: value for key, value in source.items()
                      if not key.startswith(("TF_", "TOFU_", "COLORS_PAR_"))}
-        if opts.get("provider-backend") == "r2":
+        if opts.get("provider-backend") in ("r2", "oci"):
             child_env.pop("AWS_PROFILE", None)
             child_env.pop("AWS_DEFAULT_PROFILE", None)
         execute = runner or _run

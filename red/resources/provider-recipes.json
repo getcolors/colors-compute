@@ -924,7 +924,7 @@
       },
       "ssh_key_id": 12345
     },
-    "private_filter": false,
+    "private_filter": true,
     "registration_external": false,
     "role_options": {
       "image": "oci-image-id",

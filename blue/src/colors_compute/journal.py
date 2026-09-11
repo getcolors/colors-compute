@@ -40,7 +40,7 @@ def _settings(opts):
 
 def _identity(opts, settings):
     backend = {'kind': opts['provider-backend'], 'bucket': settings['bucket'], 'region': settings['region']}
-    if backend['kind'] == 'r2':
+    if backend['kind'] in ('r2', 'oci'):
         backend['endpoint'] = settings['endpoints']['s3']
     return {'profile': opts['profile'], 'provider': opts.get('provider-compute'), 'backend': backend}
 
@@ -60,12 +60,14 @@ def _etag(output):
 
 
 def _environment(opts, source, path):
-    is_r2 = opts['provider-backend'] == 'r2'
+    is_r2 = opts['provider-backend'] in ('r2', 'oci')
     child = {key: value for key, value in source.items()
              if not key.startswith('COLORS_PAR_')
              and (not is_r2 or not key.startswith('AWS_') or key == 'AWS_CA_BUNDLE')}
     if is_r2:
-        credentials = [source.get('COLORS_PAR_R2_ACCESS_KEY_ID'), source.get('COLORS_PAR_R2_SECRET_ACCESS_KEY')]
+        credentials = [source.get(f"COLORS_PAR_{opts['provider-backend'].upper()}_ACCESS_KEY_ID"), source.get(f"COLORS_PAR_{opts['provider-backend'].upper()}_SECRET_ACCESS_KEY")]
+        if opts['provider-backend'] == 'oci':
+            credentials = [v for v in credentials if v]
         if any(not isinstance(value, str) or _missing(value) or '\n' in value or '\r' in value for value in credentials):
             raise ValueError('invalid credentials')
         credentials_file, config_file = path / 'credentials', path / 'config'
@@ -95,11 +97,32 @@ async def _session(opts, operation, intent, environment, runner):
             if len(payload) > MAX_DOCUMENT_BYTES:
                 return {'status': 'error'}
         source = dict(os.environ if environment is None else environment)
-        credentials = [source.get(name) for name in ('COLORS_PAR_R2_ACCESS_KEY_ID', 'COLORS_PAR_R2_SECRET_ACCESS_KEY')] if opts['provider-backend'] == 'r2' else []
+        credentials = [source.get(name) for name in (f"COLORS_PAR_{opts['provider-backend'].upper()}_ACCESS_KEY_ID", f"COLORS_PAR_{opts['provider-backend'].upper()}_SECRET_ACCESS_KEY")] if opts['provider-backend'] in ('r2', 'oci') else []
+        if opts['provider-backend'] == 'oci':
+            credentials = [v for v in credentials if v]
         if any(not isinstance(value, str) or _missing(value) or '\n' in value or '\r' in value for value in credentials):
             return {'status': 'error'}
         if payload is not None and _contains_secret(intent, credentials):
             return {'status': 'error'}
+        if opts['provider-backend'] == 'oci':
+            from .oci import oci_client, object_path
+            request = await oci_client(opts, source, runner)
+            if operation == 'GetObject':
+                observed = await request('GET', object_path(opts, settings['key']))
+                if observed is None:
+                    return {'status': 'absent'}
+                document, tag = observed.get('data'), observed.get('headers', {}).get('etag')
+                if not isinstance(document, dict) or not _nonblank(tag) or len(json.dumps(document).encode()) > MAX_DOCUMENT_BYTES or _contains_secret(observed, credentials):
+                    return {'status': 'error'}
+                return {'status': 'present', 'document': document, 'etag': tag}
+            condition = intent['condition']
+            headers = {'if-match': condition['if_match']} if 'if_match' in condition else {'if-none-match': '*'}
+            headers['content-type'] = 'application/json'
+            written = await request('PUT', object_path(opts, settings['key']), intent['document'], headers=headers)
+            if written and written.get('conflict'):
+                return {'status': 'conflict'}
+            tag = written.get('headers', {}).get('etag') if written else None
+            return {'status': 'written', 'etag': tag} if _nonblank(tag) else {'status': 'error'}
         if opts['provider-backend'] == 'gcs':
             from .gcs import gcs_client, gcs_get, gcs_put
             request = await gcs_client(source, runner)
@@ -134,7 +157,7 @@ async def _session(opts, operation, intent, environment, runner):
                 else:
                     command.extend(['--if-none-match', '*'])
             command.extend(['--region', settings['region'], '--output', 'json', '--no-cli-pager'])
-            if opts['provider-backend'] == 'r2':
+            if opts['provider-backend'] in ('r2', 'oci'):
                 command.extend(['--endpoint-url', settings['endpoints']['s3']])
             if _contains_secret(command, credentials):
                 return {'status': 'error'}

@@ -45,8 +45,8 @@ async def state_presence(opts, state_key, environment=None, runner=None, legacy=
             _write(body, b'')
             command = ['aws', 's3api', 'get-object', '--bucket', settings['bucket'], '--key', state_key,
                        str(body), '--region', settings['region'], '--output', 'json', '--no-cli-pager']
-            secrets = [source[key] for key in ('COLORS_PAR_R2_ACCESS_KEY_ID', 'COLORS_PAR_R2_SECRET_ACCESS_KEY')] if opts['provider-backend'] == 'r2' else []
-            if opts['provider-backend'] == 'r2':
+            secrets = [source[key] for key in (f"COLORS_PAR_{opts['provider-backend'].upper()}_ACCESS_KEY_ID", f"COLORS_PAR_{opts['provider-backend'].upper()}_SECRET_ACCESS_KEY")] if opts['provider-backend'] in ('r2', 'oci') else []
+            if opts['provider-backend'] in ('r2', 'oci'):
                 command.extend(['--endpoint-url', settings['endpoints']['s3']])
             if _contains_secret(command, secrets):
                 return {'status': 'error'}

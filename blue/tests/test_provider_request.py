@@ -139,3 +139,15 @@ def test_static_private_address_capability_is_never_silently_ignored():
     case['request']['network']['private_ip'] = '10.42.1.10'
     with pytest.raises(ValueError, match='^unsupported compute static private address$'):
         run(case)
+
+
+def test_oci_private_ingress_uses_discovered_subnet():
+    case = sample('oci-shared')
+    case['request']['network'] = {'mode': 'discovered'}
+    case['request']['security']['private_filter'] = True
+    result = run(case)
+    peer = result['inputs']['rules']['peer:private']
+    assert peer['cidr'] == 'private'
+    assert peer['from_port'] == 9093 and peer['to_port'] == 9094
+    assert result['inputs']['rules']['ssh:192.0.2.1/32']['cidr'] == '192.0.2.1/32'
+    assert 'existing' in result['documents']['shared.tf.json']['data']['oci_core_subnet']

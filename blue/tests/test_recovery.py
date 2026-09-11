@@ -36,3 +36,27 @@ async def test_recovery_refuses_uncertain_or_surviving_resources(case):
     else:runner.error=True
     with pytest.raises(ValueError):await recover_absent_aws_shared(OPTS,attempt,{},runner,lambda *a,**kw:owner)
     assert owner.released and not owner.transitions
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('case', ['empty', 'absent', 'active-state', 'instance', 'boot-volume', 'terminating', 'wrong-attempt', 'denied'])
+async def test_oci_recovery_matches_operation_and_audits_provider(case):
+    from colors_compute.recovery import recover_absent_oci_nodes
+    opts = {'provider-compute': 'oci', 'provider-backend': 'oci', 'profile': 'demo', 'oci-region': 'eu-frankfurt-1', 'oci-namespace': 'namespace', 'oci-bucket': 'states', 'oci-compartment-id': 'ocid1.compartment.example', 'oci-availability-domain': 'ad1'}
+    owner = Owner(); owner.doc['shared'] = {'phase': 'ready'}
+    owner.doc['nodes'] = {'0': {'phase': 'failed', 'operation': 'create', 'operation_id': 'attempt', 'state_key': 'demo/compute/nodes/0.tfstate'}}
+    async def runner(args, cwd, env, timeout):
+        if args[1] == 'raw-request':
+            state = {'version': 4, 'serial': 1, 'lineage': 'line', 'resources': [{}] if case == 'active-state' else [], 'outputs': {}}
+            return ProcessResult(0, json.dumps({'status': '404 Not Found' if case == 'absent' else '200 OK', 'data': state, 'headers': {}}))
+        assert '--all' in args
+        if case == 'denied': return ProcessResult(1, '')
+        resources = [{'display-name': 'Boot volume of instance demo-0' if case == 'boot-volume' else 'demo-0', 'lifecycle-state': 'TERMINATING' if case == 'terminating' else 'RUNNING'}] if case in ('instance', 'boot-volume', 'terminating') else []
+        return ProcessResult(0, json.dumps({'data': resources}))
+    operations = {'0': 'other' if case == 'wrong-attempt' else 'attempt'}
+    if case in ('empty', 'absent'):
+        assert await recover_absent_oci_nodes(opts, operations, {}, runner, lambda *a, **kw: owner) == {'status': 'recovered', 'nodes': ['0']}
+        assert owner.transitions == [(('retry',), {'node_id': '0', 'evidence': 'verified-provider-absence'})]
+    else:
+        with pytest.raises(ValueError): await recover_absent_oci_nodes(opts, operations, {}, runner, lambda *a, **kw: owner)
+        assert not owner.transitions
+    assert owner.released

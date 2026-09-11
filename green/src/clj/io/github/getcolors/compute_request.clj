@@ -90,7 +90,9 @@
                                    [(str (:id rule) ":peer:" (clojure.core/name id)) rule (str (:vpc_ip peer) "/32") false])
                                  (for [source (sort (:sources rule))]
                                    (let [private? (= "private" source)
-                                         range (if (and private? (= "digitalocean" format-name)) nil (if private? network source))]
+                                         range (cond (and private? (= "digitalocean" format-name)) nil
+                                                     (and private? (= "oci" format-name)) "private"
+                                                     private? network :else source)]
                                      (when (and private? (not= "digitalocean" format-name) (nil? range)) (fail "missing compute network CIDR for private ingress"))
                                      [(str (:id rule) ":" source) rule range private?]))))
                              (sort-by :id (get-in request [:security :ingress]))))

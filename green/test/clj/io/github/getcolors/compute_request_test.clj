@@ -64,3 +64,12 @@
         result (r/provider-request opts "shared" request)]
     (is (= "v6" (get-in result [:inputs :ingress "ssh:2606:4700::/32" :ip_type])))
     (is (thrown? Exception (r/provider-request opts "shared" (assoc-in request [:security :ingress 0 :sources] ["2606:4700:0:0::/32"]))))))
+
+(deftest oci-private-ingress-uses-discovered-subnet
+  (let [[opts stage request shared] (:args (first (filter #(= "oci-shared" (:name %))
+                                                (json/parse-string (slurp "../test/fixtures/provider-requests.json") true))))
+        request (-> request (assoc :network {:mode "discovered"}) (assoc-in [:security :private_filter] true))
+        result (r/provider-request opts stage request shared)]
+    (is (= "private" (get-in result [:inputs :rules "peer:private" :cidr])))
+    (is (= 9093 (get-in result [:inputs :rules "peer:private" :from_port])))
+    (is (= "192.0.2.1/32" (get-in result [:inputs :rules "ssh:192.0.2.1/32" :cidr])))))

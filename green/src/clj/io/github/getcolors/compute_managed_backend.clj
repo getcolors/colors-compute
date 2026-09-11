@@ -2,6 +2,7 @@
   "Owned S3 bootstrap and disposal after the entire deployment retires."
   (:require [cheshire.core :as json]
             [io.github.getcolors.compute-managed-gcs-backend :as gcs]
+            [io.github.getcolors.compute-managed-oci-backend :as oci]
             [clojure.string :as str]
             [io.github.getcolors.compute-runtime :as runtime]
             [io.github.getcolors.compute-coordinator :as coordinator])
@@ -94,8 +95,8 @@
                      (finally (with-open [paths (Files/walk directory (make-array java.nio.file.FileVisitOption 0))]
                                 (doseq [path (reverse (sort-by #(.getNameCount ^Path %) (iterator-seq (.iterator paths))))] (Files/deleteIfExists ^Path path)))))))))))))
 (defn- lifecycle [opts action environment runner factory]
-  (if (= "gcs" (:provider-backend opts))
-    (gcs/lifecycle opts action environment runner factory)
+  (if (contains? #{"gcs" "oci"} (:provider-backend opts))
+    ((if (= "oci" (:provider-backend opts)) oci/lifecycle gcs/lifecycle) opts action environment runner factory)
     (s3-lifecycle opts action environment runner factory)))
 (defn bootstrap-backend!
   ([opts] (bootstrap-backend! opts (into {} (System/getenv))))

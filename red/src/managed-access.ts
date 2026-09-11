@@ -18,7 +18,7 @@ export function publicParams(value:any,provider:string):Map {
 export class AccessDecoder {
  private content:Uint8Array|null=null;
  private secrets:string[];
- constructor(private opts:Map,environment:Record<string,string|undefined>=process.env){const keys=[...(registry.compute as Map)[opts["provider-compute"]].secrets,...(opts["provider-backend"]==="r2"?["r2-access-key-id","r2-secret-access-key"]:[])];this.secrets=keys.map(k=>environment["COLORS_PAR_"+k.toUpperCase().replaceAll("-","_")]).filter((v):v is string=>typeof v==="string"&&!!v);}
+ constructor(private opts:Map,environment:Record<string,string|undefined>=process.env){const keys=[...(registry.compute as Map)[opts["provider-compute"]].secrets,...((registry.backend as Map)[opts["provider-backend"]]?.secrets??[])];this.secrets=keys.map(k=>environment["COLORS_PAR_"+k.toUpperCase().replaceAll("-","_")]).filter((v):v is string=>typeof v==="string"&&!!v);}
  decode=(text:string):Map=>{
   const {document,params}=parseStateEnvelope(text);const publicValue=publicParams(params,this.opts['provider-compute']),outputs=document.outputs;demand(Object.keys(outputs).length===2&&Object.hasOwn(outputs,'params')&&Object.hasOwn(outputs,'kubeconfig_b64')&&(outputs.params.sensitive??false)===false);const entry=outputs.kubeconfig_b64;demand(obj(entry)&&entry.sensitive===true&&typeof entry.value==='string'&&entry.value.length<=2796204);
   const raw=Buffer.from(entry.value,'base64');demand(raw.toString('base64')===entry.value&&raw.length>0&&raw.length<=2097152);const content=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(raw);demand(!content.includes('\0')&&!content.startsWith('\ufeff'));

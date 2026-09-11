@@ -14,7 +14,7 @@ export function identityValid(value: unknown): value is Map {
   const backend=value.backend;
   if (!fields(backend,['kind','bucket','region'],['endpoint']) || !match(backend.bucket,/^[a-z0-9][a-z0-9.-]{0,62}$/) || !safe(backend.region)) return false;
   if ((backend.kind === 's3' || backend.kind === 'gcs')) return !Object.hasOwn(backend,'endpoint');
-  return backend.kind === 'r2' && backend.region === 'auto' && Object.hasOwn(backend,'endpoint') && match(backend.endpoint,/^https:\/\/[a-zA-Z0-9.-]+(:[0-9]{1,5})?\/?$/);
+  return (backend.kind === 'oci' || (backend.kind === 'r2' && backend.region === 'auto')) && Object.hasOwn(backend,'endpoint') && match(backend.endpoint,/^https:\/\/[a-zA-Z0-9.-]+(:[0-9]{1,5})?\/?$/);
 }
 function topologyValid(value: unknown): value is Map[] {
   if (!Array.isArray(value) || !value.length || value.length > 1000) return false;

@@ -34,11 +34,11 @@ def _identity(value):
     if not isinstance(backend, dict):
         return False
     kind = backend.get('kind')
-    if kind not in ('r2', 's3', 'gcs') or not _shape(backend, ('kind', 'bucket', 'region', 'endpoint') if kind == 'r2' else ('kind', 'bucket', 'region')):
+    if kind not in ('r2', 's3', 'gcs', 'oci') or not _shape(backend, ('kind', 'bucket', 'region', 'endpoint') if kind in ('r2', 'oci') else ('kind', 'bucket', 'region')):
         return False
     if not isinstance(backend['bucket'], str) or not re.fullmatch(r'[a-z0-9][a-z0-9.-]{0,62}', backend['bucket']) or not _safe(backend['region']):
         return False
-    return kind in ('s3', 'gcs') or (backend['region'] == 'auto' and isinstance(backend['endpoint'], str)
+    return kind in ('s3', 'gcs') or ((kind == 'oci' or backend['region'] == 'auto') and isinstance(backend['endpoint'], str)
                            and bool(re.fullmatch(r'https://[a-zA-Z0-9.-]+(:[0-9]{1,5})?/?', backend['endpoint'])))
 
 
