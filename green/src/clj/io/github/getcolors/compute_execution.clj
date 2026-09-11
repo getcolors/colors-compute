@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-execution
   "Internal guarded execution: caller must first commit a schema-2 attempt."
   (:require [cheshire.core :as json]
+            [io.github.getcolors.compute-gcs :as gcs]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [io.github.getcolors.compute :as compute]
@@ -28,7 +29,11 @@
      (require-valid (and (map? opts) (or (state-key? opts key)
                                         (and (true? legacy) (safe? (:profile opts)) (string? key)
                                              (re-matches (re-pattern (str (java.util.regex.Pattern/quote (:profile opts)) "/[A-Za-z0-9][A-Za-z0-9_-]{0,62}\\.tfstate")) key)))))
-     (journal/backend-session opts environment
+     (if (= "gcs" (:provider-backend opts))
+       (do (compute/backend-plan opts key)
+           (let [result ((gcs/client environment runner) "GET" (gcs/object-path (:gcs-bucket opts) (str key "/default.tfstate")) nil {})]
+             {:status (cond (nil? result) "absent" (:generation result) "present" :else "error")}))
+       (journal/backend-session opts environment
        (fn [directory env credentials settings]
          (let [body (journal/private-file! directory "state.json" "")
                argv (into ["aws" "s3api" "get-object" "--bucket" (:bucket settings) "--key" key body
@@ -39,7 +44,7 @@
              (if (= 0 (:exit result))
                (let [etag (:ETag (journal/parse-one (:out result)))]
                  (if (and (nonblank? etag) (not (journal/bound-secret? etag credentials))) {:status "present"} {:status "error"}))
-               {:status (if (= "NoSuchKey" (journal/service-code result "GetObject")) "absent" "error")})))))
+               {:status (if (= "NoSuchKey" (journal/service-code result "GetObject")) "absent" "error")}))))))
      (catch InterruptedException error (throw error))
      (catch Exception _ {:status "error"}))))
 (defn- virgin-state? [output]

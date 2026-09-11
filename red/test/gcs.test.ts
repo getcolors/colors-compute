@@ -42,3 +42,8 @@ test('managed GCS teardown deletes every generation after retirement',async()=>{
  return Response.json({labels:{colors_profile:'demo',colors_project:'demo-project',colors_purpose:'managed-backend'},location:'US-CENTRAL1',metageneration:'1'});}) as any;
  try{expect(await managedGcsBackend(opts,'finalize',{},runner,()=>({acquire:async()=>{},snapshot:async()=>({document:{status:'retired'}}),release:async()=>{}}))).toEqual({status:'destroyed'});expect(removed).toEqual(['demo/compute/shared.tfstate/default.tfstate:1','demo/compute/shared.tfstate/default.tfstate:2','_colors/backend-owner.json:3','bucket']);}finally{globalThis.fetch=original;}
 });
+test('GCS state presence uses the OpenTofu workspace object',async()=>{
+ const {statePresence}=await import('../src/execution.ts');const original=globalThis.fetch;
+ globalThis.fetch=(async(input:any)=>{expect(decodeURIComponent(new URL(input).pathname)).toEndWith('/o/demo/compute/shared.tfstate/default.tfstate');return Response.json({generation:'22'});}) as any;
+ try{expect(await statePresence(opts,'demo/compute/shared.tfstate',{},runner)).toEqual({status:'present'});}finally{globalThis.fetch=original;}
+});

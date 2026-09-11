@@ -30,3 +30,9 @@
    (is (= {:status "destroyed"} (backend/lifecycle opts "finalize" {} nil (fn [& _] {}))))
    (is (= 4 (count @deleted)))
    (is (= "storage/v1/b/demo-states" (ffirst (reverse @deleted)))))))
+(deftest state-presence
+ (require 'io.github.getcolors.compute-execution)
+ (with-redefs [gcs/client (fn [& _] (fn [method path body query]
+                                   (is (= "storage/v1/b/demo-states/o/demo%2Fcompute%2Fshared.tfstate%2Fdefault.tfstate" path))
+                                   {:generation "22"}))]
+  (is (= {:status "present"} ((requiring-resolve 'io.github.getcolors.compute-execution/state-presence) opts "demo/compute/shared.tfstate" {} nil)))))

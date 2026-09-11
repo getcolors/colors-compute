@@ -1,3 +1,4 @@
+import {gcsClient,objectPath} from './gcs.ts';
 import {chmodSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -21,6 +22,7 @@ function stateKey(opts:Map,key:unknown):boolean {
 }
 export async function statePresence(opts:Map,key:string,environment:Env=process.env,runner:BackendRunner=executeBackendCommand,legacy=false):Promise<{status:'present'|'absent'|'error'}> {
   if(!object(opts)||!(stateKey(opts,key)||(legacy===true&&safe(opts.profile)&&typeof key==='string'&&key.startsWith(opts.profile+'/')&&key.endsWith('.tfstate')&&safe(key.slice(opts.profile.length+1,-8)))))return {status:'error'};
+  if(opts['provider-backend']==='gcs'){try{backend_plan(opts,key);const result=await (await gcsClient(environment,runner))('GET',objectPath(opts['gcs-bucket'],key+'/default.tfstate'));return {status:result===null?'absent':result.generation?'present':'error'};}catch{return {status:'error'};}}
   return session(opts,environment,async(directory,env,secrets,config)=>{
     const body=join(directory,'state.json');writePrivate(body,'');
     const args=['aws','s3api','get-object','--bucket',config.bucket,'--key',key,body,...commonArgs(config)];
