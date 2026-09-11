@@ -9,7 +9,7 @@ from colors_compute.managed_backend import bootstrap_backend, finalize_backend
 from colors_compute.oci import oci_client
 from colors_compute.execution import state_presence
 
-OPTS = {'provider-backend': 'oci', 'provider-compute': 'oci', 'oci-bucket': 'demo-states',
+OPTS = {'oci-ocpus': 1, 'provider-backend': 'oci', 'provider-compute': 'oci', 'oci-bucket': 'demo-states',
         'oci-region': 'eu-frankfurt-1', 'oci-namespace': 'namespace1', 'oci-compartment-id': 'ocid1.compartment.example',
         'profile': 'demo', 'oci-bucket-mode': 'managed', 'compute-prevent-destroy': False}
 
@@ -145,3 +145,18 @@ async def test_version_pages_and_resume_old_marker_after_partial_purge(monkeypat
     def forbidden(*args, **kwargs): raise AssertionError('retired journal was already purged')
     assert await finalize_backend(OPTS, coordinator_factory=forbidden) == {'status': 'destroyed'}
     assert api.deleted == [('demo/old.tfstate', '1'), ('_colors/backend-owner.json', '2'), (None, None)]
+
+@pytest.mark.parametrize('domains', [[], ['ad1', 'ad1'], ['${injected}'], 'ad1'])
+def test_invalid_domain_vectors(domains):
+    from colors_compute.oci import place_node
+    with pytest.raises(ValueError, match='invalid OCI availability domains'):
+        place_node({**OPTS, 'oci-availability-domains': domains}, 'node', '0')
+
+
+def test_domain_selection_is_stable_and_shared_is_unchanged():
+    from colors_compute.oci import place_node
+    opts = {**OPTS, 'oci-availability-domain': 'legacy', 'oci-availability-domains': ['ad1', 'ad2', 'ad3']}
+    assert place_node(opts, 'node', 'broker-2')['oci-availability-domain'] == 'ad3'
+    assert place_node(opts, 'node', '3')['oci-availability-domain'] == 'ad1'
+    assert place_node(opts, 'shared', 'shared') == opts
+    assert opts['oci-availability-domain'] == 'legacy'

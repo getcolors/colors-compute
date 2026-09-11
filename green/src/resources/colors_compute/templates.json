@@ -3312,7 +3312,8 @@
               "shape": "{{shape}}",
               "shape_config": {
                 "memory_in_gbs": "{{memory_in_gbs}}",
-                "ocpus": "{{ocpus}}"
+                "ocpus": "{{ocpus}}",
+                "vcpus": "{{vcpus}}"
               },
               "source_details": {
                 "boot_volume_size_in_gbs": "{{boot_volume_size_in_gbs}}",
@@ -3398,7 +3399,8 @@
               "shape": "{{shape}}",
               "shape_config": {
                 "memory_in_gbs": "{{memory_in_gbs}}",
-                "ocpus": "{{ocpus}}"
+                "ocpus": "{{ocpus}}",
+                "vcpus": "{{vcpus}}"
               },
               "source_details": {
                 "boot_volume_size_in_gbs": "{{boot_volume_size_in_gbs}}",

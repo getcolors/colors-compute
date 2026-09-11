@@ -25,7 +25,7 @@ export async function recover_absent_aws_shared(opts:Map,operationId:string,envi
 
 /** Explicit OCI retry after empty state and native resource absence checks. */
 export async function recover_absent_oci_nodes(opts:Map,operations:Map,environment:Map=process.env,runner:BackendRunner=executeBackendCommand,factory?:any){
- const {ociClient,objectPath}=await import('./oci.ts');const {parseStateEnvelope}=await import('./backend.ts');
+ const {ociClient,objectPath,availabilityDomains}=await import('./oci.ts');const {parseStateEnvelope}=await import('./backend.ts');
  if(opts['provider-compute']!=='oci'||opts['provider-backend']!=='oci'||!operations||Array.isArray(operations)||typeof operations!=='object'||!Object.keys(operations).length)throw Error('recovery requires OCI node operation IDs');
  const owner=factory?factory(opts,{environment,eventPrefix:'lifecycle/'}):new Coordinator(opts,{environment,eventPrefix:'lifecycle/'});
  await owner.acquire();try{
@@ -37,11 +37,14 @@ export async function recover_absent_oci_nodes(opts:Map,operations:Map,environme
    const observed=await request('GET',objectPath(opts,record.state_key));
    if(observed!==null){const {document}=parseStateEnvelope(JSON.stringify(observed.data));if(document.resources.length||Object.keys(document.outputs).length)throw Error('recovery requires absent or empty node state');}
   }
-  const env=Object.fromEntries(Object.entries(environment).filter(([k,v])=>typeof v==='string'&&!/^(COLORS_PAR_|TF_|TOFU_)/.test(k))) as Record<string,string>;
-  const common=['--auth',(opts['oci-auth']??'SecurityToken')==='SecurityToken'?'security_token':'api_key','--profile',opts['oci-config-file-profile']??'DEFAULT','--region',opts['oci-region'],'--compartment-id',opts['oci-compartment-id'],'--all'];
-  for(const prefix of [['oci','compute','instance','list'],['oci','bv','boot-volume','list','--availability-domain',opts['oci-availability-domain']]]){
-   const result=await runner([...prefix,...common],{cwd:process.cwd(),env,timeoutMs:120000});const data=result.exit===0?JSON.parse(result.out).data:undefined;
-   if(!Array.isArray(data)||data.some((r:Map)=>(r['display-name']??'').includes(opts.profile)&&r['lifecycle-state']!=='TERMINATED'))throw Error('recovery requires absent OCI instances and boot volumes');
+  const inventory=await ociClient(opts,environment,runner,'iaas');
+  const scopes:[string,Map][]=[['/20160918/instances',{}],...Array.from(new Set([opts['oci-availability-domain'],...availabilityDomains(opts)])).map(domain=>['/20160918/bootVolumes',{availabilityDomain:domain}] as [string,Map])];
+  for(const [path,filters] of scopes){
+   let page:string|undefined;do{
+    const response=await inventory('GET',path,undefined,{...filters,compartmentId:opts['oci-compartment-id'],...(page?{page}:{})});const data=response?.data;
+    if(!Array.isArray(data)||data.some((r:Map)=>(r.displayName??'').includes(opts.profile)&&r.lifecycleState!=='TERMINATED'))throw Error('recovery requires absent OCI instances and boot volumes');
+    page=response!.headers['opc-next-page'];
+   }while(page);
   }
   for(const id of Object.keys(operations))await owner.transition('retry',{node_id:id,evidence:'verified-provider-absence'});
   return {status:'recovered',nodes:Object.keys(operations).sort()};

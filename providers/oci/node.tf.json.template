@@ -22,7 +22,8 @@
         "shape": "{{shape}}",
         "shape_config": {
           "ocpus": "{{ocpus}}",
-          "memory_in_gbs": "{{memory_in_gbs}}"
+          "memory_in_gbs": "{{memory_in_gbs}}",
+          "vcpus": "{{vcpus}}"
         },
         "create_vnic_details": {
           "subnet_id": "{{subnet_id}}",

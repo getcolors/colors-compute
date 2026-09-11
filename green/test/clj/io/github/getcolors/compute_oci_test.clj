@@ -4,7 +4,7 @@
            [io.github.getcolors.compute-journal :as journal] [io.github.getcolors.compute-coordination :as coordination]
            [io.github.getcolors.compute-managed-oci-backend :as backend]
            [io.github.getcolors.compute-coordinator :as coordinator]))
-(def opts {:provider-backend "oci" :provider-compute "oci" :oci-bucket "demo-states" :oci-region "eu-frankfurt-1" :oci-namespace "namespace1" :oci-compartment-id "ocid1.compartment.example" :profile "demo" :oci-bucket-mode "managed" :compute-prevent-destroy false})
+(def opts {:oci-ocpus 1 :provider-backend "oci" :provider-compute "oci" :oci-bucket "demo-states" :oci-region "eu-frankfurt-1" :oci-namespace "namespace1" :oci-compartment-id "ocid1.compartment.example" :profile "demo" :oci-bucket-mode "managed" :compute-prevent-destroy false})
 (deftest rendering
  (let [plan (compute/backend-plan opts "demo/shared.tfstate")]
   (is (= "https://namespace1.compat.objectstorage.eu-frankfurt-1.oraclecloud.com" (get-in plan [:config :terraform :backend :s3 :endpoints :s3])))
@@ -49,19 +49,21 @@
 (deftest recovery-refuses-default-boot-volume-name
  (require 'io.github.getcolors.compute-recovery)
  (doseq [resource-name [nil "Boot volume of instance demo-0"]]
-  (let [transitions (atom []) released (atom false)
+  (let [transitions (atom []) released (atom false) domains (atom [])
         doc {:status "active" :key {:phase "prepared"} :shared {:phase "ready"}
              :nodes {:0 {:phase "failed" :operation "create" :operation_id "attempt" :state_key "demo/compute/nodes/0.tfstate"}}}
-        runner (fn [args & _] {:exit 0 :out (json/generate-string {:data (if (and resource-name (= "bv" (second args))) [{:display-name resource-name :lifecycle-state "AVAILABLE"}] [])})})]
-   (with-redefs [oci/client (fn [& _] (fn [& _] {:data {:version 4 :serial 1 :lineage "line" :outputs {} :resources []} :headers {}}))
-                 coordinator/acquire! (fn [& _]) coordinator/snapshot (fn [& _] {:document doc})
-                 coordinator/transition! (fn [_ event fields] (swap! transitions conj [event fields]))
-                 coordinator/release! (fn [& _] (reset! released true))]
-    (let [run #((requiring-resolve 'io.github.getcolors.compute-recovery/recover-absent-oci-nodes!) (assoc opts :oci-availability-domain "ad1") {:0 "attempt"} {} runner (fn [& _] {}))]
-     (if resource-name (is (thrown-with-msg? Exception #"absent OCI instances and boot volumes" (run)))
-         (is (= {:status "recovered" :nodes ["0"]} (run))))
+        client (fn [& args]
+                 (if (= "iaas" (last args))
+                   (fn [_ path _ query _]
+                     (when (:availabilityDomain query) (swap! domains conj (:availabilityDomain query)))
+                     {:data (if (and resource-name (= "ad3" (:availabilityDomain query))) [{:displayName resource-name :lifecycleState "AVAILABLE"}] []) :headers {}})
+                   (fn [& _] {:data {:version 4 :serial 1 :lineage "line" :outputs {} :resources []} :headers {}})))]
+   (with-redefs [oci/client client coordinator/acquire! (fn [& _]) coordinator/snapshot (fn [& _] {:document doc})
+                 coordinator/transition! (fn [_ event fields] (swap! transitions conj [event fields])) coordinator/release! (fn [& _] (reset! released true))]
+    (let [run #((requiring-resolve 'io.github.getcolors.compute-recovery/recover-absent-oci-nodes!) (assoc opts :oci-availability-domain "ad1" :oci-availability-domains ["ad1" "ad2" "ad3"]) {:0 "attempt"} {} nil (fn [& _] {}))]
+     (if resource-name (is (thrown-with-msg? Exception #"absent OCI instances and boot volumes" (run))) (is (= {:status "recovered" :nodes ["0"]} (run))))
      (is (= (if resource-name [] [["retry" {:node_id "0" :evidence "verified-provider-absence"}]]) @transitions))
-     (is @released))))))
+     (is (= ["ad1" "ad2" "ad3"] @domains)) (is @released))))))
 (deftest version-pages-and-partial-marker-purge
  (let [deleted (atom []) marker {:schema 1 :identity {:bucket "demo-states" :region "eu-frankfurt-1" :namespace "namespace1" :compartment "ocid1.compartment.example" :profile "demo"} :status "active"}
        request (fn [method path _ query _]
@@ -74,3 +76,22 @@
   (with-redefs [oci/client (fn [& _] request)]
    (is (= {:status "destroyed"} (backend/lifecycle opts "finalize" {} nil (fn [& _] (throw (ex-info "journal was purged" {}))))))
    (is (= ["1" "2" "bucket"] @deleted)))))
+(deftest domain-placement
+ (let [configured (assoc opts :oci-availability-domain "legacy" :oci-availability-domains ["ad1" "ad2" "ad3"])]
+  (is (= "ad3" (:oci-availability-domain (oci/place-node configured "node" "broker-2"))))
+  (is (= "ad1" (:oci-availability-domain (oci/place-node configured "node" "3"))))
+  (is (= configured (oci/place-node configured "shared" "shared")))
+  (doseq [domains [[] ["ad1" "ad1"] ["${injected}"] "ad1"]]
+   (is (thrown-with-msg? Exception #"invalid OCI availability domains" (oci/place-node (assoc configured :oci-availability-domains domains) "node" "0"))))))
+(deftest recovery-audits-native-pages
+ (let [pages (atom []) doc {:status "active" :key {:phase "prepared"} :shared {:phase "ready"} :nodes {:0 {:phase "failed" :operation "create" :operation_id "attempt" :state_key "demo/compute/nodes/0.tfstate"}}}
+       client (fn [& args] (if (= "iaas" (last args))
+          (fn [_ _ _ query _] (swap! pages conj (:page query))
+            (if (:page query) {:data [{:displayName "demo-0" :lifecycleState "RUNNING"}] :headers {}}
+                {:data [] :headers {:opc-next-page "next"}}))
+          (fn [& _] nil)))]
+  (with-redefs [oci/client client coordinator/acquire! (fn [& _]) coordinator/snapshot (fn [& _] {:document doc})
+                coordinator/transition! (fn [& _] (throw (ex-info "must refuse" {}))) coordinator/release! (fn [& _])]
+   (is (thrown-with-msg? Exception #"absent OCI instances and boot volumes"
+         ((requiring-resolve 'io.github.getcolors.compute-recovery/recover-absent-oci-nodes!) (assoc opts :oci-availability-domain "ad1") {:0 "attempt"} {} nil (fn [& _] {}))))
+   (is (= [nil "next"] @pages)))))

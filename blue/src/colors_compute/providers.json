@@ -160,7 +160,6 @@
         "oci-compartment-id",
         "oci-availability-domain",
         "oci-shape",
-        "oci-ocpus",
         "oci-boot-volume-size-in-gbs",
         "oci-boot-volume-vpus-per-gb"
       ],
@@ -168,7 +167,17 @@
       "ssh-setting": "oci-ssh-authorized-keys",
       "sudoer": "ubuntu",
       "tofu-env": {},
-      "user": "ubuntu"
+      "user": "ubuntu",
+      "required-one-of": [
+        [
+          [
+            "oci-ocpus"
+          ],
+          [
+            "oci-vcpus"
+          ]
+        ]
+      ]
     },
     "vultr": {
       "registration": true,

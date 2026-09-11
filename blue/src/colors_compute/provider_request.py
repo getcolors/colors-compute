@@ -128,7 +128,8 @@ def provider_request(opts, stage, request, shared=None):
     if not isinstance(provider, str) or provider not in recipes:
         _fail('compute provider recipe unavailable')
     recipe = recipes[provider]
-    opts = deepcopy(opts)
+    from .oci import place_node
+    opts = place_node(deepcopy(opts), stage, request.get("node_id") if isinstance(request, dict) else None)
     role = request.get('role') if isinstance(request, dict) else None
     if role is not None:
         if not _safe(role):

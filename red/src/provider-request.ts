@@ -1,3 +1,4 @@
+import {placeNode} from './oci.ts';
 import {applyOptions} from './compute-options.ts';
 import {isIP} from 'node:net';
 import {createHash} from 'node:crypto';
@@ -97,6 +98,7 @@ function rules(format:string,request:Map,network:string|null,name:string):Map {
 
 /** Resolve provider-neutral requests through packaged data, without infrastructure I/O. */
 export function provider_request(opts:Map,stage:string,request:Map,shared:Map|null=null) {
+  if(object(opts))opts=placeNode(opts,stage,request?.node_id);
   const provider=object(opts)?opts['provider-compute']:null;
   if(typeof provider!=='string'||!Object.hasOwn(recipes,provider))fail('compute provider recipe unavailable');
   const recipe=recipes[provider],entry=(registry.compute as Map)[provider];

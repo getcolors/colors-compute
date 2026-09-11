@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-request
   "Pure provider-neutral requests resolved through packaged declarative recipes."
-  (:require [io.github.getcolors.compute-options :as options] [cheshire.core :as json]
+  (:require [io.github.getcolors.compute-oci :as oci]
+            [io.github.getcolors.compute-options :as options] [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [io.github.getcolors.compute :as compute])
@@ -289,7 +290,8 @@
 (defn provider-request
   ([opts stage request] (provider-request opts stage request {}))
   ([opts stage request shared]
-   (let [provider (:provider-compute opts) recipe (when (string? provider) (get recipes (keyword provider)))
+   (let [opts (oci/place-node opts stage (:node_id request))
+         provider (:provider-compute opts) recipe (when (string? provider) (get recipes (keyword provider)))
          role (:role request)]
      (when-not recipe (fail "compute provider recipe unavailable"))
      (let [opts

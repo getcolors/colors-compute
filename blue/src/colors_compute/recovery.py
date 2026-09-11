@@ -46,7 +46,7 @@ async def recover_absent_aws_shared(opts, operation_id, environment=None, runner
 
 async def recover_absent_oci_nodes(opts, operations, environment=None, runner=None, coordinator_factory=None):
     """Recover exact failed OCI operations after native state and resource audits."""
-    from .oci import oci_client, object_path
+    from .oci import oci_client, object_path, availability_domains
     from .backend import _params
     if opts.get('provider-compute') != 'oci' or opts.get('provider-backend') != 'oci' or not isinstance(operations, dict) or not operations:
         raise ValueError('recovery requires OCI node operation IDs')
@@ -68,15 +68,19 @@ async def recover_absent_oci_nodes(opts, operations, environment=None, runner=No
                 _params(json.dumps(state))
                 if state['resources'] != [] or state['outputs'] != {}:
                     raise ValueError('recovery requires absent or empty node state')
-        child = {k: v for k, v in env.items() if not k.startswith(('COLORS_PAR_', 'TF_', 'TOFU_'))}
-        common = ['--auth', 'security_token' if opts.get('oci-auth', 'SecurityToken') == 'SecurityToken' else 'api_key',
-                  '--profile', opts.get('oci-config-file-profile', 'DEFAULT'), '--region', opts['oci-region'],
-                  '--compartment-id', opts['oci-compartment-id'], '--all']
-        for prefix in (['oci', 'compute', 'instance', 'list'], ['oci', 'bv', 'boot-volume', 'list', '--availability-domain', opts['oci-availability-domain']]):
-            result = await (runner or _run)(prefix + common, os.getcwd(), child, 120000)
-            data = json.loads(result.out).get('data') if result.exit == 0 else None
-            if not isinstance(data, list) or any(opts['profile'] in r.get('display-name', '') and r.get('lifecycle-state') != 'TERMINATED' for r in data):
-                raise ValueError('recovery requires absent OCI instances and boot volumes')
+        request = await oci_client(opts, env, runner, 'iaas')
+        domains = list(dict.fromkeys([opts['oci-availability-domain']] + availability_domains(opts)))
+        scopes = [('/20160918/instances', {})] + [('/20160918/bootVolumes', {'availabilityDomain': domain}) for domain in domains]
+        for path, filters in scopes:
+            page = None
+            while True:
+                response = await request('GET', path, query={**filters, 'compartmentId': opts['oci-compartment-id'], **({'page': page} if page else {})})
+                data = response.get('data') if response else None
+                if not isinstance(data, list) or any(opts['profile'] in r.get('displayName', '') and r.get('lifecycleState') != 'TERMINATED' for r in data):
+                    raise ValueError('recovery requires absent OCI instances and boot volumes')
+                page = response['headers'].get('opc-next-page')
+                if not page:
+                    break
         for node_id in operations:
             await owner.transition('retry', node_id=node_id, evidence='verified-provider-absence')
         return {'status': 'recovered', 'nodes': sorted(operations)}

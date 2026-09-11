@@ -58,16 +58,17 @@
        (let [observed ((oci/client opts environment runner) "GET" (oci/object-path opts (:state_key record)) nil {} {})
              state (:data observed)]
         (require-valid (or (nil? observed) (and (runtime/valid-state? state) (= [] (:resources state)) (= {} (:outputs state)))) "recovery requires absent or empty node state")))
-      (let [env (into {} (remove (fn [[k _]] (re-find #"^(COLORS_PAR_|TF_|TOFU_)" k)) environment))
-            common ["--auth" (if (= "SecurityToken" (get opts :oci-auth "SecurityToken")) "security_token" "api_key")
-                    "--profile" (get opts :oci-config-file-profile "DEFAULT") "--region" (:oci-region opts)
-                    "--compartment-id" (:oci-compartment-id opts) "--all"]]
-       (doseq [prefix [["oci" "compute" "instance" "list"] ["oci" "bv" "boot-volume" "list" "--availability-domain" (:oci-availability-domain opts)]]]
-        (let [result (runner (into prefix common) (System/getProperty "user.dir") env 120000)
-              data (when (= 0 (:exit result)) (:data (json/parse-string (:out result) true)))]
-         (require-valid (and (vector? data)
-                             (not-any? #(and (str/includes? (or (:display-name %) "") (:profile opts))
-                                             (not (contains? #{"TERMINATED"} (:lifecycle-state %)))) data)) "recovery requires absent OCI instances and boot volumes"))))
+      (let [request (oci/client opts environment runner "iaas")
+            domains (distinct (cons (:oci-availability-domain opts) (oci/availability-domains opts)))
+            scopes (cons ["/20160918/instances" {}] (map (fn [domain] ["/20160918/bootVolumes" {:availabilityDomain domain}]) domains))]
+       (doseq [[path filters] scopes]
+        (loop [page nil]
+         (let [response (request "GET" path nil (cond-> (assoc filters :compartmentId (:oci-compartment-id opts)) page (assoc :page page)) {})
+               data (:data response)]
+          (require-valid (and (vector? data)
+                              (not-any? #(and (str/includes? (or (:displayName %) "") (:profile opts))
+                                              (not= "TERMINATED" (:lifecycleState %))) data)) "recovery requires absent OCI instances and boot volumes")
+          (when-let [next-page (get-in response [:headers :opc-next-page])] (recur next-page))))))
       (doseq [[id _] operations] (coordinator/transition! owner "retry" {:node_id (name id) :evidence "verified-provider-absence"}))
       {:status "recovered" :nodes (vec (sort (map name (keys operations))))})
      (finally (coordinator/release! owner))))))

@@ -38,24 +38,37 @@ async def test_recovery_refuses_uncertain_or_surviving_resources(case):
     assert owner.released and not owner.transitions
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('case', ['empty', 'absent', 'active-state', 'instance', 'boot-volume', 'terminating', 'wrong-attempt', 'denied'])
+@pytest.mark.parametrize('case', ['empty', 'absent', 'active-state', 'instance', 'boot-volume', 'terminating', 'wrong-attempt', 'denied', 'second-page'])
 async def test_oci_recovery_matches_operation_and_audits_provider(case):
     from colors_compute.recovery import recover_absent_oci_nodes
-    opts = {'provider-compute': 'oci', 'provider-backend': 'oci', 'profile': 'demo', 'oci-region': 'eu-frankfurt-1', 'oci-namespace': 'namespace', 'oci-bucket': 'states', 'oci-compartment-id': 'ocid1.compartment.example', 'oci-availability-domain': 'ad1'}
+    from urllib.parse import urlparse, parse_qs
+    opts = {'provider-compute': 'oci', 'provider-backend': 'oci', 'profile': 'demo', 'oci-region': 'eu-frankfurt-1', 'oci-namespace': 'namespace', 'oci-bucket': 'states', 'oci-compartment-id': 'ocid1.compartment.example', 'oci-availability-domain': 'ad1', 'oci-availability-domains': ['ad1', 'ad2', 'ad3']}
     owner = Owner(); owner.doc['shared'] = {'phase': 'ready'}
     owner.doc['nodes'] = {'0': {'phase': 'failed', 'operation': 'create', 'operation_id': 'attempt', 'state_key': 'demo/compute/nodes/0.tfstate'}}
+    domains = []
     async def runner(args, cwd, env, timeout):
-        if args[1] == 'raw-request':
+        assert args[:2] == ['oci', 'raw-request']
+        url = urlparse(args[args.index('--target-uri')+1]); query = parse_qs(url.query)
+        if '/o/' in url.path:
             state = {'version': 4, 'serial': 1, 'lineage': 'line', 'resources': [{}] if case == 'active-state' else [], 'outputs': {}}
             return ProcessResult(0, json.dumps({'status': '404 Not Found' if case == 'absent' else '200 OK', 'data': state, 'headers': {}}))
-        assert '--all' in args
-        if case == 'denied': return ProcessResult(1, '')
-        resources = [{'display-name': 'Boot volume of instance demo-0' if case == 'boot-volume' else 'demo-0', 'lifecycle-state': 'TERMINATING' if case == 'terminating' else 'RUNNING'}] if case in ('instance', 'boot-volume', 'terminating') else []
-        return ProcessResult(0, json.dumps({'data': resources}))
+        assert query['compartmentId'] == ['ocid1.compartment.example']
+        if case == 'denied': return ProcessResult(0, json.dumps({'status': '403 Forbidden'}))
+        if 'availabilityDomain' in query: domains.append(query['availabilityDomain'][0])
+        data = []
+        if case in ('instance', 'boot-volume', 'terminating'):
+            data = [{'displayName': 'Boot volume of instance demo-0' if case == 'boot-volume' else 'demo-0', 'lifecycleState': 'TERMINATING' if case == 'terminating' else 'RUNNING'}]
+        if case == 'second-page':
+            if 'page' not in query:
+                return ProcessResult(0, json.dumps({'status': '200 OK', 'data': [], 'headers': {'opc-next-page': 'next'}}))
+            assert query['page'] == ['next']
+            data = [{'displayName': 'Boot volume of instance demo-0', 'lifecycleState': 'AVAILABLE'}]
+        return ProcessResult(0, json.dumps({'status': '200 OK', 'data': data, 'headers': {}}))
     operations = {'0': 'other' if case == 'wrong-attempt' else 'attempt'}
     if case in ('empty', 'absent'):
         assert await recover_absent_oci_nodes(opts, operations, {}, runner, lambda *a, **kw: owner) == {'status': 'recovered', 'nodes': ['0']}
         assert owner.transitions == [(('retry',), {'node_id': '0', 'evidence': 'verified-provider-absence'})]
+        assert domains == ['ad1', 'ad2', 'ad3']
     else:
         with pytest.raises(ValueError): await recover_absent_oci_nodes(opts, operations, {}, runner, lambda *a, **kw: owner)
         assert not owner.transitions

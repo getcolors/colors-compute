@@ -848,7 +848,8 @@
         "path": "shared.params.nsg_ids"
       },
       "ocpus": {
-        "path": "opts.oci-ocpus"
+        "path": "opts.oci-ocpus",
+        "default": null
       },
       "prevent_destroy": {
         "path": "derived.prevent_destroy"
@@ -899,6 +900,10 @@
       },
       "user": {
         "path": "derived.user"
+      },
+      "vcpus": {
+        "path": "opts.oci-vcpus",
+        "default": null
       }
     },
     "discovery_stage": "node-discovery",

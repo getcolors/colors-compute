@@ -2582,7 +2582,8 @@
                     "shape": "VM.Standard.A1.Flex",
                     "shape_config": {
                       "memory_in_gbs": 6,
-                      "ocpus": 1
+                      "ocpus": 1,
+                      "vcpus": null
                     },
                     "source_details": {
                       "boot_volume_size_in_gbs": 50,
@@ -2658,7 +2659,8 @@
                     "shape": "VM.Standard.A1.Flex",
                     "shape_config": {
                       "memory_in_gbs": 6,
-                      "ocpus": 1
+                      "ocpus": 1,
+                      "vcpus": null
                     },
                     "source_details": {
                       "boot_volume_size_in_gbs": 50,
@@ -2734,7 +2736,8 @@
                     "shape": "VM.Standard.A1.Flex",
                     "shape_config": {
                       "memory_in_gbs": 6,
-                      "ocpus": 1
+                      "ocpus": 1,
+                      "vcpus": null
                     },
                     "source_details": {
                       "boot_volume_size_in_gbs": 50,

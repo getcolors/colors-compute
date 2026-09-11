@@ -49,5 +49,6 @@
   "image_id": "ocid1.image.oc1.eu-frankfurt-1.example",
   "user": "ubuntu",
   "sudoer": "ubuntu",
-  "uid": "1001"
+  "uid": "1001",
+  "vcpus": null
 }

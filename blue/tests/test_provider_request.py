@@ -13,6 +13,12 @@ CASES = [dict(name=c['name'], opts=c['args'][0], stage=c['args'][1], request=c['
 @pytest.mark.parametrize('case', CASES, ids=lambda item: item['name'])
 def test_all_eight_provider_stages(case):
     original = deepcopy(case)
+    if 'error' in case['expected']:
+        with pytest.raises(ValueError) as error:
+            provider_request(case['opts'], case['stage'], case['request'], case['shared'])
+        assert str(error.value) == case['expected']['error']
+        assert case == original
+        return
     result = provider_request(case['opts'], case['stage'], case['request'], case['shared'])
     assert result == case['expected']
     assert '{{' not in json.dumps(result['documents'])

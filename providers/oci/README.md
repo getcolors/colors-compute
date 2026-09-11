@@ -126,3 +126,18 @@ A missing value renders Terraform `null`, so the provider omits that API field.
 This matters when the shape API reports a per-OCPU memory range of zero and
 rejects explicit memory ratios. Verify the resulting instance shape after
 creation rather than assuming the omitted value implies a particular size.
+
+For a regional subnet, `oci-availability-domains` may contain an ordered list of
+availability-domain names. A node's numeric index selects the domain modulo the
+list length. Nodes `0`, `1`, and `2` use the first, second, and third domains;
+node `3` returns to the first. Role node IDs such as `broker-2` use the same
+numeric suffix. Keep the list order stable across converges. Changing it can
+request a replacement, which the normal create guard refuses. Shared resources
+continue to use the configured subnet and ignore node placement. Retain the
+scalar `oci-availability-domain` for compatibility and recovery scope.
+
+Set exactly one of `oci-ocpus` or `oci-vcpus`. The former accepts a positive
+number of OCPUs; the latter accepts a positive integer vCPU count. The unused
+field renders as Terraform `null` and does not enter the launch request. This
+supports OCI shapes whose API accepts vCPU configuration directly. The library
+does not translate OCPUs into vCPUs or infer their ratio from the shape name.

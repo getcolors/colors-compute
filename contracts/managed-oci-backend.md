@@ -69,8 +69,13 @@ the remote journal or replace its operation IDs by hand.
 
 The recovery audit matches the deployment profile anywhere in resource display
 names, including OCI's `Boot volume of instance <name>` default. It checks all
-instances in the compartment and boot volumes in the configured availability
-domain. It does not prove ownership of manually renamed resources or resources
+instances in the compartment and boot volumes in the scalar availability domain and every domain in
+`oci-availability-domains`. It does not prove ownership of manually renamed resources or resources
 moved outside that scope. Review an independent resource inventory before using
 this helper after out-of-band changes. Do not change the compartment or
 availability domain before recovering the original failed operation.
+
+OCI CLI `boot-volume list` returned success with empty stdout in an availability
+domain that had no boot volumes. An empty process response is not evidence of
+resource absence. Recovery therefore reads the native IAAS APIs, requires JSON
+arrays, and follows every `opc-next-page` header before accepting the audit.

@@ -1383,11 +1383,11 @@
       ":oci-boot-volume-vpus-per-gb is required",
       ":oci-compartment-id is required",
       ":oci-config-file-profile is required",
-      ":oci-ocpus is required",
       ":oci-shape is required",
       ":oci-subnet-id is required",
       ":r2-bucket is required",
-      ":r2-endpoint is required"
+      ":r2-endpoint is required",
+      "one of :oci-ocpus or :oci-vcpus is required"
     ]
   },
   {
@@ -1444,11 +1444,11 @@
       ":oci-boot-volume-vpus-per-gb is required",
       ":oci-compartment-id is required",
       ":oci-config-file-profile is required",
-      ":oci-ocpus is required",
       ":oci-shape is required",
       ":oci-subnet-id is required",
       ":s3-bucket is required",
-      ":s3-region is required"
+      ":s3-region is required",
+      "one of :oci-ocpus or :oci-vcpus is required"
     ]
   },
   {
