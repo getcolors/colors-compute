@@ -19,6 +19,12 @@ export async function read_deployment(opts:Map,environment:Map=process.env,depen
   if(doc.status==='retired')return {status:'destroyed'};
   const shared=await call('read_state',readState,opts,state_keys(opts.profile,[]).shared,env,undefined,true);
   if(shared.status!=='present'||shared.params?.provider!==opts['provider-compute']||!shared.outputs)return {status:'error'};
+  const records=Object.values(doc.nodes).filter((node:any)=>node.phase!=='destroyed') as Map[];
+  if(records.length&&records.every(node=>node.phase==='declared')){
+   if(doc.shared.phase!=='ready'||doc.key.phase!=='prepared'||mode(opts).mode!==doc.key.mode)return {status:'error'};
+   for(const node of records){const state=await call('read_state',readState,opts,node.state_key,env,undefined,true);if(!(state.status==='absent'&&Object.keys(state).length===1)&&!(state.status==='present'&&state.state_empty===true))return {status:'error'};}
+   return {status:'partial'};
+  }
   const declarations:Map[]=[],results:Map[]=[];
   for(const [id,node] of Object.entries(doc.nodes) as [string,Map][]){
    if(node.phase==='destroyed')continue;if(!['ready','failed'].includes(node.phase))return {status:'error'};

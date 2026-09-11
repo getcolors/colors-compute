@@ -35,6 +35,15 @@ async def read_deployment(opts, environment=None, dependencies=None, requirement
         shared = await call('read_state', read_state, opts, state_keys(opts['profile'], [])['shared'], env, include_outputs=True)
         if shared.get('status') != 'present' or shared.get('params', {}).get('provider') != opts['provider-compute']:
             return {'status': 'error'}
+        records = [node for node in document['nodes'].values() if node['phase'] != 'destroyed']
+        if records and all(node['phase'] == 'declared' for node in records):
+            if document['shared']['phase'] != 'ready' or document['key']['phase'] != 'prepared' or _mode(opts)['mode'] != document['key']['mode']:
+                return {'status': 'error'}
+            for node in records:
+                state = await call('read_state', read_state, opts, node['state_key'], env, include_outputs=True)
+                if state != {'status': 'absent'} and not (state.get('status') == 'present' and state.get('state_empty') is True):
+                    return {'status': 'error'}
+            return {'status': 'partial'}
         declarations, results = [], []
         for node_id, node in document['nodes'].items():
             if node['phase'] == 'destroyed':

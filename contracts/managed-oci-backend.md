@@ -79,3 +79,7 @@ OCI CLI `boot-volume list` returned success with empty stdout in an availability
 domain that had no boot volumes. An empty process response is not evidence of
 resource absence. Recovery therefore reads the native IAAS APIs, requires JSON
 arrays, and follows every `opc-next-page` header before accepting the audit.
+
+## Deleting a recovered partial deployment
+
+Read-only inspection reports `partial` only for an idle, identity-validated journal with ready shared resources, a prepared matching key, and at least one remaining node, all declared. Each declared node must have absent or verified empty state. Failed nodes, nonempty state, malformed reads, and held journals refuse. Normal deletion removes application storage, marks those empty nodes destroyed under the compute lease, destroys shared resources, cleans the key, then finalizes the retired backend. Empty node state objects need no OpenTofu execution and remain eligible for backend version cleanup. An absent backend or retired journal routes directly to guarded finalization without bootstrapping a new bucket.

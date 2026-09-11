@@ -243,3 +243,25 @@ async def test_existing_state_guard_refuses_uninitialized_and_invalid_options():
     before = runtime.store.calls
     assert await orchestrate({**OPTS, 'compute-require-existing-state': True}, [{'count': 1}], {}, {}, runtime.dependencies()) == {'status': 'error'}
     assert runtime.store.calls == before
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('empty', [True, False, None])
+async def test_recovered_declared_empty_nodes_delete_without_convergence(empty):
+    from colors_compute.inspection import read_deployment
+    runtime = Runtime()
+    assert (await runtime.run())['status'] == 'ready'
+    for node in runtime.store.observed['document']['nodes'].values():
+        node.update(phase='declared', operation=None, operation_id=None)
+    deps = runtime.dependencies()
+    original = deps['read_state']
+    async def read(opts, key, env, include_outputs=False):
+        if '/nodes/' in key:
+            return {'status': 'present', 'state_empty': empty}
+        return await original(opts, key, env, include_outputs)
+    deps['read_state'] = read
+    reader = {'journal_get': lambda *_: runtime.store.observed, 'read_state': read}
+    assert await read_deployment(OPTS, {}, reader) == {'status': 'partial' if empty is True else 'error'}
+    runtime.events.clear()
+    result = await orchestrate({**OPTS, 'blue/event': 'delete', 'compute-prevent-destroy': False}, [{'count': 2}], {}, {}, deps)
+    assert result == {'status': 'destroyed' if empty is True else 'error'}
+    assert not any(event.startswith('delete:0') or event.startswith('delete:1') for event in runtime.events)

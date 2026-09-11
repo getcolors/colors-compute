@@ -34,7 +34,7 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
   }
   const id=nodeId===null?await (operation==='create'?coordinator.sharedStart():coordinator.sharedDestroy()):await (operation==='create'?coordinator.start(nodeId):coordinator.destroy(nodeId));
   let result:any;
-  try{result=operation==='delete'&&record.phase==='declared'&&presence.status==='absent'?{status:'destroyed'}:await call('converge_state',convergeState,opts,key,documents,operation,presence,env);}
+  try{result=operation==='delete'&&record.phase==='declared'?{status:'destroyed'}:await call('converge_state',convergeState,opts,key,documents,operation,presence,env);}
   catch(e){if(nodeId===null)await coordinator.sharedFail(id);else await coordinator.fail(nodeId,id);throw e;}
   const success=result.status===(operation==='create'?'ready':'destroyed');
   if(nodeId===null)await (success?coordinator.sharedComplete(id):coordinator.sharedFail(id));else await (success?coordinator.complete(nodeId,id):coordinator.fail(nodeId,id));

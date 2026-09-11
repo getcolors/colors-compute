@@ -86,3 +86,16 @@ test('existing state guard requires actual booleans',async()=>{
   expect(await orchestrate(input,[{count:1}],{},{},r.deps())).toEqual({status:'error'});expect(r.writes).toBe(0);
  }
 });
+
+test('recovered declared nodes require verified empty state and delete without convergence',async()=>{
+ const {read_deployment}=await import('../src/inspection.ts');
+ for(const empty of [true,false,null]){
+  const r=new Runtime();expect((await r.run()).status).toBe('ready');
+  for(const node of Object.values(r.observed.document.nodes) as Map[])Object.assign(node,{phase:'declared',operation:null,operation_id:null});
+  const deps=r.deps(),original=deps.read_state;
+  deps.read_state=async(o:Map,key:string):Promise<any>=>key.includes('/nodes/')?{status:'present',state_empty:empty}:original(o,key);
+  expect(await read_deployment(opts,{}, {journal_get:async()=>r.observed,read_state:deps.read_state})).toEqual({status:empty===true?'partial':'error'});
+  r.events=[];expect(await orchestrate({...opts,'red/event':'delete'},[{count:2}],{},{},deps)).toEqual({status:empty===true?'destroyed':'error'});
+  expect(r.events.some(event=>event==='delete:undefined'||event==='delete:0'||event==='delete:1')).toBe(false);
+ }
+});

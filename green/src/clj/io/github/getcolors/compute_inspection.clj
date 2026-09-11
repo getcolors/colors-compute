@@ -30,7 +30,15 @@
                        _ (require-valid (= (:mode selected) (get-in doc [:key :mode])))
                        private-path (if (= "managed" (get-in doc [:key :mode])) (str (or (get environment "HOME") (System/getProperty "user.home")) "/.ssh/" (:profile opts)) (:private_key_path selected))
                        records (remove #(= "destroyed" (:phase (val %))) (:nodes doc))
-                       entries (mapv (fn [[node-id node]]
+                       partial? (and (seq records) (every? #(= "declared" (:phase (val %))) records))]
+                   (if partial?
+                     (do
+                       (require-valid (and (= "ready" (get-in doc [:shared :phase])) (= "prepared" (get-in doc [:key :phase]))))
+                       (doseq [[_ node] records]
+                         (let [state ((get dependencies :read-state (fn [opts key env] (runtime/read-state opts key env runtime/run-command true))) opts (:state_key node) environment)]
+                           (require-valid (or (= state {:status "absent"}) (and (= "present" (:status state)) (true? (:state_empty state)))))))
+                       {:status "partial"})
+                     (let [entries (mapv (fn [[node-id node]]
                                        (require-valid (contains? #{"ready" "failed"} (:phase node)))
                                        (let [state ((get dependencies :read-state runtime/read-state) opts (:state_key node) environment)]
                                          (require-valid (= "present" (:status state)))
@@ -41,6 +49,6 @@
                    (require-valid (and (seq declarations) (string? entry) (some #(= entry (:node_id %)) declarations)))
                    {:status "present" :shared (:outputs shared) :cluster (compute/collect declarations (mapv :params entries) entry)
                     :key (cond-> {:mode (get-in doc [:key :mode])}
-                           private-path (assoc :private_key_path private-path))})))))
+                           private-path (assoc :private_key_path private-path))})))))))
      (catch InterruptedException error (throw error))
      (catch Exception _ {:status "error"}))))

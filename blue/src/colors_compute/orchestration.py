@@ -73,7 +73,7 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         else:
             operation_id = await (coordinator.start(node_id) if operation == 'create' else coordinator.destroy(node_id))
         try:
-            result = {'status': 'destroyed'} if operation == 'delete' and record['phase'] == 'declared' and presence == {'status': 'absent'} else await call('converge_state', converge_state, opts, key, documents, operation, presence, env)
+            result = {'status': 'destroyed'} if operation == 'delete' and record['phase'] == 'declared' else await call('converge_state', converge_state, opts, key, documents, operation, presence, env)
         except BaseException:
             if node_id is None:
                 await coordinator.shared_fail(operation_id)

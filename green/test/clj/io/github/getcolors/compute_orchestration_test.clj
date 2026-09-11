@@ -152,3 +152,18 @@
       (is (some #{":compute-require-existing-state must be a boolean"} (io.github.getcolors.compute/validate input)))
       (is (= {:status "error"} (o/orchestrate input topology requirements {} deps)))
       (is (= 0 (:writes @(:state storage)))))))
+
+(deftest recovered-declared-empty-nodes-delete-without-convergence
+  (doseq [empty? [true false nil]]
+    (let [{:keys [deps storage calls]} (world)]
+      (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
+      (swap! (:state storage) update-in [:observation :document :nodes]
+             #(into {} (map (fn [[id node]] [id (assoc node :phase "declared" :operation nil :operation_id nil)]) %)))
+      (let [read-state (fn [opts key env] (if (re-find #"/nodes/" key) {:status "present" :state_empty empty?} ((:read-state deps) opts key env)))
+            deps (assoc deps :read-state read-state)]
+        (is (= {:status (if (true? empty?) "partial" "error")}
+               (inspection/read-deployment opts {} {:journal-get (fn [& _] ((:read storage))) :read-state read-state})))
+        (reset! calls [])
+        (is (= {:status (if (true? empty?) "destroyed" "error")}
+               (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps)))
+        (is (not-any? #(and (vector? %) (re-find #"/nodes/" (first %))) @calls))))))

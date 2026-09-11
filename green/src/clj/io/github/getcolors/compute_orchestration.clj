@@ -49,7 +49,7 @@
                        (let [operation-id (transition (if (nil? id) (if (= operation "create") "shared-start" "shared-destroy") (if (= operation "create") "start" "destroy"))
                                                       (if (nil? id) {} {:node_id id}))
                              result (try
-                                      (if (and (= operation "delete") (= "declared" (:phase record)) (= presence {:status "absent"})) {:status "destroyed"}
+                                      (if (and (= operation "delete") (= "declared" (:phase record))) {:status "destroyed"}
                                           (call :converge-state execution/converge-state opts key documents operation presence environment))
                                       (catch InterruptedException error (coordinator/poison! @owner) (throw error))
                                       (catch Exception error (outcome id operation-id false) (throw error)))
