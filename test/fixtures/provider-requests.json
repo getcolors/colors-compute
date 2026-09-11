@@ -3659,5 +3659,183 @@
     },
     "name": "AWS external public file owns shared registration node",
     "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "oci-availability-domain": "example:EU-FRANKFURT-1-AD-1",
+        "oci-boot-volume-size-in-gbs": 50,
+        "oci-boot-volume-vpus-per-gb": 10,
+        "oci-compartment-id": "ocid1.compartment.oc1..example",
+        "oci-config-file-profile": "DEFAULT",
+        "oci-image-id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "oci-ocpus": 1,
+        "oci-shape": "VM.Standard.A1.Flex",
+        "oci-subnet-id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "oci-uid": "1001",
+        "profile": "example",
+        "provider-compute": "oci"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": false
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+          ],
+          "provider": "oci",
+          "security_group_id": "security-fixture",
+          "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+          "subnetwork_id": "subnetwork-fixture",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node-image-pinned.tf.json": {
+          "locals": {
+            "image_id": "ocid1.image.oc1.eu-frankfurt-1.example"
+          }
+        },
+        "node.tf.json": {
+          "output": {
+            "params": {
+              "value": {
+                "instance_id": "${oci_core_instance.node.id}",
+                "ip": "${oci_core_instance.node.public_ip}",
+                "metadata": {
+                  "availability_domain": "${oci_core_instance.node.availability_domain}",
+                  "image_id": "${local.image_id}"
+                },
+                "name": "${oci_core_instance.node.display_name}",
+                "node_id": "0",
+                "provider": "oci",
+                "provider_id": "${oci_core_instance.node.id}",
+                "sudoer": "ubuntu",
+                "uid": "1001",
+                "user": "ubuntu",
+                "vpc_ip": "${oci_core_instance.node.private_ip}"
+              }
+            }
+          },
+          "provider": {
+            "oci": {
+              "config_file_profile": "DEFAULT"
+            }
+          },
+          "resource": {
+            "oci_core_instance": {
+              "node": {
+                "availability_domain": "example:EU-FRANKFURT-1-AD-1",
+                "compartment_id": "ocid1.compartment.oc1..example",
+                "create_vnic_details": {
+                  "assign_public_ip": true,
+                  "nsg_ids": [
+                    "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+                  ],
+                  "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example"
+                },
+                "display_name": "example-0",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "metadata": {
+                  "ssh_authorized_keys": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only"
+                },
+                "shape": "VM.Standard.A1.Flex",
+                "shape_config": {
+                  "memory_in_gbs": null,
+                  "ocpus": 1
+                },
+                "source_details": {
+                  "boot_volume_size_in_gbs": 50,
+                  "boot_volume_vpus_per_gb": 10,
+                  "source_id": "${local.image_id}",
+                  "source_type": "image"
+                }
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "oci": {
+                "source": "oracle/oci",
+                "version": "8.4.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "inputs": {
+        "availability_domain": "example:EU-FRANKFURT-1-AD-1",
+        "boot_volume_size_in_gbs": 50,
+        "boot_volume_vpus_per_gb": 10,
+        "compartment_id": "ocid1.compartment.oc1..example",
+        "config_file_profile": "DEFAULT",
+        "image_id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "memory_in_gbs": null,
+        "name": "example-0",
+        "node_id": "0",
+        "nsg_ids": [
+          "ocid1.networksecuritygroup.oc1.eu-frankfurt-1.example"
+        ],
+        "ocpus": 1,
+        "prevent_destroy": true,
+        "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEe80SHFnPwSoLdDTboLs3QUvyBeeCXDBwkVBly3Q6vw fixture-only",
+        "shape": "VM.Standard.A1.Flex",
+        "subnet_id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "sudoer": "ubuntu",
+        "uid": "1001",
+        "user": "ubuntu"
+      },
+      "provider": "oci",
+      "stage": "node"
+    },
+    "name": "oci-node-shape-default-memory",
+    "op": "provider_request"
   }
 ]

@@ -119,3 +119,10 @@ must be preserved during migration. NSGs are newly owned resources and require
 reviewed attachment/rule plans. Removing the old SSH provisioner does not prove
 readiness, and renaming image data addresses does not permit image replacement.
 No package can claim migration or live provider support from these assets alone.
+
+`oci-memory-in-gbs` is optional. Omit it to let the OCI API select the shape's
+memory default. Explicit values remain unchanged in the rendered request.
+A missing value renders Terraform `null`, so the provider omits that API field.
+This matters when the shape API reports a per-OCPU memory range of zero and
+rejects explicit memory ratios. Verify the resulting instance shape after
+creation rather than assuming the omitted value implies a particular size.

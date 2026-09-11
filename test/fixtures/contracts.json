@@ -1,189 +1,187 @@
 [
   {
-    "name": "stable role expansion",
-    "op": "expand",
     "args": [
       [
         {
-          "role": "broker",
-          "count": 2
+          "count": 2,
+          "role": "broker"
         }
       ]
     ],
     "expected": [
       {
+        "index": 0,
         "node_id": "broker-0",
-        "role": "broker",
-        "index": 0
+        "role": "broker"
       },
       {
+        "index": 1,
         "node_id": "broker-1",
-        "role": "broker",
-        "index": 1
+        "role": "broker"
       }
-    ]
+    ],
+    "name": "stable role expansion",
+    "op": "expand"
   },
   {
-    "name": "singleton indexed",
-    "op": "expand",
     "args": [
       [
         {
-          "role": "broker",
-          "count": 1
+          "count": 1,
+          "role": "broker"
         }
       ]
     ],
     "expected": [
       {
+        "index": 0,
         "node_id": "broker-0",
-        "role": "broker",
-        "index": 0
+        "role": "broker"
       }
-    ]
+    ],
+    "name": "singleton indexed",
+    "op": "expand"
   },
   {
-    "name": "homogeneous",
-    "op": "expand",
     "args": [
       [
         {
-          "role": null,
-          "count": 2
+          "count": 2,
+          "role": null
         }
       ]
     ],
     "expected": [
       {
+        "index": 0,
         "node_id": "0",
-        "role": null,
-        "index": 0
+        "role": null
       },
       {
+        "index": 1,
         "node_id": "1",
-        "role": null,
-        "index": 1
+        "role": null
       }
-    ]
+    ],
+    "name": "homogeneous",
+    "op": "expand"
   },
   {
+    "args": [
+      [
+        {
+          "count": false,
+          "role": "worker"
+        }
+      ]
+    ],
+    "expected": {
+      "error": "count must be a positive integer"
+    },
     "name": "bad count False",
-    "op": "expand",
+    "op": "expand"
+  },
+  {
     "args": [
       [
         {
-          "role": "worker",
-          "count": false
+          "count": true,
+          "role": "worker"
         }
       ]
     ],
     "expected": {
       "error": "count must be a positive integer"
-    }
-  },
-  {
+    },
     "name": "bad count True",
-    "op": "expand",
+    "op": "expand"
+  },
+  {
     "args": [
       [
         {
-          "role": "worker",
-          "count": true
+          "count": 0,
+          "role": "worker"
         }
       ]
     ],
     "expected": {
       "error": "count must be a positive integer"
-    }
-  },
-  {
+    },
     "name": "bad count 0",
-    "op": "expand",
+    "op": "expand"
+  },
+  {
     "args": [
       [
         {
-          "role": "worker",
-          "count": 0
+          "count": -1,
+          "role": "worker"
         }
       ]
     ],
     "expected": {
       "error": "count must be a positive integer"
-    }
-  },
-  {
+    },
     "name": "bad count -1",
-    "op": "expand",
+    "op": "expand"
+  },
+  {
     "args": [
       [
         {
-          "role": "worker",
-          "count": -1
+          "count": 1.5,
+          "role": "worker"
         }
       ]
     ],
     "expected": {
       "error": "count must be a positive integer"
-    }
-  },
-  {
+    },
     "name": "bad count 1.5",
-    "op": "expand",
+    "op": "expand"
+  },
+  {
     "args": [
       [
         {
-          "role": "worker",
-          "count": 1.5
+          "count": "2",
+          "role": "worker"
         }
       ]
     ],
     "expected": {
       "error": "count must be a positive integer"
-    }
-  },
-  {
+    },
     "name": "bad count 2",
-    "op": "expand",
+    "op": "expand"
+  },
+  {
     "args": [
       [
         {
-          "role": "worker",
-          "count": "2"
+          "count": null,
+          "role": "worker"
         }
       ]
     ],
     "expected": {
       "error": "count must be a positive integer"
-    }
-  },
-  {
+    },
     "name": "bad count None",
-    "op": "expand",
-    "args": [
-      [
-        {
-          "role": "worker",
-          "count": null
-        }
-      ]
-    ],
-    "expected": {
-      "error": "count must be a positive integer"
-    }
+    "op": "expand"
   },
   {
-    "name": "bad roles topology must declare at least one role",
-    "op": "expand",
     "args": [
       []
     ],
     "expected": {
       "error": "topology must declare at least one role"
-    }
+    },
+    "name": "bad roles topology must declare at least one role",
+    "op": "expand"
   },
   {
-    "name": "bad roles invalid role",
-    "op": "expand",
     "args": [
       [
         {
@@ -193,11 +191,11 @@
     ],
     "expected": {
       "error": "invalid role"
-    }
+    },
+    "name": "bad roles invalid role",
+    "op": "expand"
   },
   {
-    "name": "bad roles a null role must be the only role",
-    "op": "expand",
     "args": [
       [
         {
@@ -210,11 +208,11 @@
     ],
     "expected": {
       "error": "a null role must be the only role"
-    }
+    },
+    "name": "bad roles a null role must be the only role",
+    "op": "expand"
   },
   {
-    "name": "bad roles duplicate role",
-    "op": "expand",
     "args": [
       [
         {
@@ -227,11 +225,11 @@
     ],
     "expected": {
       "error": "duplicate role"
-    }
+    },
+    "name": "bad roles duplicate role",
+    "op": "expand"
   },
   {
-    "name": "state layout",
-    "op": "state_keys",
     "args": [
       "demo",
       [
@@ -240,16 +238,16 @@
       ]
     ],
     "expected": {
-      "shared": "demo/compute/shared.tfstate",
       "nodes": {
         "broker-0": "demo/compute/nodes/broker-0.tfstate",
         "broker-1": "demo/compute/nodes/broker-1.tfstate"
-      }
-    }
+      },
+      "shared": "demo/compute/shared.tfstate"
+    },
+    "name": "state layout",
+    "op": "state_keys"
   },
   {
-    "name": "bad identity :profile must be a safe identifier",
-    "op": "state_keys",
     "args": [
       "..",
       [
@@ -258,11 +256,11 @@
     ],
     "expected": {
       "error": ":profile must be a safe identifier"
-    }
+    },
+    "name": "bad identity :profile must be a safe identifier",
+    "op": "state_keys"
   },
   {
-    "name": "bad identity invalid node_id: ../other",
-    "op": "state_keys",
     "args": [
       "demo",
       [
@@ -271,11 +269,11 @@
     ],
     "expected": {
       "error": "invalid node_id: ../other"
-    }
+    },
+    "name": "bad identity invalid node_id: ../other",
+    "op": "state_keys"
   },
   {
-    "name": "bad identity duplicate node_id: 0",
-    "op": "state_keys",
     "args": [
       "demo",
       [
@@ -285,11 +283,11 @@
     ],
     "expected": {
       "error": "duplicate node_id: 0"
-    }
+    },
+    "name": "bad identity duplicate node_id: 0",
+    "op": "state_keys"
   },
   {
-    "name": "bad identity invalid node_id: null",
-    "op": "state_keys",
     "args": [
       "demo",
       [
@@ -298,11 +296,11 @@
     ],
     "expected": {
       "error": "invalid node_id: null"
-    }
+    },
+    "name": "bad identity invalid node_id: null",
+    "op": "state_keys"
   },
   {
-    "name": "bad identity invalid node_id: true",
-    "op": "state_keys",
     "args": [
       "demo",
       [
@@ -311,377 +309,377 @@
     ],
     "expected": {
       "error": "invalid node_id: true"
-    }
+    },
+    "name": "bad identity invalid node_id: true",
+    "op": "state_keys"
   },
   {
-    "name": "join arrival order and metadata",
-    "op": "collect",
     "args": [
       [
         {
+          "index": 0,
           "node_id": "broker-0",
-          "role": "broker",
-          "index": 0
+          "role": "broker"
         },
         {
+          "index": 1,
           "node_id": "broker-1",
-          "role": "broker",
-          "index": 1
+          "role": "broker"
         }
       ],
       [
         {
-          "node_id": "broker-1",
-          "provider": "vultr",
-          "name": "demo-broker-1",
           "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root",
           "metadata": {
             "disk": "disk-id"
-          }
+          },
+          "name": "demo-broker-1",
+          "node_id": "broker-1",
+          "provider": "vultr",
+          "sudoer": "root",
+          "user": "root"
         },
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "broker-0"
     ],
     "expected": {
-      "provider": "vultr",
       "entry_node_id": "broker-0",
       "nodes": [
         {
+          "index": 0,
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root",
           "role": "broker",
-          "index": 0
+          "sudoer": "root",
+          "user": "root"
         },
         {
-          "node_id": "broker-1",
-          "provider": "vultr",
-          "name": "demo-broker-1",
+          "index": 1,
           "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root",
           "metadata": {
             "disk": "disk-id"
           },
+          "name": "demo-broker-1",
+          "node_id": "broker-1",
+          "provider": "vultr",
           "role": "broker",
-          "index": 1
+          "sudoer": "root",
+          "user": "root"
         }
-      ]
-    }
+      ],
+      "provider": "vultr"
+    },
+    "name": "join arrival order and metadata",
+    "op": "collect"
   },
   {
-    "name": "join missing node: broker-1",
-    "op": "collect",
     "args": [
       [
         {
+          "index": 0,
           "node_id": "broker-0",
-          "role": "broker",
-          "index": 0
+          "role": "broker"
         },
         {
+          "index": 1,
           "node_id": "broker-1",
-          "role": "broker",
-          "index": 1
+          "role": "broker"
         }
       ],
       [
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "broker-0"
     ],
     "expected": {
       "error": "missing node: broker-1"
-    }
+    },
+    "name": "join missing node: broker-1",
+    "op": "collect"
   },
   {
-    "name": "join duplicate node: broker-0",
-    "op": "collect",
     "args": [
       [
         {
+          "index": 0,
           "node_id": "broker-0",
-          "role": "broker",
-          "index": 0
+          "role": "broker"
         },
         {
+          "index": 1,
           "node_id": "broker-1",
-          "role": "broker",
-          "index": 1
+          "role": "broker"
         }
       ],
       [
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         },
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "broker-0"
     ],
     "expected": {
       "error": "duplicate node: broker-0"
-    }
+    },
+    "name": "join duplicate node: broker-0",
+    "op": "collect"
   },
   {
-    "name": "join undeclared node: other",
-    "op": "collect",
     "args": [
       [
         {
+          "index": 0,
           "node_id": "broker-0",
-          "role": "broker",
-          "index": 0
+          "role": "broker"
         },
         {
+          "index": 1,
           "node_id": "broker-1",
-          "role": "broker",
-          "index": 1
+          "role": "broker"
         }
       ],
       [
         {
+          "ip": "192.0.2.10",
+          "name": "demo-other",
           "node_id": "other",
           "provider": "vultr",
-          "name": "demo-other",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "broker-0"
     ],
     "expected": {
       "error": "undeclared node: other"
-    }
+    },
+    "name": "join undeclared node: other",
+    "op": "collect"
   },
   {
-    "name": "join unknown entry node: other",
-    "op": "collect",
     "args": [
       [
         {
+          "index": 0,
           "node_id": "broker-0",
-          "role": "broker",
-          "index": 0
+          "role": "broker"
         },
         {
+          "index": 1,
           "node_id": "broker-1",
-          "role": "broker",
-          "index": 1
+          "role": "broker"
         }
       ],
       [
         {
-          "node_id": "broker-1",
-          "provider": "vultr",
-          "name": "demo-broker-1",
           "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root",
           "metadata": {
             "disk": "disk-id"
-          }
+          },
+          "name": "demo-broker-1",
+          "node_id": "broker-1",
+          "provider": "vultr",
+          "sudoer": "root",
+          "user": "root"
         },
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "other"
     ],
     "expected": {
       "error": "unknown entry node: other"
-    }
+    },
+    "name": "join unknown entry node: other",
+    "op": "collect"
   },
   {
-    "name": "incomplete node",
-    "op": "collect",
     "args": [
       [
         {
+          "index": 0,
           "node_id": "broker-0",
-          "role": "broker",
-          "index": 0
+          "role": "broker"
         },
         {
+          "index": 1,
           "node_id": "broker-1",
-          "role": "broker",
-          "index": 1
+          "role": "broker"
         }
       ],
       [
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         },
         {
+          "ip": "",
+          "name": "demo-broker-1",
           "node_id": "broker-1",
           "provider": "vultr",
-          "name": "demo-broker-1",
-          "ip": "",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "broker-0"
     ],
     "expected": {
       "error": "incomplete node broker-1: ip"
-    }
+    },
+    "name": "incomplete node",
+    "op": "collect"
   },
   {
-    "name": "mixed providers",
-    "op": "collect",
     "args": [
       [
         {
-          "node_id": "broker-0",
-          "role": "broker",
-          "index": 0
-        },
-        {
-          "node_id": "broker-1",
-          "role": "broker",
-          "index": 1
-        }
-      ],
-      [
-        {
-          "node_id": "broker-0",
-          "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
-        },
-        {
-          "node_id": "broker-1",
-          "provider": "aws",
-          "name": "demo-broker-1",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
-        }
-      ],
-      "broker-0"
-    ],
-    "expected": {
-      "error": "provider mismatch: broker-1"
-    }
-  },
-  {
-    "name": "explicit mixed providers still refused",
-    "op": "collect",
-    "args": [
-      [
-        {
-          "node_id": "broker-0",
-          "role": "broker",
           "index": 0,
-          "provider": "vultr"
+          "node_id": "broker-0",
+          "role": "broker"
         },
         {
-          "node_id": "broker-1",
-          "role": "broker",
           "index": 1,
-          "provider": "aws"
+          "node_id": "broker-1",
+          "role": "broker"
         }
       ],
       [
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         },
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-1",
           "node_id": "broker-1",
           "provider": "aws",
-          "name": "demo-broker-1",
-          "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "broker-0"
     ],
     "expected": {
       "error": "provider mismatch: broker-1"
-    }
+    },
+    "name": "mixed providers",
+    "op": "collect"
   },
   {
-    "name": "private address required",
-    "op": "collect",
     "args": [
       [
         {
-          "node_id": "broker-0",
-          "role": "broker",
           "index": 0,
-          "private": true
+          "node_id": "broker-0",
+          "provider": "vultr",
+          "role": "broker"
+        },
+        {
+          "index": 1,
+          "node_id": "broker-1",
+          "provider": "aws",
+          "role": "broker"
         }
       ],
       [
         {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
           "node_id": "broker-0",
           "provider": "vultr",
-          "name": "demo-broker-0",
+          "sudoer": "root",
+          "user": "root"
+        },
+        {
           "ip": "192.0.2.10",
-          "user": "root",
-          "sudoer": "root"
+          "name": "demo-broker-1",
+          "node_id": "broker-1",
+          "provider": "aws",
+          "sudoer": "root",
+          "user": "root"
+        }
+      ],
+      "broker-0"
+    ],
+    "expected": {
+      "error": "provider mismatch: broker-1"
+    },
+    "name": "explicit mixed providers still refused",
+    "op": "collect"
+  },
+  {
+    "args": [
+      [
+        {
+          "index": 0,
+          "node_id": "broker-0",
+          "private": true,
+          "role": "broker"
+        }
+      ],
+      [
+        {
+          "ip": "192.0.2.10",
+          "name": "demo-broker-0",
+          "node_id": "broker-0",
+          "provider": "vultr",
+          "sudoer": "root",
+          "user": "root"
         }
       ],
       "broker-0"
     ],
     "expected": {
       "error": "incomplete node broker-0: vpc_ip"
-    }
+    },
+    "name": "private address required",
+    "op": "collect"
   },
   {
-    "name": "empty join",
-    "op": "collect",
     "args": [
       [],
       [],
@@ -689,11 +687,11 @@
     ],
     "expected": {
       "error": "no nodes requested"
-    }
+    },
+    "name": "empty join",
+    "op": "collect"
   },
   {
-    "name": "state {'status': 'absent'}",
-    "op": "state_decision",
     "args": [
       {
         "status": "absent"
@@ -702,11 +700,11 @@
     ],
     "expected": {
       "action": "create"
-    }
+    },
+    "name": "state {'status': 'absent'}",
+    "op": "state_decision"
   },
   {
-    "name": "state {'status': 'error'}",
-    "op": "state_decision",
     "args": [
       {
         "status": "error"
@@ -715,57 +713,57 @@
     ],
     "expected": {
       "error": "could not read compute state; refusing mutation"
-    }
+    },
+    "name": "state {'status': 'error'}",
+    "op": "state_decision"
   },
   {
-    "name": "state {'status': 'present', 'params': {'provider': 'aws'}}",
-    "op": "state_decision",
     "args": [
       {
-        "status": "present",
         "params": {
           "provider": "aws"
-        }
+        },
+        "status": "present"
       },
       "aws"
     ],
     "expected": {
       "action": "reuse"
-    }
+    },
+    "name": "state {'status': 'present', 'params': {'provider': 'aws'}}",
+    "op": "state_decision"
   },
   {
-    "name": "state {'status': 'present', 'params': {}}",
-    "op": "state_decision",
     "args": [
       {
-        "status": "present",
-        "params": {}
+        "params": {},
+        "status": "present"
       },
       "aws"
     ],
     "expected": {
       "error": "legacy state requires migration"
-    }
+    },
+    "name": "state {'status': 'present', 'params': {}}",
+    "op": "state_decision"
   },
   {
-    "name": "state {'status': 'present', 'params': {'provider': 'vultr'}}",
-    "op": "state_decision",
     "args": [
       {
-        "status": "present",
         "params": {
           "provider": "vultr"
-        }
+        },
+        "status": "present"
       },
       "aws"
     ],
     "expected": {
       "error": "state holds a vultr machine; set provider-compute back to vultr and delete first"
-    }
+    },
+    "name": "state {'status': 'present', 'params': {'provider': 'vultr'}}",
+    "op": "state_decision"
   },
   {
-    "name": "state {'status': 'unknown'}",
-    "op": "state_decision",
     "args": [
       {
         "status": "unknown"
@@ -774,106 +772,106 @@
     ],
     "expected": {
       "error": "invalid state read status"
-    }
+    },
+    "name": "state {'status': 'unknown'}",
+    "op": "state_decision"
   },
   {
-    "name": "state {'status': 'present', 'params': {'provider': 7}}",
-    "op": "state_decision",
     "args": [
       {
-        "status": "present",
         "params": {
           "provider": 7
-        }
+        },
+        "status": "present"
       },
       "aws"
     ],
     "expected": {
       "error": "legacy state requires migration"
-    }
+    },
+    "name": "state {'status': 'present', 'params': {'provider': 7}}",
+    "op": "state_decision"
   },
   {
-    "name": "state {'status': 'present', 'params': {'provider': ' REPLACE_ME '}}",
-    "op": "state_decision",
     "args": [
       {
-        "status": "present",
         "params": {
           "provider": " REPLACE_ME "
-        }
+        },
+        "status": "present"
       },
       "aws"
     ],
     "expected": {
       "error": "legacy state requires migration"
-    }
+    },
+    "name": "state {'status': 'present', 'params': {'provider': ' REPLACE_ME '}}",
+    "op": "state_decision"
   },
   {
+    "args": [
+      {
+        "profile": "demo",
+        "provider-backend": "r2",
+        "provider-compute": "aws"
+      }
+    ],
+    "expected": [
+      ":aws-availability-zone is required",
+      ":aws-image-id is required",
+      ":aws-instance-type is required",
+      ":aws-region is required",
+      ":aws-root-volume-size-gb is required",
+      ":aws-subnet-cidr is required",
+      ":aws-vpc-cidr is required",
+      ":r2-bucket is required",
+      ":r2-endpoint is required"
+    ],
     "name": "missing settings aws r2",
-    "op": "validate",
-    "args": [
-      {
-        "profile": "demo",
-        "provider-compute": "aws",
-        "provider-backend": "r2"
-      }
-    ],
-    "expected": [
-      ":aws-availability-zone is required",
-      ":aws-image-id is required",
-      ":aws-instance-type is required",
-      ":aws-region is required",
-      ":aws-root-volume-size-gb is required",
-      ":aws-subnet-cidr is required",
-      ":aws-vpc-cidr is required",
-      ":r2-bucket is required",
-      ":r2-endpoint is required"
-    ]
+    "op": "validate"
   },
   {
+    "args": [
+      {
+        "aws-availability-zone": "fixture-value",
+        "aws-image-id": "fixture-value",
+        "aws-instance-type": "fixture-value",
+        "aws-region": "fixture-value",
+        "aws-root-volume-size-gb": "fixture-value",
+        "aws-subnet-cidr": "fixture-value",
+        "aws-vpc-cidr": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "r2",
+        "provider-compute": "aws",
+        "r2-bucket": "fixture-value",
+        "r2-endpoint": "fixture-value"
+      }
+    ],
+    "expected": [],
     "name": "valid settings aws r2",
-    "op": "validate",
-    "args": [
-      {
-        "profile": "demo",
-        "provider-compute": "aws",
-        "provider-backend": "r2",
-        "aws-availability-zone": "fixture-value",
-        "aws-image-id": "fixture-value",
-        "aws-instance-type": "fixture-value",
-        "aws-region": "fixture-value",
-        "aws-root-volume-size-gb": "fixture-value",
-        "aws-subnet-cidr": "fixture-value",
-        "aws-vpc-cidr": "fixture-value",
-        "r2-bucket": "fixture-value",
-        "r2-endpoint": "fixture-value"
-      }
-    ],
-    "expected": []
+    "op": "validate"
   },
   {
-    "name": "credentials aws r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "aws",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "aws"
       }
     ],
     "expected": [
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY"
-    ]
+    ],
+    "name": "credentials aws r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings aws s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "aws",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "aws"
       }
     ],
     "expected": [
@@ -886,16 +884,13 @@
       ":aws-vpc-cidr is required",
       ":s3-bucket is required",
       ":s3-region is required"
-    ]
+    ],
+    "name": "missing settings aws s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings aws s3",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "aws",
-        "provider-backend": "s3",
         "aws-availability-zone": "fixture-value",
         "aws-image-id": "fixture-value",
         "aws-instance-type": "fixture-value",
@@ -903,32 +898,35 @@
         "aws-root-volume-size-gb": "fixture-value",
         "aws-subnet-cidr": "fixture-value",
         "aws-vpc-cidr": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "s3",
+        "provider-compute": "aws",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings aws s3",
+    "op": "validate"
   },
   {
-    "name": "credentials aws s3",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "aws",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "aws"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "credentials aws s3",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings azure r2",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "azure",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "azure"
       }
     ],
     "expected": [
@@ -945,16 +943,13 @@
       ":azure-vnet-cidr is required",
       ":r2-bucket is required",
       ":r2-endpoint is required"
-    ]
+    ],
+    "name": "missing settings azure r2",
+    "op": "validate"
   },
   {
-    "name": "valid settings azure r2",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "azure",
-        "provider-backend": "r2",
         "azure-boot-disk-size-gb": "fixture-value",
         "azure-image-offer": "fixture-value",
         "azure-image-publisher": "fixture-value",
@@ -966,35 +961,38 @@
         "azure-subscription-id": "fixture-value",
         "azure-vm-size": "fixture-value",
         "azure-vnet-cidr": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "r2",
+        "provider-compute": "azure",
         "r2-bucket": "fixture-value",
         "r2-endpoint": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings azure r2",
+    "op": "validate"
   },
   {
-    "name": "credentials azure r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "azure",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "azure"
       }
     ],
     "expected": [
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY"
-    ]
+    ],
+    "name": "credentials azure r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings azure s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "azure",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "azure"
       }
     ],
     "expected": [
@@ -1011,16 +1009,13 @@
       ":azure-vnet-cidr is required",
       ":s3-bucket is required",
       ":s3-region is required"
-    ]
+    ],
+    "name": "missing settings azure s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings azure s3",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "azure",
-        "provider-backend": "s3",
         "azure-boot-disk-size-gb": "fixture-value",
         "azure-image-offer": "fixture-value",
         "azure-image-publisher": "fixture-value",
@@ -1032,32 +1027,35 @@
         "azure-subscription-id": "fixture-value",
         "azure-vm-size": "fixture-value",
         "azure-vnet-cidr": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "s3",
+        "provider-compute": "azure",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings azure s3",
+    "op": "validate"
   },
   {
-    "name": "credentials azure s3",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "azure",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "azure"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "credentials azure s3",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings digitalocean r2",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "digitalocean",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "digitalocean"
       }
     ],
     "expected": [
@@ -1066,49 +1064,49 @@
       ":digitalocean-size is required",
       ":r2-bucket is required",
       ":r2-endpoint is required"
-    ]
+    ],
+    "name": "missing settings digitalocean r2",
+    "op": "validate"
   },
   {
-    "name": "valid settings digitalocean r2",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "digitalocean",
-        "provider-backend": "r2",
         "digitalocean-image": "fixture-value",
         "digitalocean-region": "fixture-value",
         "digitalocean-size": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "r2",
+        "provider-compute": "digitalocean",
         "r2-bucket": "fixture-value",
         "r2-endpoint": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings digitalocean r2",
+    "op": "validate"
   },
   {
-    "name": "credentials digitalocean r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "digitalocean",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "digitalocean"
       }
     ],
     "expected": [
       "COLORS_PAR_DO_TOKEN",
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY"
-    ]
+    ],
+    "name": "credentials digitalocean r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings digitalocean s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "digitalocean",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "digitalocean"
       }
     ],
     "expected": [
@@ -1117,47 +1115,47 @@
       ":digitalocean-size is required",
       ":s3-bucket is required",
       ":s3-region is required"
-    ]
+    ],
+    "name": "missing settings digitalocean s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings digitalocean s3",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "digitalocean",
-        "provider-backend": "s3",
         "digitalocean-image": "fixture-value",
         "digitalocean-region": "fixture-value",
         "digitalocean-size": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "s3",
+        "provider-compute": "digitalocean",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings digitalocean s3",
+    "op": "validate"
   },
   {
-    "name": "credentials digitalocean s3",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "digitalocean",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "digitalocean"
       }
     ],
     "expected": [
       "COLORS_PAR_DO_TOKEN"
-    ]
+    ],
+    "name": "credentials digitalocean s3",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings google r2",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "google",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "google"
       }
     ],
     "expected": [
@@ -1170,16 +1168,13 @@
       ":r2-bucket is required",
       ":r2-endpoint is required",
       "one of :google-image-id or :google-image-project and :google-image-family is required"
-    ]
+    ],
+    "name": "missing settings google r2",
+    "op": "validate"
   },
   {
-    "name": "valid settings google r2",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "google",
-        "provider-backend": "r2",
         "google-boot-disk-size-gb": "fixture-value",
         "google-image-family": "fixture-value",
         "google-image-id": "fixture-value",
@@ -1189,35 +1184,38 @@
         "google-region": "fixture-value",
         "google-subnet-cidr": "fixture-value",
         "google-zone": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "r2",
+        "provider-compute": "google",
         "r2-bucket": "fixture-value",
         "r2-endpoint": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings google r2",
+    "op": "validate"
   },
   {
-    "name": "credentials google r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "google",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "google"
       }
     ],
     "expected": [
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY"
-    ]
+    ],
+    "name": "credentials google r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings google s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "google",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "google"
       }
     ],
     "expected": [
@@ -1230,16 +1228,13 @@
       ":s3-bucket is required",
       ":s3-region is required",
       "one of :google-image-id or :google-image-project and :google-image-family is required"
-    ]
+    ],
+    "name": "missing settings google s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings google s3",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "google",
-        "provider-backend": "s3",
         "google-boot-disk-size-gb": "fixture-value",
         "google-image-family": "fixture-value",
         "google-image-id": "fixture-value",
@@ -1249,32 +1244,35 @@
         "google-region": "fixture-value",
         "google-subnet-cidr": "fixture-value",
         "google-zone": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "s3",
+        "provider-compute": "google",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings google s3",
+    "op": "validate"
   },
   {
-    "name": "credentials google s3",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "google",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "google"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "credentials google s3",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings hcloud r2",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "hcloud",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "hcloud"
       }
     ],
     "expected": [
@@ -1283,49 +1281,49 @@
       ":hcloud-server-type is required",
       ":r2-bucket is required",
       ":r2-endpoint is required"
-    ]
+    ],
+    "name": "missing settings hcloud r2",
+    "op": "validate"
   },
   {
-    "name": "valid settings hcloud r2",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "hcloud",
-        "provider-backend": "r2",
         "hcloud-image": "fixture-value",
         "hcloud-location": "fixture-value",
         "hcloud-server-type": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "r2",
+        "provider-compute": "hcloud",
         "r2-bucket": "fixture-value",
         "r2-endpoint": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings hcloud r2",
+    "op": "validate"
   },
   {
-    "name": "credentials hcloud r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "hcloud",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "hcloud"
       }
     ],
     "expected": [
       "COLORS_PAR_HCLOUD_TOKEN",
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY"
-    ]
+    ],
+    "name": "credentials hcloud r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings hcloud s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "hcloud",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "hcloud"
       }
     ],
     "expected": [
@@ -1334,47 +1332,47 @@
       ":hcloud-server-type is required",
       ":s3-bucket is required",
       ":s3-region is required"
-    ]
+    ],
+    "name": "missing settings hcloud s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings hcloud s3",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "hcloud",
-        "provider-backend": "s3",
         "hcloud-image": "fixture-value",
         "hcloud-location": "fixture-value",
         "hcloud-server-type": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "s3",
+        "provider-compute": "hcloud",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings hcloud s3",
+    "op": "validate"
   },
   {
-    "name": "credentials hcloud s3",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "hcloud",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "hcloud"
       }
     ],
     "expected": [
       "COLORS_PAR_HCLOUD_TOKEN"
-    ]
+    ],
+    "name": "credentials hcloud s3",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings oci r2",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "oci",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "oci"
       }
     ],
     "expected": [
@@ -1383,22 +1381,18 @@
       ":oci-boot-volume-vpus-per-gb is required",
       ":oci-compartment-id is required",
       ":oci-config-file-profile is required",
-      ":oci-memory-in-gbs is required",
       ":oci-ocpus is required",
       ":oci-shape is required",
       ":oci-subnet-id is required",
       ":r2-bucket is required",
       ":r2-endpoint is required"
-    ]
+    ],
+    "name": "missing settings oci r2",
+    "op": "validate"
   },
   {
-    "name": "valid settings oci r2",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "oci",
-        "provider-backend": "r2",
         "oci-availability-domain": "fixture-value",
         "oci-boot-volume-size-in-gbs": "fixture-value",
         "oci-boot-volume-vpus-per-gb": "fixture-value",
@@ -1408,35 +1402,38 @@
         "oci-ocpus": "fixture-value",
         "oci-shape": "fixture-value",
         "oci-subnet-id": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "r2",
+        "provider-compute": "oci",
         "r2-bucket": "fixture-value",
         "r2-endpoint": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings oci r2",
+    "op": "validate"
   },
   {
-    "name": "credentials oci r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "oci",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "oci"
       }
     ],
     "expected": [
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY"
-    ]
+    ],
+    "name": "credentials oci r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings oci s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "oci",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "oci"
       }
     ],
     "expected": [
@@ -1445,22 +1442,18 @@
       ":oci-boot-volume-vpus-per-gb is required",
       ":oci-compartment-id is required",
       ":oci-config-file-profile is required",
-      ":oci-memory-in-gbs is required",
       ":oci-ocpus is required",
       ":oci-shape is required",
       ":oci-subnet-id is required",
       ":s3-bucket is required",
       ":s3-region is required"
-    ]
+    ],
+    "name": "missing settings oci s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings oci s3",
-    "op": "validate",
     "args": [
       {
-        "profile": "demo",
-        "provider-compute": "oci",
-        "provider-backend": "s3",
         "oci-availability-domain": "fixture-value",
         "oci-boot-volume-size-in-gbs": "fixture-value",
         "oci-boot-volume-vpus-per-gb": "fixture-value",
@@ -1470,83 +1463,86 @@
         "oci-ocpus": "fixture-value",
         "oci-shape": "fixture-value",
         "oci-subnet-id": "fixture-value",
+        "profile": "demo",
+        "provider-backend": "s3",
+        "provider-compute": "oci",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings oci s3",
+    "op": "validate"
   },
   {
+    "args": [
+      {
+        "profile": "demo",
+        "provider-backend": "s3",
+        "provider-compute": "oci"
+      }
+    ],
+    "expected": [],
     "name": "credentials oci s3",
-    "op": "credential_requirements",
+    "op": "credential_requirements"
+  },
+  {
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "oci",
-        "provider-backend": "s3"
+        "provider-backend": "r2",
+        "provider-compute": "vultr"
       }
     ],
-    "expected": []
-  },
-  {
+    "expected": [
+      ":r2-bucket is required",
+      ":r2-endpoint is required",
+      ":vultr-os-id is required",
+      ":vultr-plan is required",
+      ":vultr-region is required"
+    ],
     "name": "missing settings vultr r2",
-    "op": "validate",
+    "op": "validate"
+  },
+  {
     "args": [
       {
         "profile": "demo",
+        "provider-backend": "r2",
         "provider-compute": "vultr",
-        "provider-backend": "r2"
+        "r2-bucket": "fixture-value",
+        "r2-endpoint": "fixture-value",
+        "vultr-os-id": "fixture-value",
+        "vultr-plan": "fixture-value",
+        "vultr-region": "fixture-value"
       }
     ],
-    "expected": [
-      ":r2-bucket is required",
-      ":r2-endpoint is required",
-      ":vultr-os-id is required",
-      ":vultr-plan is required",
-      ":vultr-region is required"
-    ]
-  },
-  {
+    "expected": [],
     "name": "valid settings vultr r2",
-    "op": "validate",
-    "args": [
-      {
-        "profile": "demo",
-        "provider-compute": "vultr",
-        "provider-backend": "r2",
-        "r2-bucket": "fixture-value",
-        "r2-endpoint": "fixture-value",
-        "vultr-os-id": "fixture-value",
-        "vultr-plan": "fixture-value",
-        "vultr-region": "fixture-value"
-      }
-    ],
-    "expected": []
+    "op": "validate"
   },
   {
-    "name": "credentials vultr r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "vultr",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "vultr"
       }
     ],
     "expected": [
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY",
       "COLORS_PAR_VULTR_API_KEY"
-    ]
+    ],
+    "name": "credentials vultr r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings vultr s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "vultr",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "vultr"
       }
     ],
     "expected": [
@@ -1555,16 +1551,16 @@
       ":vultr-os-id is required",
       ":vultr-plan is required",
       ":vultr-region is required"
-    ]
+    ],
+    "name": "missing settings vultr s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings vultr s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "vultr",
         "provider-backend": "s3",
+        "provider-compute": "vultr",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value",
         "vultr-os-id": "fixture-value",
@@ -1572,30 +1568,30 @@
         "vultr-region": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings vultr s3",
+    "op": "validate"
   },
   {
-    "name": "credentials vultr s3",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "vultr",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "vultr"
       }
     ],
     "expected": [
       "COLORS_PAR_VULTR_API_KEY"
-    ]
+    ],
+    "name": "credentials vultr s3",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings yandex r2",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "yandex",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "yandex"
       }
     ],
     "expected": [
@@ -1611,16 +1607,16 @@
       ":yandex-subnet-cidr is required",
       ":yandex-zone is required",
       "one of :yandex-image-id or :yandex-image-family is required"
-    ]
+    ],
+    "name": "missing settings yandex r2",
+    "op": "validate"
   },
   {
-    "name": "valid settings yandex r2",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "yandex",
         "provider-backend": "r2",
+        "provider-compute": "yandex",
         "r2-bucket": "fixture-value",
         "r2-endpoint": "fixture-value",
         "yandex-cloud-id": "fixture-value",
@@ -1635,32 +1631,32 @@
         "yandex-zone": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings yandex r2",
+    "op": "validate"
   },
   {
-    "name": "credentials yandex r2",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "yandex",
-        "provider-backend": "r2"
+        "provider-backend": "r2",
+        "provider-compute": "yandex"
       }
     ],
     "expected": [
       "COLORS_PAR_R2_ACCESS_KEY_ID",
       "COLORS_PAR_R2_SECRET_ACCESS_KEY",
       "COLORS_PAR_YANDEX_TOKEN"
-    ]
+    ],
+    "name": "credentials yandex r2",
+    "op": "credential_requirements"
   },
   {
-    "name": "missing settings yandex s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "yandex",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "yandex"
       }
     ],
     "expected": [
@@ -1676,16 +1672,16 @@
       ":yandex-subnet-cidr is required",
       ":yandex-zone is required",
       "one of :yandex-image-id or :yandex-image-family is required"
-    ]
+    ],
+    "name": "missing settings yandex s3",
+    "op": "validate"
   },
   {
-    "name": "valid settings yandex s3",
-    "op": "validate",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "yandex",
         "provider-backend": "s3",
+        "provider-compute": "yandex",
         "s3-bucket": "fixture-value",
         "s3-region": "fixture-value",
         "yandex-cloud-id": "fixture-value",
@@ -1700,55 +1696,55 @@
         "yandex-zone": "fixture-value"
       }
     ],
-    "expected": []
+    "expected": [],
+    "name": "valid settings yandex s3",
+    "op": "validate"
   },
   {
-    "name": "credentials yandex s3",
-    "op": "credential_requirements",
     "args": [
       {
         "profile": "demo",
-        "provider-compute": "yandex",
-        "provider-backend": "s3"
+        "provider-backend": "s3",
+        "provider-compute": "yandex"
       }
     ],
     "expected": [
       "COLORS_PAR_YANDEX_TOKEN"
-    ]
+    ],
+    "name": "credentials yandex s3",
+    "op": "credential_requirements"
   },
   {
+    "args": [
+      {
+        "provider-backend": "local",
+        "provider-compute": "no-infra"
+      }
+    ],
+    "expected": [
+      ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
+      ":provider-backend must be one of gcs, oci, r2, s3",
+      ":profile is required"
+    ],
     "name": "unsupported selectors",
-    "op": "validate",
+    "op": "validate"
+  },
+  {
     "args": [
       {
-        "provider-compute": "no-infra",
-        "provider-backend": "local"
+        "provider-backend": [],
+        "provider-compute": {}
       }
     ],
     "expected": [
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
       ":provider-backend must be one of gcs, oci, r2, s3",
       ":profile is required"
-    ]
-  },
-  {
+    ],
     "name": "structured invalid selectors",
-    "op": "validate",
-    "args": [
-      {
-        "provider-compute": {},
-        "provider-backend": []
-      }
-    ],
-    "expected": [
-      ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
-      ":provider-backend must be one of gcs, oci, r2, s3",
-      ":profile is required"
-    ]
+    "op": "validate"
   },
   {
-    "name": "typed rendering",
-    "op": "render_template",
     "args": [
       {
         "bool": "{{enabled}}",
@@ -1758,8 +1754,8 @@
         "ref": "${vultr_vpc.network.id}"
       },
       {
-        "enabled": false,
         "count": 3,
+        "enabled": false,
         "ids": [
           "x"
         ],
@@ -1774,44 +1770,44 @@
       ],
       "nil": null,
       "ref": "${vultr_vpc.network.id}"
-    }
+    },
+    "name": "typed rendering",
+    "op": "render_template"
   },
   {
-    "name": "bad template prefix{{id}}",
-    "op": "render_template",
     "args": [
       "prefix{{id}}",
       {}
     ],
     "expected": {
       "error": "template placeholders must occupy the entire string"
-    }
+    },
+    "name": "bad template prefix{{id}}",
+    "op": "render_template"
   },
   {
-    "name": "bad template {{missing}}",
-    "op": "render_template",
     "args": [
       "{{missing}}",
       {}
     ],
     "expected": {
       "error": "missing template input: missing"
-    }
+    },
+    "name": "bad template {{missing}}",
+    "op": "render_template"
   },
   {
-    "name": "bad template {{bad-key}}",
-    "op": "render_template",
     "args": [
       "{{bad-key}}",
       {}
     ],
     "expected": {
       "error": "template placeholders must occupy the entire string"
-    }
+    },
+    "name": "bad template {{bad-key}}",
+    "op": "render_template"
   },
   {
-    "name": "backend r2",
-    "op": "backend_plan",
     "args": [
       {
         "provider-backend": "r2",
@@ -1826,18 +1822,18 @@
           "backend": {
             "s3": {
               "bucket": "state",
-              "key": "demo/compute/shared.tfstate",
-              "region": "auto",
-              "use_lockfile": true,
               "endpoints": {
                 "s3": "https://example.r2.cloudflarestorage.com"
               },
-              "use_path_style": false,
+              "key": "demo/compute/shared.tfstate",
+              "region": "auto",
               "skip_credentials_validation": true,
               "skip_metadata_api_check": true,
               "skip_region_validation": true,
               "skip_requesting_account_id": true,
-              "skip_s3_checksum": true
+              "skip_s3_checksum": true,
+              "use_lockfile": true,
+              "use_path_style": false
             }
           }
         }
@@ -1847,11 +1843,11 @@
         "COLORS_PAR_R2_SECRET_ACCESS_KEY": "secret_key"
       },
       "environment": {}
-    }
+    },
+    "name": "backend r2",
+    "op": "backend_plan"
   },
   {
-    "name": "backend invalid key r2",
-    "op": "backend_plan",
     "args": [
       {
         "provider-backend": "r2",
@@ -1862,11 +1858,11 @@
     ],
     "expected": {
       "error": "invalid state key"
-    }
+    },
+    "name": "backend invalid key r2",
+    "op": "backend_plan"
   },
   {
-    "name": "backend s3",
-    "op": "backend_plan",
     "args": [
       {
         "provider-backend": "s3",
@@ -1890,11 +1886,11 @@
       },
       "credential_bindings": {},
       "environment": {}
-    }
+    },
+    "name": "backend s3",
+    "op": "backend_plan"
   },
   {
-    "name": "backend invalid key s3",
-    "op": "backend_plan",
     "args": [
       {
         "provider-backend": "s3",
@@ -1905,39 +1901,30 @@
     ],
     "expected": {
       "error": "invalid state key"
-    }
+    },
+    "name": "backend invalid key s3",
+    "op": "backend_plan"
   },
   {
-    "name": "provider render vultr shared",
-    "op": "render_template",
     "args": [
       {
-        "terraform": {
-          "required_providers": {
-            "vultr": {
-              "source": "vultr/vultr",
-              "version": "2.32.0"
+        "locals": {
+          "ingress": "{{ingress}}"
+        },
+        "output": {
+          "params": {
+            "value": {
+              "firewall_group_id": "${vultr_firewall_group.network.id}",
+              "provider": "vultr",
+              "vpc_id": "${vultr_vpc.network.id}",
+              "vpc_ip_range": "{{network_cidr}}"
             }
           }
         },
         "provider": {
           "vultr": {}
         },
-        "locals": {
-          "ingress": "{{ingress}}"
-        },
         "resource": {
-          "vultr_vpc": {
-            "network": {
-              "region": "{{region}}",
-              "description": "{{name}}",
-              "v4_subnet": "{{network_address}}",
-              "v4_subnet_mask": "{{network_prefix}}",
-              "lifecycle": {
-                "prevent_destroy": "{{prevent_destroy}}"
-              }
-            }
-          },
           "vultr_firewall_group": {
             "network": {
               "description": "{{firewall_name}}",
@@ -1948,138 +1935,138 @@
           },
           "vultr_firewall_rule": {
             "ingress": {
-              "for_each": "${local.ingress}",
               "firewall_group_id": "${vultr_firewall_group.network.id}",
-              "protocol": "${each.value.protocol}",
-              "port": "${each.value.port}",
+              "for_each": "${local.ingress}",
               "ip_type": "${each.value.ip_type}",
+              "port": "${each.value.port}",
+              "protocol": "${each.value.protocol}",
               "subnet": "${each.value.subnet}",
               "subnet_size": "${each.value.subnet_size}"
             }
+          },
+          "vultr_vpc": {
+            "network": {
+              "description": "{{name}}",
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "region": "{{region}}",
+              "v4_subnet": "{{network_address}}",
+              "v4_subnet_mask": "{{network_prefix}}"
+            }
           }
         },
-        "output": {
-          "params": {
-            "value": {
-              "provider": "vultr",
-              "vpc_id": "${vultr_vpc.network.id}",
-              "vpc_ip_range": "{{network_cidr}}",
-              "firewall_group_id": "${vultr_firewall_group.network.id}"
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
             }
           }
         }
       },
       {
-        "profile": "example",
-        "name": "example",
-        "region": "ewr",
-        "network_address": "10.42.0.0",
-        "network_prefix": 24,
-        "network_cidr": "10.42.0.0/24",
-        "prevent_destroy": true,
-        "firewall_name": "example-firewall",
-        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
-        "node_id": "0",
-        "plan": "vc2-2c-4gb",
-        "os_id": 2284,
         "firewall_group_id": "00000000-0000-0000-0000-000000000001",
-        "vpc_ids": [
-          "00000000-0000-0000-0000-000000000002"
-        ],
-        "ssh_key_ids": [
-          "00000000-0000-0000-0000-000000000003"
-        ],
-        "ssh_key_id": "00000000-0000-0000-0000-000000000003",
-        "user": "root",
-        "sudoer": "root",
+        "firewall_name": "example-firewall",
         "ingress": {
-          "ssh:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "22",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
-          "kafka:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "9092",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
           "cluster_internal:9093": {
-            "protocol": "tcp",
-            "port": "9093",
             "ip_type": "v4",
+            "port": "9093",
+            "protocol": "tcp",
             "subnet": "10.42.0.0",
             "subnet_size": 24
           },
           "cluster_internal:9094": {
-            "protocol": "tcp",
-            "port": "9094",
             "ip_type": "v4",
+            "port": "9094",
+            "protocol": "tcp",
             "subnet": "10.42.0.0",
             "subnet_size": 24
+          },
+          "kafka:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "9092",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          },
+          "ssh:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
           }
-        }
+        },
+        "name": "example",
+        "network_address": "10.42.0.0",
+        "network_cidr": "10.42.0.0/24",
+        "network_prefix": 24,
+        "node_id": "0",
+        "os_id": 2284,
+        "plan": "vc2-2c-4gb",
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "ewr",
+        "ssh_key_id": "00000000-0000-0000-0000-000000000003",
+        "ssh_key_ids": [
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "00000000-0000-0000-0000-000000000002"
+        ]
       }
     ],
     "expected": {
-      "terraform": {
-        "required_providers": {
-          "vultr": {
-            "source": "vultr/vultr",
-            "version": "2.32.0"
+      "locals": {
+        "ingress": {
+          "cluster_internal:9093": {
+            "ip_type": "v4",
+            "port": "9093",
+            "protocol": "tcp",
+            "subnet": "10.42.0.0",
+            "subnet_size": 24
+          },
+          "cluster_internal:9094": {
+            "ip_type": "v4",
+            "port": "9094",
+            "protocol": "tcp",
+            "subnet": "10.42.0.0",
+            "subnet_size": 24
+          },
+          "kafka:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "9092",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          },
+          "ssh:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          }
+        }
+      },
+      "output": {
+        "params": {
+          "value": {
+            "firewall_group_id": "${vultr_firewall_group.network.id}",
+            "provider": "vultr",
+            "vpc_id": "${vultr_vpc.network.id}",
+            "vpc_ip_range": "10.42.0.0/24"
           }
         }
       },
       "provider": {
         "vultr": {}
       },
-      "locals": {
-        "ingress": {
-          "ssh:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "22",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
-          "kafka:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "9092",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
-          "cluster_internal:9093": {
-            "protocol": "tcp",
-            "port": "9093",
-            "ip_type": "v4",
-            "subnet": "10.42.0.0",
-            "subnet_size": 24
-          },
-          "cluster_internal:9094": {
-            "protocol": "tcp",
-            "port": "9094",
-            "ip_type": "v4",
-            "subnet": "10.42.0.0",
-            "subnet_size": 24
-          }
-        }
-      },
       "resource": {
-        "vultr_vpc": {
-          "network": {
-            "region": "ewr",
-            "description": "example",
-            "v4_subnet": "10.42.0.0",
-            "v4_subnet_mask": 24,
-            "lifecycle": {
-              "prevent_destroy": true
-            }
-          }
-        },
         "vultr_firewall_group": {
           "network": {
             "description": "example-firewall",
@@ -2090,38 +2077,53 @@
         },
         "vultr_firewall_rule": {
           "ingress": {
-            "for_each": "${local.ingress}",
             "firewall_group_id": "${vultr_firewall_group.network.id}",
-            "protocol": "${each.value.protocol}",
-            "port": "${each.value.port}",
+            "for_each": "${local.ingress}",
             "ip_type": "${each.value.ip_type}",
+            "port": "${each.value.port}",
+            "protocol": "${each.value.protocol}",
             "subnet": "${each.value.subnet}",
             "subnet_size": "${each.value.subnet_size}"
           }
+        },
+        "vultr_vpc": {
+          "network": {
+            "description": "example",
+            "lifecycle": {
+              "prevent_destroy": true
+            },
+            "region": "ewr",
+            "v4_subnet": "10.42.0.0",
+            "v4_subnet_mask": 24
+          }
         }
       },
-      "output": {
-        "params": {
-          "value": {
-            "provider": "vultr",
-            "vpc_id": "${vultr_vpc.network.id}",
-            "vpc_ip_range": "10.42.0.0/24",
-            "firewall_group_id": "${vultr_firewall_group.network.id}"
+      "terraform": {
+        "required_providers": {
+          "vultr": {
+            "source": "vultr/vultr",
+            "version": "2.32.0"
           }
         }
       }
-    }
+    },
+    "name": "provider render vultr shared",
+    "op": "render_template"
   },
   {
-    "name": "provider render vultr node",
-    "op": "render_template",
     "args": [
       {
-        "terraform": {
-          "required_providers": {
-            "vultr": {
-              "source": "vultr/vultr",
-              "version": "2.32.0"
+        "output": {
+          "params": {
+            "value": {
+              "ip": "${vultr_instance.node.main_ip}",
+              "name": "${vultr_instance.node.label}",
+              "node_id": "{{node_id}}",
+              "provider": "vultr",
+              "ssh_key_id": "{{ssh_key_id}}",
+              "sudoer": "{{sudoer}}",
+              "user": "{{user}}",
+              "vpc_ip": "${vultr_instance.node.internal_ip}"
             }
           }
         },
@@ -2131,95 +2133,95 @@
         "resource": {
           "vultr_instance": {
             "node": {
-              "label": "{{name}}",
-              "region": "{{region}}",
-              "plan": "{{plan}}",
-              "os_id": "{{os_id}}",
               "firewall_group_id": "{{firewall_group_id}}",
-              "vpc_ids": "{{vpc_ids}}",
-              "ssh_key_ids": "{{ssh_key_ids}}",
+              "label": "{{name}}",
               "lifecycle": {
                 "prevent_destroy": "{{prevent_destroy}}"
-              }
+              },
+              "os_id": "{{os_id}}",
+              "plan": "{{plan}}",
+              "region": "{{region}}",
+              "ssh_key_ids": "{{ssh_key_ids}}",
+              "vpc_ids": "{{vpc_ids}}"
             }
           }
         },
-        "output": {
-          "params": {
-            "value": {
-              "node_id": "{{node_id}}",
-              "provider": "vultr",
-              "name": "${vultr_instance.node.label}",
-              "ip": "${vultr_instance.node.main_ip}",
-              "vpc_ip": "${vultr_instance.node.internal_ip}",
-              "user": "{{user}}",
-              "sudoer": "{{sudoer}}",
-              "ssh_key_id": "{{ssh_key_id}}"
+        "terraform": {
+          "required_providers": {
+            "vultr": {
+              "source": "vultr/vultr",
+              "version": "2.32.0"
             }
           }
         }
       },
       {
-        "profile": "example",
-        "name": "example",
-        "region": "ewr",
-        "network_address": "10.42.0.0",
-        "network_prefix": 24,
-        "network_cidr": "10.42.0.0/24",
-        "prevent_destroy": true,
-        "firewall_name": "example-firewall",
-        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
-        "node_id": "0",
-        "plan": "vc2-2c-4gb",
-        "os_id": 2284,
         "firewall_group_id": "00000000-0000-0000-0000-000000000001",
-        "vpc_ids": [
-          "00000000-0000-0000-0000-000000000002"
-        ],
-        "ssh_key_ids": [
-          "00000000-0000-0000-0000-000000000003"
-        ],
-        "ssh_key_id": "00000000-0000-0000-0000-000000000003",
-        "user": "root",
-        "sudoer": "root",
+        "firewall_name": "example-firewall",
         "ingress": {
-          "ssh:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "22",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
-          "kafka:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "9092",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
           "cluster_internal:9093": {
-            "protocol": "tcp",
-            "port": "9093",
             "ip_type": "v4",
+            "port": "9093",
+            "protocol": "tcp",
             "subnet": "10.42.0.0",
             "subnet_size": 24
           },
           "cluster_internal:9094": {
-            "protocol": "tcp",
-            "port": "9094",
             "ip_type": "v4",
+            "port": "9094",
+            "protocol": "tcp",
             "subnet": "10.42.0.0",
             "subnet_size": 24
+          },
+          "kafka:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "9092",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          },
+          "ssh:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
           }
-        }
+        },
+        "name": "example",
+        "network_address": "10.42.0.0",
+        "network_cidr": "10.42.0.0/24",
+        "network_prefix": 24,
+        "node_id": "0",
+        "os_id": 2284,
+        "plan": "vc2-2c-4gb",
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "ewr",
+        "ssh_key_id": "00000000-0000-0000-0000-000000000003",
+        "ssh_key_ids": [
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "00000000-0000-0000-0000-000000000002"
+        ]
       }
     ],
     "expected": {
-      "terraform": {
-        "required_providers": {
-          "vultr": {
-            "source": "vultr/vultr",
-            "version": "2.32.0"
+      "output": {
+        "params": {
+          "value": {
+            "ip": "${vultr_instance.node.main_ip}",
+            "name": "${vultr_instance.node.label}",
+            "node_id": "0",
+            "provider": "vultr",
+            "ssh_key_id": "00000000-0000-0000-0000-000000000003",
+            "sudoer": "root",
+            "user": "root",
+            "vpc_ip": "${vultr_instance.node.internal_ip}"
           }
         }
       },
@@ -2229,145 +2231,139 @@
       "resource": {
         "vultr_instance": {
           "node": {
-            "label": "example",
-            "region": "ewr",
-            "plan": "vc2-2c-4gb",
-            "os_id": 2284,
             "firewall_group_id": "00000000-0000-0000-0000-000000000001",
-            "vpc_ids": [
-              "00000000-0000-0000-0000-000000000002"
-            ],
+            "label": "example",
+            "lifecycle": {
+              "prevent_destroy": true
+            },
+            "os_id": 2284,
+            "plan": "vc2-2c-4gb",
+            "region": "ewr",
             "ssh_key_ids": [
               "00000000-0000-0000-0000-000000000003"
             ],
-            "lifecycle": {
-              "prevent_destroy": true
-            }
+            "vpc_ids": [
+              "00000000-0000-0000-0000-000000000002"
+            ]
           }
         }
       },
-      "output": {
-        "params": {
-          "value": {
-            "node_id": "0",
-            "provider": "vultr",
-            "name": "${vultr_instance.node.label}",
-            "ip": "${vultr_instance.node.main_ip}",
-            "vpc_ip": "${vultr_instance.node.internal_ip}",
-            "user": "root",
-            "sudoer": "root",
-            "ssh_key_id": "00000000-0000-0000-0000-000000000003"
+      "terraform": {
+        "required_providers": {
+          "vultr": {
+            "source": "vultr/vultr",
+            "version": "2.32.0"
           }
         }
       }
-    }
+    },
+    "name": "provider render vultr node",
+    "op": "render_template"
   },
   {
-    "name": "provider render vultr shared-keygen",
-    "op": "render_template",
     "args": [
       {
-        "resource": {
-          "vultr_ssh_key": {
-            "machine": {
-              "name": "{{profile}}",
-              "ssh_key": "{{public_key}}",
-              "lifecycle": {
-                "prevent_destroy": "{{prevent_destroy}}"
-              }
-            }
-          }
-        },
         "output": {
           "ssh_key_id": {
             "value": "${vultr_ssh_key.machine.id}"
           }
-        }
-      },
-      {
-        "profile": "example",
-        "name": "example",
-        "region": "ewr",
-        "network_address": "10.42.0.0",
-        "network_prefix": 24,
-        "network_cidr": "10.42.0.0/24",
-        "prevent_destroy": true,
-        "firewall_name": "example-firewall",
-        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
-        "node_id": "0",
-        "plan": "vc2-2c-4gb",
-        "os_id": 2284,
-        "firewall_group_id": "00000000-0000-0000-0000-000000000001",
-        "vpc_ids": [
-          "00000000-0000-0000-0000-000000000002"
-        ],
-        "ssh_key_ids": [
-          "00000000-0000-0000-0000-000000000003"
-        ],
-        "ssh_key_id": "00000000-0000-0000-0000-000000000003",
-        "user": "root",
-        "sudoer": "root",
-        "ingress": {
-          "ssh:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "22",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
-          "kafka:192.0.2.1/32": {
-            "protocol": "tcp",
-            "port": "9092",
-            "ip_type": "v4",
-            "subnet": "192.0.2.1",
-            "subnet_size": 32
-          },
-          "cluster_internal:9093": {
-            "protocol": "tcp",
-            "port": "9093",
-            "ip_type": "v4",
-            "subnet": "10.42.0.0",
-            "subnet_size": 24
-          },
-          "cluster_internal:9094": {
-            "protocol": "tcp",
-            "port": "9094",
-            "ip_type": "v4",
-            "subnet": "10.42.0.0",
-            "subnet_size": 24
-          }
-        }
-      }
-    ],
-    "expected": {
-      "resource": {
-        "vultr_ssh_key": {
-          "machine": {
-            "name": "example",
-            "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
-            "lifecycle": {
-              "prevent_destroy": true
+        },
+        "resource": {
+          "vultr_ssh_key": {
+            "machine": {
+              "lifecycle": {
+                "prevent_destroy": "{{prevent_destroy}}"
+              },
+              "name": "{{profile}}",
+              "ssh_key": "{{public_key}}"
             }
           }
         }
       },
+      {
+        "firewall_group_id": "00000000-0000-0000-0000-000000000001",
+        "firewall_name": "example-firewall",
+        "ingress": {
+          "cluster_internal:9093": {
+            "ip_type": "v4",
+            "port": "9093",
+            "protocol": "tcp",
+            "subnet": "10.42.0.0",
+            "subnet_size": 24
+          },
+          "cluster_internal:9094": {
+            "ip_type": "v4",
+            "port": "9094",
+            "protocol": "tcp",
+            "subnet": "10.42.0.0",
+            "subnet_size": 24
+          },
+          "kafka:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "9092",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          },
+          "ssh:192.0.2.1/32": {
+            "ip_type": "v4",
+            "port": "22",
+            "protocol": "tcp",
+            "subnet": "192.0.2.1",
+            "subnet_size": 32
+          }
+        },
+        "name": "example",
+        "network_address": "10.42.0.0",
+        "network_cidr": "10.42.0.0/24",
+        "network_prefix": 24,
+        "node_id": "0",
+        "os_id": 2284,
+        "plan": "vc2-2c-4gb",
+        "prevent_destroy": true,
+        "profile": "example",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "ewr",
+        "ssh_key_id": "00000000-0000-0000-0000-000000000003",
+        "ssh_key_ids": [
+          "00000000-0000-0000-0000-000000000003"
+        ],
+        "sudoer": "root",
+        "user": "root",
+        "vpc_ids": [
+          "00000000-0000-0000-0000-000000000002"
+        ]
+      }
+    ],
+    "expected": {
       "output": {
         "ssh_key_id": {
           "value": "${vultr_ssh_key.machine.id}"
         }
+      },
+      "resource": {
+        "vultr_ssh_key": {
+          "machine": {
+            "lifecycle": {
+              "prevent_destroy": true
+            },
+            "name": "example",
+            "ssh_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+          }
+        }
       }
-    }
+    },
+    "name": "provider render vultr shared-keygen",
+    "op": "render_template"
   },
   {
-    "name": "array selectors are not strings",
-    "op": "validate",
     "args": [
       {
-        "provider-compute": [
-          "aws"
-        ],
         "provider-backend": [
           "s3"
+        ],
+        "provider-compute": [
+          "aws"
         ]
       }
     ],
@@ -2375,11 +2371,11 @@
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
       ":provider-backend must be one of gcs, oci, r2, s3",
       ":profile is required"
-    ]
+    ],
+    "name": "array selectors are not strings",
+    "op": "validate"
   },
   {
-    "name": "missing result identity",
-    "op": "collect",
     "args": [
       [
         {
@@ -2393,11 +2389,11 @@
     ],
     "expected": {
       "error": "undeclared node: null"
-    }
+    },
+    "name": "missing result identity",
+    "op": "collect"
   },
   {
-    "name": "null requested provider uses deployment provider",
-    "op": "collect",
     "args": [
       [
         {
@@ -2407,36 +2403,36 @@
       ],
       [
         {
+          "ip": "192.0.2.10",
+          "name": "n",
           "node_id": "0",
           "provider": "aws",
-          "name": "n",
-          "ip": "192.0.2.10",
-          "user": "ubuntu",
-          "sudoer": "ubuntu"
+          "sudoer": "ubuntu",
+          "user": "ubuntu"
         }
       ],
       "0"
     ],
     "expected": {
-      "provider": "aws",
       "entry_node_id": "0",
       "nodes": [
         {
+          "index": null,
+          "ip": "192.0.2.10",
+          "name": "n",
           "node_id": "0",
           "provider": "aws",
-          "name": "n",
-          "ip": "192.0.2.10",
-          "user": "ubuntu",
-          "sudoer": "ubuntu",
           "role": null,
-          "index": null
+          "sudoer": "ubuntu",
+          "user": "ubuntu"
         }
-      ]
-    }
+      ],
+      "provider": "aws"
+    },
+    "name": "null requested provider uses deployment provider",
+    "op": "collect"
   },
   {
-    "name": "array provider cannot select bundled plan",
-    "op": "provider_plan",
     "args": [
       [
         "aws"
@@ -2446,11 +2442,11 @@
     ],
     "expected": {
       "error": "compute provider templates unavailable: [\"aws\"]"
-    }
+    },
+    "name": "array provider cannot select bundled plan",
+    "op": "provider_plan"
   },
   {
-    "name": "array stage cannot select bundled plan",
-    "op": "provider_plan",
     "args": [
       "aws",
       [
@@ -2460,11 +2456,11 @@
     ],
     "expected": {
       "error": "unsupported compute stage: [\"node\"]"
-    }
+    },
+    "name": "array stage cannot select bundled plan",
+    "op": "provider_plan"
   },
   {
-    "name": "backend read valid",
-    "op": "read_state_case",
     "args": [
       {
         "provider-backend": "r2",
@@ -2473,9 +2469,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2483,26 +2479,57 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
-      "status": "present",
       "params": {
-        "provider": "vultr",
         "ip": "192.0.2.1",
         "metadata": {
           "keep": true
-        }
-      }
-    }
+        },
+        "provider": "vultr"
+      },
+      "status": "present"
+    },
+    "name": "backend read valid",
+    "op": "read_state_case"
   },
   {
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "AWS_ACCESS_KEY_ID": "ambient",
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "err": "diagnostic-must-not-escape",
+          "exit": 0,
+          "out": ""
+        }
+      ]
+    ],
+    "expected": {
+      "status": "error"
+    },
     "name": "backend read empty successful pull",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2511,9 +2538,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2521,19 +2548,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "",
-          "err": "diagnostic-must-not-escape"
+          "out": "{"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read malformed",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2542,29 +2569,29 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
-          "exit": 0,
+          "exit": -1,
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read init exit -1",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2573,29 +2600,29 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
-          "exit": -1,
+          "exit": 0,
           "out": ""
         },
         {
-          "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "err": "diagnostic-must-not-escape",
+          "exit": -1,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read pull exit -1",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2604,29 +2631,29 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
-          "exit": 0,
+          "exit": 1,
           "out": ""
         },
         {
-          "exit": -1,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "err": "diagnostic-must-not-escape",
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read init exit 1",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2635,29 +2662,29 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
-          "exit": 1,
+          "exit": 0,
           "out": ""
         },
         {
-          "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "err": "diagnostic-must-not-escape",
+          "exit": 1,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read pull exit 1",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2666,29 +2693,29 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
-          "exit": 0,
+          "exit": 127,
           "out": ""
         },
         {
-          "exit": 1,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "err": "diagnostic-must-not-escape",
+          "exit": 0,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read init exit 127",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2697,29 +2724,29 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
-          "exit": 127,
+          "exit": 0,
           "out": ""
         },
         {
-          "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "err": "diagnostic-must-not-escape",
+          "exit": 127,
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read pull exit 127",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2728,9 +2755,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2738,19 +2765,19 @@
           "out": ""
         },
         {
-          "exit": 127,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "err": "diagnostic-must-not-escape",
+          "exit": 0,
+          "out": "{\"version\": true, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read invalid version True",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2759,9 +2786,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2769,19 +2796,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": true, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 3, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read invalid version 3",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2790,9 +2817,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2800,19 +2827,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 3, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": -1, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read invalid serial -1",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2821,9 +2848,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2831,19 +2858,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": -1, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 9007199254740992, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read invalid serial 9007199254740992",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2852,9 +2879,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2862,19 +2889,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 9007199254740992, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \" \", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read invalid lineage  ",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2883,9 +2910,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2893,19 +2920,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \" \", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": [], \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read invalid outputs []",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2914,9 +2941,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2924,19 +2951,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": [], \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": {}}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read invalid resources {}",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2945,9 +2972,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2955,19 +2982,20 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": {}}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
-      "status": "error"
-    }
-  },
-  {
+      "params": {},
+      "status": "present"
+    },
     "name": "backend read missing params",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -2976,9 +3004,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -2986,20 +3014,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": null}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
-      "status": "present",
-      "params": {}
-    }
-  },
-  {
+      "status": "error"
+    },
     "name": "backend read invalid params",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -3008,9 +3035,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -3018,19 +3045,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": null}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"secret\": \"fixture-secret-unique\"}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read credential echo",
-    "op": "read_state_case",
+    "op": "read_state_case"
+  },
+  {
     "args": [
       {
         "provider-backend": "r2",
@@ -3039,9 +3066,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "quote\"slash\\newline\nsecret"
       },
       [
         {
@@ -3049,50 +3076,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"secret\": \"fixture-secret-unique\"}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"secret\": \"quote\\\"slash\\\\newline\\nsecret\"}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
-  },
-  {
+    },
     "name": "backend read escaped credential echo",
-    "op": "read_state_case",
-    "args": [
-      {
-        "provider-backend": "r2",
-        "r2-bucket": "test",
-        "r2-endpoint": "https://example.invalid"
-      },
-      "fixture/compute/shared.tfstate",
-      {
-        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "quote\"slash\\newline\nsecret",
-        "AWS_ACCESS_KEY_ID": "ambient"
-      },
-      [
-        {
-          "exit": 0,
-          "out": ""
-        },
-        {
-          "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"secret\": \"quote\\\"slash\\\\newline\\nsecret\"}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
-        }
-      ]
-    ],
-    "expected": {
-      "status": "error"
-    }
+    "op": "read_state_case"
   },
   {
-    "name": "backend read missing credentials",
-    "op": "read_state_case",
     "args": [
       {
         "provider-backend": "r2",
@@ -3107,19 +3103,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "",
-          "err": "diagnostic-must-not-escape"
+          "out": ""
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
+    },
+    "name": "backend read missing credentials",
+    "op": "read_state_case"
   },
   {
-    "name": "backend read s3 ambient",
-    "op": "read_state_case",
     "args": [
       {
         "provider-backend": "s3",
@@ -3134,64 +3130,64 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
-      "status": "present",
       "params": {
-        "provider": "vultr",
         "ip": "192.0.2.1",
         "metadata": {
           "keep": true
-        }
-      }
-    }
+        },
+        "provider": "vultr"
+      },
+      "status": "present"
+    },
+    "name": "backend read s3 ambient",
+    "op": "read_state_case"
   },
   {
+    "args": [
+      {
+        "provider-backend": "r2",
+        "r2-bucket": "test",
+        "r2-endpoint": "https://example.invalid"
+      },
+      "fixture/compute/shared.tfstate",
+      {
+        "AWS_ACCESS_KEY_ID": "ambient",
+        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
+      },
+      [
+        {
+          "exit": 0,
+          "out": ""
+        },
+        {
+          "err": "diagnostic-must-not-escape",
+          "exit": 0,
+          "out": "{\"version\": 4.0, \"serial\": 0.0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
+        }
+      ]
+    ],
+    "expected": {
+      "params": {
+        "ip": "192.0.2.1",
+        "metadata": {
+          "keep": true
+        },
+        "provider": "vultr"
+      },
+      "status": "present"
+    },
     "name": "backend read integral JSON decimals",
-    "op": "read_state_case",
-    "args": [
-      {
-        "provider-backend": "r2",
-        "r2-bucket": "test",
-        "r2-endpoint": "https://example.invalid"
-      },
-      "fixture/compute/shared.tfstate",
-      {
-        "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
-      },
-      [
-        {
-          "exit": 0,
-          "out": ""
-        },
-        {
-          "exit": 0,
-          "out": "{\"version\": 4.0, \"serial\": 0.0, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
-        }
-      ]
-    ],
-    "expected": {
-      "status": "present",
-      "params": {
-        "provider": "vultr",
-        "ip": "192.0.2.1",
-        "metadata": {
-          "keep": true
-        }
-      }
-    }
+    "op": "read_state_case"
   },
   {
-    "name": "backend read fractional serial",
-    "op": "read_state_case",
     "args": [
       {
         "provider-backend": "r2",
@@ -3200,9 +3196,9 @@
       },
       "fixture/compute/shared.tfstate",
       {
+        "AWS_ACCESS_KEY_ID": "ambient",
         "COLORS_PAR_R2_ACCESS_KEY_ID": "fixture-access-unique",
-        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique",
-        "AWS_ACCESS_KEY_ID": "ambient"
+        "COLORS_PAR_R2_SECRET_ACCESS_KEY": "fixture-secret-unique"
       },
       [
         {
@@ -3210,19 +3206,19 @@
           "out": ""
         },
         {
+          "err": "diagnostic-must-not-escape",
           "exit": 0,
-          "out": "{\"version\": 4, \"serial\": 0.5, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}",
-          "err": "diagnostic-must-not-escape"
+          "out": "{\"version\": 4, \"serial\": 0.5, \"lineage\": \"fixture-lineage\", \"outputs\": {\"params\": {\"value\": {\"provider\": \"vultr\", \"ip\": \"192.0.2.1\", \"metadata\": {\"keep\": true}}}}, \"resources\": []}"
         }
       ]
     ],
     "expected": {
       "status": "error"
-    }
+    },
+    "name": "backend read fractional serial",
+    "op": "read_state_case"
   },
   {
-    "name": "profile cannot end in newline",
-    "op": "state_keys",
     "args": [
       "demo\n",
       [
@@ -3231,11 +3227,11 @@
     ],
     "expected": {
       "error": ":profile must be a safe identifier"
-    }
+    },
+    "name": "profile cannot end in newline",
+    "op": "state_keys"
   },
   {
-    "name": "node id cannot end in newline",
-    "op": "state_keys",
     "args": [
       "demo",
       [
@@ -3244,26 +3240,26 @@
     ],
     "expected": {
       "error": "invalid node_id: 0\n"
-    }
+    },
+    "name": "node id cannot end in newline",
+    "op": "state_keys"
   },
   {
-    "name": "role cannot end in newline",
-    "op": "expand",
     "args": [
       [
         {
-          "role": "broker\n",
-          "count": 1
+          "count": 1,
+          "role": "broker\n"
         }
       ]
     ],
     "expected": {
       "error": "invalid role"
-    }
+    },
+    "name": "role cannot end in newline",
+    "op": "expand"
   },
   {
-    "name": "state key cannot end in newline",
-    "op": "backend_plan",
     "args": [
       {
         "provider-backend": "s3",
@@ -3274,7 +3270,9 @@
     ],
     "expected": {
       "error": "invalid state key"
-    }
+    },
+    "name": "state key cannot end in newline",
+    "op": "backend_plan"
   },
   {
     "args": [
@@ -3322,14 +3320,12 @@
     "op": "validate"
   },
   {
-    "name": "native GCS state backend prefix",
-    "op": "backend_plan",
     "args": [
       {
-        "provider-backend": "gcs",
         "gcs-bucket": "demo-states",
         "gcs-region": "us-central1",
-        "google-project": "demo-project"
+        "google-project": "demo-project",
+        "provider-backend": "gcs"
       },
       "demo/compute/shared.tfstate"
     ],
@@ -3346,6 +3342,8 @@
       },
       "credential_bindings": {},
       "environment": {}
-    }
+    },
+    "name": "native GCS state backend prefix",
+    "op": "backend_plan"
   }
 ]

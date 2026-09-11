@@ -817,7 +817,8 @@
         "path": "derived.key_name"
       },
       "memory_in_gbs": {
-        "path": "opts.oci-memory-in-gbs"
+        "path": "opts.oci-memory-in-gbs",
+        "default": null
       },
       "name": {
         "path": "derived.name"

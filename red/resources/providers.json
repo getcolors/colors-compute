@@ -161,7 +161,6 @@
         "oci-availability-domain",
         "oci-shape",
         "oci-ocpus",
-        "oci-memory-in-gbs",
         "oci-boot-volume-size-in-gbs",
         "oci-boot-volume-vpus-per-gb"
       ],
