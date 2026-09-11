@@ -34,7 +34,10 @@
               (let [page (request "GET" (str path "/o") nil (cond-> {} versions (assoc :versions true) page-token (assoc :pageToken page-token))) items (into items (:items page))]
                (if (:nextPageToken page) (recur (:nextPageToken page) items) items))))]
        (if (= action "bootstrap")
-        (do (check (and (= "active" (:status marker)) (not= "deleting" (get-in metadata [:labels :colors_phase]))) "managed backend deletion in progress") {:status "ready" :bucket bucket})
+        (do (check (and (= "active" (:status marker)) (not= "deleting" (get-in metadata [:labels :colors_phase]))) "managed backend deletion in progress")
+            (check (not (:conflict (request "PATCH" path {:iamConfiguration {:uniformBucketLevelAccess {:enabled true} :publicAccessPrevention "enforced"}
+                         :versioning {:enabled true} :softDeletePolicy {:retentionDurationSeconds "0"}} {:ifMetagenerationMatch (:metageneration metadata)}))) "managed backend metadata conflict")
+            {:status "ready" :bucket bucket})
         (do
          (check (false? (:compute-prevent-destroy opts)) "managed backend deletion protected")
          (when (= "active" (:status marker))

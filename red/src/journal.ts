@@ -84,7 +84,7 @@ export function commonArgs(config:ReturnType<typeof configuration>) {
 
 /** Fetch untrusted journal data. Reducer validation is still required. */
 export async function journalGet(opts:Map,environment:Env=process.env,runner:BackendRunner=executeBackendCommand):Promise<JournalGetResult> {
-  if(opts['provider-backend']==='gcs'){try{backend_plan(opts,`${opts.profile}/compute/coordination.json`);state_keys(opts.profile,[]);const r=await gcsGet(await gcsClient(environment,runner),opts['gcs-bucket'],`${opts.profile}/compute/coordination.json`);return r?{status:'present',...r}:{status:'absent'};}catch{return {status:'error'};}}
+  if(opts['provider-backend']==='gcs'){try{backend_plan(opts,`${opts.profile}/compute/coordination.json`);state_keys(opts.profile,[]);const r=await gcsGet(await gcsClient(environment,runner),opts['gcs-bucket'],`${opts.profile}/compute/coordination.json`,limit);return r?{status:'present',...r}:{status:'absent'};}catch{return {status:'error'};}}
   return session<JournalGetResult>(opts,environment,async(directory,env,values,config)=>{
     const body=join(directory,'body.json');writePrivate(body,'');
     const args=['aws','s3api','get-object','--bucket',config.bucket,'--key',config.key,body,...commonArgs(config)];

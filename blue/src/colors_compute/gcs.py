@@ -49,13 +49,17 @@ def object_path(bucket, key):
     return bucket_path(bucket) + '/o/' + quote(key, safe='')
 
 
-async def gcs_get(request, bucket, key):
+async def gcs_get(request, bucket, key, max_bytes=None):
     metadata = await request('GET', object_path(bucket, key))
     if metadata is None:
         return None
+    if max_bytes is not None and (not str(metadata.get('size', '')).isdigit() or int(metadata['size']) > max_bytes):
+        raise ValueError('GCS object too large or missing size')
     document = await request('GET', object_path(bucket, key), query={'alt': 'media', 'generation': metadata['generation']})
     if document is None:
         raise ValueError('GCS generation disappeared')
+    if max_bytes is not None and (not isinstance(document, dict) or len(json.dumps(document).encode()) > max_bytes):
+        raise ValueError('invalid GCS document')
     return {'document': document, 'etag': metadata['generation']}
 
 

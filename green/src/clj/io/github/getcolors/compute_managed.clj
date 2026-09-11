@@ -80,13 +80,10 @@
        :else (cond-> {:status "present" :params (access/public-params (:params result) (:provider-compute opts))}
                write (assoc :kubeconfig_path ((:write decoder))))))))
 (defn- identity [opts]
-  (let [plan (compute/backend-plan opts (str (:profile opts) "/compute/managed-kubernetes.tfstate"))
-        backend (get-in plan [:config :terraform :backend (keyword (:provider-backend opts))])]
-    ;; OpenTofu uses the s3 backend type for both provider choices.
-    (let [backend (or backend (get-in plan [:config :terraform :backend :s3]))]
-      {:profile (:profile opts) :provider (:provider-compute opts)
-       :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket backend) :region (:region backend)}
-                  (= "r2" (:provider-backend opts)) (assoc :endpoint (get-in backend [:endpoints :s3])))})))
+  (let [backend (compute/backend-settings opts (str (:profile opts) "/compute/managed-kubernetes.tfstate"))]
+    {:profile (:profile opts) :provider (:provider-compute opts)
+     :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket backend) :region (:region backend)}
+                (= "r2" (:provider-backend opts)) (assoc :endpoint (get-in backend [:endpoints :s3])))}))
 (defn- make-coordinator
   ([opts env] (make-coordinator opts env nil))
   ([opts env read] (coordinator/coordinator opts env read nil nil {:event-prefix "managed/" :reducer managed-journal/managed-coordination})))

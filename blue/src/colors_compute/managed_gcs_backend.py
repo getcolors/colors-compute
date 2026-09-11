@@ -47,6 +47,10 @@ async def managed_gcs_backend(opts, action, environment=None, runner=None, coord
         if action == 'bootstrap':
             if marker['status'] != 'active' or metadata['labels'].get('colors_phase') == 'deleting':
                 raise ValueError('managed backend deletion in progress')
+            protected = await request('PATCH', path, {'iamConfiguration': {'uniformBucketLevelAccess': {'enabled': True}, 'publicAccessPrevention': 'enforced'},
+                'versioning': {'enabled': True}, 'softDeletePolicy': {'retentionDurationSeconds': '0'}}, {'ifMetagenerationMatch': metadata['metageneration']})
+            if protected and protected.get('conflict'):
+                raise ValueError('managed backend metadata conflict')
             return {'status': 'ready', 'bucket': bucket}
         if opts.get('compute-prevent-destroy') is not False:
             raise ValueError('managed backend deletion protected')

@@ -25,6 +25,8 @@
   (with-redefs [gcs/client (fn [& _] request) coordinator/acquire! (fn [& _]) coordinator/snapshot (fn [& _] {:document {:status "retired"}}) coordinator/release! (fn [& _])]
    (is (= {:status "ready" :bucket "demo-states"} (backend/lifecycle opts "bootstrap" {} nil nil)))
    (is (= {:status "ready" :bucket "demo-states"} (backend/lifecycle opts "bootstrap" {} nil nil)))
+   (swap! bucket assoc :versioning {:enabled false})
+   (backend/lifecycle opts "bootstrap" {} nil nil)
    (is (= 1 @created))
    (is (= true (get-in @bucket [:versioning :enabled])))
    (is (= {:status "destroyed"} (backend/lifecycle opts "finalize" {} nil (fn [& _] {}))))
@@ -36,3 +38,10 @@
                                    (is (= "storage/v1/b/demo-states/o/demo%2Fcompute%2Fshared.tfstate%2Fdefault.tfstate" path))
                                    {:generation "22"}))]
   (is (= {:status "present"} ((requiring-resolve 'io.github.getcolors.compute-execution/state-presence) opts "demo/compute/shared.tfstate" {} nil)))))
+(deftest bounded-generation-read
+ (let [calls (atom 0) request (fn [& _] (swap! calls inc) {:generation "1" :size "2097153"})]
+  (is (thrown-with-msg? Exception #"too large" (gcs/get-object request "states" "journal" 2097152)))
+  (is (= 1 @calls)))
+ (is (thrown-with-msg? Exception #"invalid GCS document" (gcs/get-object (fn [_ _ _ query] (if (:alt query) [] {:generation "1" :size "2"})) "states" "journal" 2097152))))
+(deftest managed-identity-includes-region
+ (is (= "us-central1" (get-in ((deref (ns-resolve 'io.github.getcolors.compute-managed 'identity)) opts) [:backend :region]))))

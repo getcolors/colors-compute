@@ -136,7 +136,7 @@
     (let [settings (settings opts) bucket (:bucket settings) key (:key settings)
           expected {:profile (:profile opts) :provider (:provider-compute opts) :backend (select-keys settings [:kind :bucket :region])}]
       (if (nil? intent)
-        (if-let [result (gcs/get-object (gcs/client environment runner) bucket key)] (assoc result :status "present") {:status "absent"})
+        (if-let [result (gcs/get-object (gcs/client environment runner) bucket key limit-bytes)] (assoc result :status "present") {:status "absent"})
         (let [condition (:condition intent) generation (or (:if_match condition) "0")]
           (when-not (and (exact? intent #{:condition :document})
                          (or (coordination/valid-document? (:document intent)) (lifecycle/valid-document? (:document intent)))

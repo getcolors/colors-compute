@@ -24,6 +24,8 @@ export async function managedGcsBackend(opts:Map,action:string,environment:Map=p
   if(!marker||marker.schema!==1||!marker.identity||Object.keys(marker.identity).length!==4||Object.entries(identity).some(([k,v])=>marker.identity[k]!==v)||!['active','deleting'].includes(marker.status))throw Error('managed backend ownership mismatch');
   if(action==='bootstrap'){
    if(marker.status!=='active'||metadata.labels.colors_phase==='deleting')throw Error('managed backend deletion in progress');
+   const protectedBucket=await request('PATCH',path,{iamConfiguration:{uniformBucketLevelAccess:{enabled:true},publicAccessPrevention:'enforced'},versioning:{enabled:true},softDeletePolicy:{retentionDurationSeconds:'0'}},{ifMetagenerationMatch:metadata.metageneration});
+   if(protectedBucket?.conflict)throw Error('managed backend metadata conflict');
    return {status:'ready',bucket};
   }
   if(opts['compute-prevent-destroy']!==false)throw Error('managed backend deletion protected');

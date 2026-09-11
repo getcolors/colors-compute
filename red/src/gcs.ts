@@ -16,10 +16,12 @@ export async function gcsClient(environment:Map=process.env,runner:BackendRunner
 }
 export const bucketPath=(bucket:string)=>`storage/v1/b/${encodeURIComponent(bucket)}`;
 export const objectPath=(bucket:string,key:string)=>`${bucketPath(bucket)}/o/${encodeURIComponent(key)}`;
-export async function gcsGet(request:Awaited<ReturnType<typeof gcsClient>>,bucket:string,key:string){
+export async function gcsGet(request:Awaited<ReturnType<typeof gcsClient>>,bucket:string,key:string,maxBytes=Infinity){
  const metadata=await request('GET',objectPath(bucket,key));if(metadata===null)return null;
+ if(Number.isFinite(maxBytes)&&(!/^\d+$/.test(metadata.size??'')||Number(metadata.size)>maxBytes))throw Error('GCS object too large or missing size');
  const document=await request('GET',objectPath(bucket,key),undefined,{alt:'media',generation:metadata.generation});
- if(document===null)throw Error('GCS generation disappeared');return {document,etag:metadata.generation};
+ if(document===null)throw Error('GCS generation disappeared');
+ if(Number.isFinite(maxBytes)&&(typeof document!=='object'||Array.isArray(document)||Buffer.byteLength(JSON.stringify(document),'utf8')>maxBytes))throw Error('invalid GCS document');return {document,etag:metadata.generation};
 }
 export async function gcsPut(request:Awaited<ReturnType<typeof gcsClient>>,bucket:string,key:string,document:Map,generation:string){
  return request('POST',`upload/storage/v1/b/${encodeURIComponent(bucket)}/o`,document,{uploadType:'media',name:key,ifGenerationMatch:generation});

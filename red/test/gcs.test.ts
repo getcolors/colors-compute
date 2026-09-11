@@ -20,11 +20,11 @@ test('managed GCS refuses an unowned existing bucket',async()=>{
 });
 test('managed GCS creates with protection and retains ownership on repeat bootstrap',async()=>{
  const original=globalThis.fetch;let bucket:any=null,marker:any=null,created=0;
- globalThis.fetch=(async(input:any,init:any)=>{const url=new URL(input);if(url.pathname==='/storage/v1/b'&&init.method==='POST'){bucket={...JSON.parse(init.body),metageneration:'1'};created++;return Response.json(bucket);}
+ globalThis.fetch=(async(input:any,init:any)=>{const url=new URL(input);if(init.method==='PATCH'){Object.assign(bucket,JSON.parse(init.body));return Response.json(bucket);}if(url.pathname==='/storage/v1/b'&&init.method==='POST'){bucket={...JSON.parse(init.body),metageneration:'1'};created++;return Response.json(bucket);}
  if(url.pathname==='/upload/storage/v1/b/demo-states/o'){marker=JSON.parse(init.body);return Response.json({generation:'1'});}
  if(url.pathname.includes('/o/'))return marker?Response.json(url.searchParams.get('alt')==='media'?marker:{generation:'1'}):new Response('',{status:404});
  return bucket?Response.json(bucket):new Response('',{status:404});}) as any;
- try{expect(await managedGcsBackend(opts,'bootstrap',{},runner)).toEqual({status:'ready',bucket:'demo-states'});expect(await managedGcsBackend(opts,'bootstrap',{},runner)).toEqual({status:'ready',bucket:'demo-states'});expect(created).toBe(1);expect(bucket.iamConfiguration.publicAccessPrevention).toBe('enforced');expect(bucket.versioning.enabled).toBe(true);}finally{globalThis.fetch=original;}
+ try{expect(await managedGcsBackend(opts,'bootstrap',{},runner)).toEqual({status:'ready',bucket:'demo-states'});bucket.versioning.enabled=false;bucket.iamConfiguration.publicAccessPrevention='inherited';expect(await managedGcsBackend(opts,'bootstrap',{},runner)).toEqual({status:'ready',bucket:'demo-states'});expect(created).toBe(1);expect(bucket.iamConfiguration.publicAccessPrevention).toBe('enforced');expect(bucket.versioning.enabled).toBe(true);}finally{globalThis.fetch=original;}
 });
 test('managed GCS refuses to delete before compute retirement',async()=>{
  const original=globalThis.fetch;const identity={project:'demo-project',bucket:'demo-states',region:'us-central1',profile:'demo'};let released=false;
@@ -46,4 +46,10 @@ test('GCS state presence uses the OpenTofu workspace object',async()=>{
  const {statePresence}=await import('../src/execution.ts');const original=globalThis.fetch;
  globalThis.fetch=(async(input:any)=>{expect(decodeURIComponent(new URL(input).pathname)).toEndWith('/o/demo/compute/shared.tfstate/default.tfstate');return Response.json({generation:'22'});}) as any;
  try{expect(await statePresence(opts,'demo/compute/shared.tfstate',{},runner)).toEqual({status:'present'});}finally{globalThis.fetch=original;}
+});
+test('bounded GCS journal reads reject large generations before downloading',async()=>{
+ const {gcsGet}=await import('../src/gcs.ts');let calls=0;
+ await expect(gcsGet(async()=>{calls++;return {generation:'1',size:'2097153'};},'states','journal',2097152)).rejects.toThrow('too large');
+ expect(calls).toBe(1);
+ await expect(gcsGet(async(_method,_path,_body,query)=>query?.alt?[]:{generation:'1',size:'2'},'states','journal',2097152)).rejects.toThrow('invalid GCS document');
 });

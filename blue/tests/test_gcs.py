@@ -65,8 +65,11 @@ async def test_managed_create_repeat_and_unowned_refusal(monkeypatch):
     api = GCS()
     monkeypatch.setattr('colors_compute.managed_gcs_backend.gcs_client', api.client)
     assert await bootstrap_backend(OPTS) == {'status': 'ready', 'bucket': 'demo-states'}
+    api.metadata['versioning']['enabled'] = False
+    api.metadata['iamConfiguration']['publicAccessPrevention'] = 'inherited'
     assert await bootstrap_backend(OPTS) == {'status': 'ready', 'bucket': 'demo-states'}
     assert api.created == 1
+    assert api.metadata['versioning']['enabled'] is True
     assert api.metadata['iamConfiguration']['publicAccessPrevention'] == 'enforced'
     assert api.metadata['softDeletePolicy']['retentionDurationSeconds'] == '0'
     api.metadata['labels']['colors_profile'] = 'foreign'
@@ -114,4 +117,15 @@ async def test_state_presence_uses_physical_key_and_refuses_foreign_key(monkeypa
     assert await state_presence(OPTS, 'demo/compute/shared.tfstate') == {'status': 'absent'}
     assert calls == ['storage/v1/b/demo-states/o/demo%2Fcompute%2Fshared.tfstate%2Fdefault.tfstate']
     assert await state_presence(OPTS, 'foreign/compute/shared.tfstate') == {'status': 'error'}
+    assert len(calls) == 1
+
+@pytest.mark.asyncio
+async def test_bounded_generation_read_rejects_before_download():
+    from colors_compute.gcs import gcs_get
+    calls = []
+    async def request(*args, **kwargs):
+        calls.append(args)
+        return {'generation': '1', 'size': '2097153'}
+    with pytest.raises(ValueError, match='too large'):
+        await gcs_get(request, 'states', 'journal', 2097152)
     assert len(calls) == 1

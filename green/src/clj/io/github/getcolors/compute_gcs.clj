@@ -17,10 +17,17 @@
         (cond (= code 404) nil (= code 412) {:conflict true}
               (<= 200 code 299) (if (str/blank? (.body response)) {} (json/parse-string (.body response) true))
               :else (throw (ex-info (str "GCS operation failed (" code ")") {})))))))
-(defn get-object [request bucket key]
-  (when-let [metadata (request "GET" (object-path bucket key) nil {})]
+(defn get-object
+  ([request bucket key] (get-object request bucket key nil))
+  ([request bucket key max-bytes]
+   (when-let [metadata (request "GET" (object-path bucket key) nil {})]
+    (when (and max-bytes (or (not (and (string? (:size metadata)) (re-matches #"[0-9]+" (:size metadata))))
+                             (> (bigint (:size metadata)) max-bytes)))
+      (throw (ex-info "GCS object too large or missing size" {})))
     (let [document (request "GET" (object-path bucket key) nil {:alt "media" :generation (:generation metadata)})]
       (when-not document (throw (ex-info "GCS generation disappeared" {})))
-      {:document document :etag (:generation metadata)})))
+      (when (and max-bytes (or (not (map? document)) (> (alength (.getBytes (json/generate-string document) "UTF-8")) max-bytes)))
+        (throw (ex-info "invalid GCS document" {})))
+      {:document document :etag (:generation metadata)}))))
 (defn put-object [request bucket key document generation]
   (request "POST" (str "upload/storage/v1/b/" (encode bucket) "/o") document {:uploadType "media" :name key :ifGenerationMatch generation}))

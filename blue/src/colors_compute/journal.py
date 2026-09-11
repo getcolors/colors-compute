@@ -104,7 +104,7 @@ async def _session(opts, operation, intent, environment, runner):
             from .gcs import gcs_client, gcs_get, gcs_put
             request = await gcs_client(source, runner)
             if operation == 'GetObject':
-                observed = await gcs_get(request, settings['bucket'], settings['key'])
+                observed = await gcs_get(request, settings['bucket'], settings['key'], MAX_DOCUMENT_BYTES)
                 if observed is None:
                     return {'status': 'absent'}
                 if not isinstance(observed['document'], dict) or len(json.dumps(observed['document']).encode()) > MAX_DOCUMENT_BYTES:
