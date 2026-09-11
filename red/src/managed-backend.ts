@@ -1,3 +1,4 @@
+import {managedGcsBackend} from './managed-gcs-backend.ts';
 /** Owned S3 bootstrap; disposal only after package states and compute retire. */
 import {mkdtempSync,chmodSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -7,6 +8,7 @@ import {Coordinator} from './coordinator.ts';
 type Map=Record<string,any>;
 const MARKER='_colors/backend-owner.json';
 async function lifecycle(opts:Map,action:string,environment:Map=process.env,runner:BackendRunner=executeBackendCommand,coordinatorFactory?:any){
+ if(opts['provider-backend']==='gcs')return managedGcsBackend(opts,action,environment,runner,coordinatorFactory);
  const mode=opts['s3-bucket-mode']??'external';
  if(!['external','managed'].includes(mode))throw Error('invalid S3 bucket mode');
  if(mode==='external')return {status:'skipped'};

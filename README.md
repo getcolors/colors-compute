@@ -140,3 +140,22 @@ runs an OpenTofu apply or changes the VM's desired power state. See
 [the power contract](contracts/power-runtime.md) for result and recovery semantics.
 The test suite includes synthetic local HTTPS calls and OCI CLI input generation;
 these checks do not prove live permissions or availability.
+
+### GCS state backend
+
+Select `provider-backend=gcs` with `gcs-bucket`, `gcs-region`, and
+`google-project`. OpenTofu uses each logical state key as its GCS prefix, so
+`demo/compute/shared.tfstate` stores state at
+`demo/compute/shared.tfstate/default.tfstate`. The coordination journal uses
+GCS generation preconditions for atomic writes.
+
+Set `gcs-bucket-mode=managed` to create and retire the state bucket with the
+compute lifecycle. The bucket has uniform access, public access prevention,
+versioning, and disabled soft delete. Ownership labels and a marker bind it to
+the project and profile. Deletion requires `compute-prevent-destroy=false`, a
+retired compute journal, and empty package states. Cleanup removes all object
+generations before deleting the bucket. External buckets are never deleted.
+
+OpenTofu uses Google Application Default Credentials. Journal and bucket
+operations use the active `gcloud` account, which must have access to the same
+project. Enable the Cloud Storage API before bootstrapping the bucket.

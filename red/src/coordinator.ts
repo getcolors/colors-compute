@@ -41,7 +41,7 @@ export class Coordinator {
     const saved=copy(opts);
     const environment={...(options.environment??process.env)};
     const kind=saved['provider-backend'];
-    this.identity={profile:saved.profile,provider:saved['provider-compute'],backend:{kind,bucket:saved[`${kind}-bucket`],region:kind==='r2'?'auto':saved['s3-region'],...(kind==='r2'?{endpoint:saved['r2-endpoint']}:{})}};
+    this.identity={profile:saved.profile,provider:saved['provider-compute'],backend:{kind,bucket:saved[`${kind}-bucket`],region:kind==='r2'?'auto':saved[`${kind}-region`],...(kind==='r2'?{endpoint:saved['r2-endpoint']}:{})}};
     if(!identityValid(this.identity))throw new Error('invalid coordination identity');
     this.read=options.read??(()=>journalGet(saved,environment));
     this.write=options.write??(intention=>journalPut(saved,intention,environment));

@@ -35,7 +35,7 @@ test('R2 plans protected backend credential bindings without AWS environment sub
   expect(process.env).toEqual(env);
 });
 test('backend validates selection then sorted requirements then state key', () => {
-  expect(() => backend_plan({}, '')).toThrow(':provider-backend must be one of r2, s3');
+  expect(() => backend_plan({}, '')).toThrow(':provider-backend must be one of gcs, r2, s3');
   expect(() => backend_plan({'provider-backend':'s3'}, '')).toThrow(':s3-bucket is required');
   expect(() => backend_plan({...s3,'s3-region':' replace_me '}, '')).toThrow(':s3-region is required');
   for (const key of ['', '../state', 'a/../b', './a', 'a//b', '/a', 'a/', 'a b', 'a\\b']) {

@@ -23,7 +23,7 @@ export function render_template(value: Json, inputs: Record<string, Json>): Json
 /** Plan nonsecret backend configuration. Credential binding belongs to runtime. */
 export function backend_plan(opts: Record<string, any>, state_key: string) {
   const backend: unknown = opts['provider-backend'];
-  if (backend !== 'r2' && backend !== 's3') throw new Error(':provider-backend must be one of r2, s3');
+  if (backend !== 'r2' && backend !== 's3' && backend !== 'gcs') throw new Error(':provider-backend must be one of gcs, r2, s3');
   for (const key of [...registry.backend[backend].required].sort()) {
     const value = opts[key];
     if (value == null || (typeof value === 'string' && (!value.trim() || value.trim().toUpperCase() === 'REPLACE_ME'))) {
@@ -33,6 +33,7 @@ export function backend_plan(opts: Record<string, any>, state_key: string) {
   if (typeof state_key !== 'string' || !state_key.split('/').every(part => /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.exec(part)?.[0] === part)) {
     throw new Error('invalid state key');
   }
+  if (backend === 'gcs') return {config:{terraform:{backend:{gcs:{bucket:opts['gcs-bucket'],prefix:state_key}}}} as Record<string,any>,credential_bindings:{} as Record<string,string>,environment:{}};
   const settings: Record<string, any> = {
     bucket: opts[`${backend}-bucket`], region: backend === 's3' ? opts['s3-region'] : 'auto', key: state_key, use_lockfile: true,
   };

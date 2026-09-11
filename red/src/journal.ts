@@ -1,3 +1,4 @@
+import {gcsClient,gcsGet,gcsPut} from './gcs.ts';
 import {chmodSync,mkdtempSync,readFileSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -24,7 +25,7 @@ function configuration(opts:Map) {
 }
 export function identity(opts:Map):Map {
   const kind=opts['provider-backend'];
-  return {profile:opts.profile,provider:opts['provider-compute'],backend:{kind,bucket:opts[`${kind}-bucket`],region:kind==='r2'?'auto':opts['s3-region'],...(kind==='r2'?{endpoint:opts['r2-endpoint']}:{})}};
+  return {profile:opts.profile,provider:opts['provider-compute'],backend:{kind,bucket:opts[`${kind}-bucket`],region:kind==='r2'?'auto':opts[`${kind}-region`],...(kind==='r2'?{endpoint:opts['r2-endpoint']}:{})}};
 }
 function secrets(opts:Map,environment:Env):string[] {
   if(opts['provider-backend']!=='r2')return [];
@@ -83,6 +84,7 @@ export function commonArgs(config:ReturnType<typeof configuration>) {
 
 /** Fetch untrusted journal data. Reducer validation is still required. */
 export async function journalGet(opts:Map,environment:Env=process.env,runner:BackendRunner=executeBackendCommand):Promise<JournalGetResult> {
+  if(opts['provider-backend']==='gcs'){try{backend_plan(opts,`${opts.profile}/compute/coordination.json`);state_keys(opts.profile,[]);const r=await gcsGet(await gcsClient(environment,runner),opts['gcs-bucket'],`${opts.profile}/compute/coordination.json`);return r?{status:'present',...r}:{status:'absent'};}catch{return {status:'error'};}}
   return session<JournalGetResult>(opts,environment,async(directory,env,values,config)=>{
     const body=join(directory,'body.json');writePrivate(body,'');
     const args=['aws','s3api','get-object','--bucket',config.bucket,'--key',config.key,body,...commonArgs(config)];
@@ -110,6 +112,7 @@ export async function journalPut(opts:Map,intent:unknown,environment:Env=process
   let bodyText:string;
   try{bodyText=JSON.stringify(intent.document);}catch{return {status:'error'};}
   if(Buffer.byteLength(bodyText,'utf8')>limit)return {status:'error'};
+  if(opts['provider-backend']==='gcs'){try{const generation=condition.if_match??'0';if(!/^\d+$/.test(generation))return {status:'error'};const r=await gcsPut(await gcsClient(environment,runner),opts['gcs-bucket'],`${opts.profile}/compute/coordination.json`,intent.document,generation);return r?.conflict?{status:'conflict'}:r?.generation?{status:'written',etag:r.generation}:{status:'error'};}catch{return {status:'error'};}}
   return session<JournalPutResult>(opts,environment,async(directory,env,values,config)=>{
     if(containsSecret(JSON.stringify(intent),values))return {status:'error'};
     const body=join(directory,'body.json');writePrivate(body,bodyText);
