@@ -14,7 +14,7 @@ wheels = [
 [[package]]
 name = "blue"
 version = "0.1.0"
-source = { git = "https://github.com/getcolors/blue.git?rev=290f313ead5ca162875c33a049c880da017eae09#290f313ead5ca162875c33a049c880da017eae09" }
+source = { git = "https://github.com/getcolors/blue.git?rev=ec33f05543dc7f1d380fd61d40af56362960fcb9#ec33f05543dc7f1d380fd61d40af56362960fcb9" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -39,15 +39,17 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "blue" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "blue", git = "https://github.com/getcolors/blue.git?rev=290f313ead5ca162875c33a049c880da017eae09" }]
+requires-dist = [{ name = "blue", specifier = ">=0.1.0" }]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "blue", git = "https://github.com/getcolors/blue.git?rev=ec33f05543dc7f1d380fd61d40af56362960fcb9" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
 ]

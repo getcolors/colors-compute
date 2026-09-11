@@ -60,9 +60,11 @@ R2 and S3; SMTP, DNS, and GitHub integrations remain outside this library.
 | Red | Root Git/npm facade `colors-compute-red` | main export | `colors-compute-red/workflow` |
 | Blue | Python Git dependency with `subdirectory=blue`, distribution `colors-compute-blue` | `colors_compute` | `colors_compute.workflow.cluster_workflow` |
 
-Consumers must pin an existing published commit. The SDK dependencies are
-pinned inside each package. Green, Red, and Blue must be interchangeable for
-the same inputs and state identities.
+Consumers must pin an existing published commit. Green and Red pin their SDK
+dependencies inside each package. Blue declares a normal SDK requirement; the consuming application must
+supply an explicit Blue git pin. The Blue development group pins the SDK for
+this repository's tests, without imposing that git source on consumers. Green,
+Red, and Blue must be interchangeable for the same inputs and state identities.
 
 The workflow constructor takes ordered expanded requests, an entry node id,
 a standard Colors node step, and an optional downstream step. The node step
