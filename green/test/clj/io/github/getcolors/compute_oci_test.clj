@@ -25,7 +25,8 @@
          (.endsWith path "/o") (result {:objects [{:name "demo/shared.tfstate"}]})
          (.contains path "/o/") (if (= method "PUT") (do (is (or (= "*" (:if-none-match headers)) (= "e1" (:if-match headers)))) (reset! marker body) (result nil))
                                   (if (.contains path "backend-owner") (when @marker (result @marker)) (result {:version 4 :resources []})))
-         (= method "PUT") (result (swap! bucket merge body))
+         (= method "POST") (do (is (= "application/json" (:content-type headers))) (result (swap! bucket merge body)))
+         (= method "PUT") (throw (ex-info "OCI bucket updates require POST" {}))
          :else (when @bucket (result @bucket))))]
   (with-redefs [oci/client (fn [& _] request) coordinator/acquire! (fn [& _]) coordinator/snapshot (fn [& _] {:document {:status "retired"}}) coordinator/release! (fn [& _])]
    (is (= {:status "ready" :bucket "demo-states"} (backend/lifecycle opts "bootstrap" {} nil nil)))

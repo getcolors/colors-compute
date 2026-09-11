@@ -25,7 +25,7 @@ export async function managedOciBackend(opts:Map,action:string,environment:Map=p
   if(!marker&&action==='finalize'&&metadata.freeformTags['colors-phase']==='deleting')marker={schema:1,identity,status:'deleting'};
   check(marker?.schema===1&&marker.identity&&Object.keys(marker.identity).length===5&&Object.entries(identity).every(([k,v])=>marker.identity[k]===v)&&['active','deleting'].includes(marker.status),'managed backend ownership mismatch');
   if(action==='finalize'&&metadata.freeformTags['colors-phase']==='deleting')marker={...marker,status:'deleting'};
-  const update=async(body:Map)=>{const result=await request('PUT',path,body,{},{'if-match':observed!.headers.etag});check(result&&!result.conflict,'managed backend metadata conflict');};
+  const update=async(body:Map)=>{const result=await request('POST',path,body,{},{'content-type':'application/json','if-match':observed!.headers.etag});check(result&&!result.conflict,'managed backend metadata conflict');};
   if(action==='bootstrap'){
    check(marker.status==='active'&&metadata.freeformTags['colors-phase']!=='deleting','managed backend deletion in progress');
    if(metadata.versioning!=='Enabled'||metadata.publicAccessType!=='NoPublicAccess')await update({versioning:'Enabled',publicAccessType:'NoPublicAccess'});

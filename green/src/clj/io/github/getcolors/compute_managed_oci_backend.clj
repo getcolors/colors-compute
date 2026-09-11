@@ -39,7 +39,7 @@
             marker (or (:data marker-response) (when (and (= action "finalize") (= "deleting" (get-in metadata [:freeformTags :colors-phase]))) {:schema 1 :identity identity :status "deleting"}))
             _ (check (and (= 1 (:schema marker)) (= identity (:identity marker)) (contains? #{"active" "deleting"} (:status marker))) "managed backend ownership mismatch")
             marker (if (and (= action "finalize") (= "deleting" (get-in metadata [:freeformTags :colors-phase]))) (assoc marker :status "deleting") marker)
-            update! (fn [body] (let [result (request "PUT" path body {} {:if-match (get-in observed [:headers :etag])})] (check (and result (not (:conflict result))) "managed backend metadata conflict")))
+            update! (fn [body] (let [result (request "POST" path body {} {:content-type "application/json" :if-match (get-in observed [:headers :etag])})] (check (and result (not (:conflict result))) "managed backend metadata conflict")))
             list-objects (fn [versions] (loop [start nil items []]
               (let [response (request "GET" (str path (if versions "/objectversions" "/o")) nil (cond-> {} start (assoc (if versions :page :start) start)) {})
                     _ (check (and response (not (:conflict response))) "managed backend listing failed")

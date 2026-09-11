@@ -52,7 +52,7 @@ async def managed_oci_backend(opts, action, environment=None, runner=None, coord
         if action == 'finalize' and metadata['freeformTags'].get('colors-phase') == 'deleting':
             marker = {**marker, 'status': 'deleting'}
         async def update(body):
-            updated = await request('PUT', path, body, headers={'if-match': observed['headers']['etag']})
+            updated = await request('POST', path, body, headers={'content-type': 'application/json', 'if-match': observed['headers']['etag']})
             check(updated and not updated.get('conflict'), 'managed backend metadata conflict')
         if action == 'bootstrap':
             check(marker['status'] == 'active' and metadata['freeformTags'].get('colors-phase') != 'deleting', 'managed backend deletion in progress')

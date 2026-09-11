@@ -50,7 +50,10 @@ class OCI:
             self.objects[key] = body; return result(None)
         if path.endswith('/o'): return result({'objects': [{'name': k} for k in self.objects]})
         if path.endswith('/objectversions'): return result({'items': self.versions})
-        if method == 'PUT': self.metadata.update(body)
+        assert method in ('GET', 'POST'), 'OCI bucket updates require POST'
+        if method == 'POST':
+            assert headers.get('content-type') == 'application/json'
+            self.metadata.update(body)
         return result(self.metadata) if self.metadata else None
 
 

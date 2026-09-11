@@ -28,7 +28,7 @@ test('OCI lifecycle retains ownership and removes all versions after retirement'
   else if(path.endsWith('/objectversions'))data={items:[{name:'_colors/backend-owner.json',versionId:'3'},{name:'demo/shared.tfstate',versionId:'1'},{name:'demo/shared.tfstate',versionId:'2'}]};
   else if(path.endsWith('/o'))data={objects:[{name:'demo/shared.tfstate'}]};
   else if(key){if(method==='PUT')marker=body;else data=key==='_colors/backend-owner.json'?marker:{version:4,resources:[]};if(method==='GET'&&!data)status='404 Not Found';}
-  else{if(method==='PUT')Object.assign(bucket,body);data=bucket;if(!data)status='404 Not Found';}
+  else{expect(['GET','POST']).toContain(method!);if(method==='POST'){expect(JSON.parse(args[args.indexOf('--request-headers')+1]!)['content-type']).toBe('application/json');Object.assign(bucket,body);}data=bucket;if(!data)status='404 Not Found';}
   return {exit:0,out:JSON.stringify({status,data,headers:{etag:'e1'}}),err:''};
  };
  expect(await managedOciBackend(opts,'bootstrap',{},runner)).toEqual({status:'ready',bucket:'demo-states'});
