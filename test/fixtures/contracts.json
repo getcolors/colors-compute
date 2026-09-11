@@ -1727,7 +1727,7 @@
     ],
     "expected": [
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
-      ":provider-backend must be one of r2, s3",
+      ":provider-backend must be one of gcs, r2, s3",
       ":profile is required"
     ]
   },
@@ -1742,7 +1742,7 @@
     ],
     "expected": [
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
-      ":provider-backend must be one of r2, s3",
+      ":provider-backend must be one of gcs, r2, s3",
       ":profile is required"
     ]
   },
@@ -2373,7 +2373,7 @@
     ],
     "expected": [
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
-      ":provider-backend must be one of r2, s3",
+      ":provider-backend must be one of gcs, r2, s3",
       ":profile is required"
     ]
   },
@@ -3320,5 +3320,32 @@
     "expected": [],
     "name": "yandex explicit image needs no family",
     "op": "validate"
+  },
+  {
+    "name": "native GCS state backend prefix",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "gcs",
+        "gcs-bucket": "demo-states",
+        "gcs-region": "us-central1",
+        "google-project": "demo-project"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "config": {
+        "terraform": {
+          "backend": {
+            "gcs": {
+              "bucket": "demo-states",
+              "prefix": "demo/compute/shared.tfstate"
+            }
+          }
+        }
+      },
+      "credential_bindings": {},
+      "environment": {}
+    }
   }
 ]

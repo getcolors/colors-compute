@@ -29,7 +29,13 @@ async def state_presence(opts, state_key, environment=None, runner=None, legacy=
         legacy_key = legacy is True and _safe(opts.get('profile')) and isinstance(state_key, str) and re.fullmatch(re.escape(opts['profile']) + r'/[A-Za-z0-9][A-Za-z0-9_-]{0,62}\.tfstate', state_key)
         if not _state_key(opts, state_key) and not legacy_key:
             return {'status': 'error'}
-        settings = backend_plan(opts, state_key)['config']['terraform']['backend']['s3']
+        backend = backend_plan(opts, state_key)['config']['terraform']['backend']
+        if opts['provider-backend'] == 'gcs':
+            from .gcs import gcs_client, object_path
+            request = await gcs_client(environment, runner)
+            metadata = await request('GET', object_path(opts['gcs-bucket'], state_key + '/default.tfstate'))
+            return {'status': 'absent' if metadata is None else 'present'}
+        settings = backend['s3']
         source = dict(os.environ if environment is None else environment)
         with tempfile.TemporaryDirectory(prefix='colors-compute-presence-') as directory:
             path = Path(directory)

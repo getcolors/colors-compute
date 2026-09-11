@@ -12,6 +12,9 @@ MARKER = '_colors/backend-owner.json'
 
 
 async def _lifecycle(opts, action, environment=None, runner=None, coordinator_factory=None):
+    if opts.get('provider-backend') == 'gcs':
+        from .managed_gcs_backend import managed_gcs_backend
+        return await managed_gcs_backend(opts, action, environment, runner, coordinator_factory)
     mode = opts.get('s3-bucket-mode', 'external')
     if mode not in ('external', 'managed'):
         raise ValueError('invalid S3 bucket mode')

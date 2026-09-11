@@ -32,7 +32,9 @@ def _settings(opts):
     if not _safe(opts.get('profile')):
         raise ValueError('invalid profile')
     key = opts['profile'] + '/compute/coordination.json'
-    config = backend_plan(opts, key)['config']['terraform']['backend']['s3']
+    plan = backend_plan(opts, key)['config']['terraform']['backend']
+    config = ({'bucket': opts['gcs-bucket'], 'key': key, 'region': opts['gcs-region']}
+              if opts['provider-backend'] == 'gcs' else plan['s3'])
     return config
 
 
@@ -98,6 +100,23 @@ async def _session(opts, operation, intent, environment, runner):
             return {'status': 'error'}
         if payload is not None and _contains_secret(intent, credentials):
             return {'status': 'error'}
+        if opts['provider-backend'] == 'gcs':
+            from .gcs import gcs_client, gcs_get, gcs_put
+            request = await gcs_client(source, runner)
+            if operation == 'GetObject':
+                observed = await gcs_get(request, settings['bucket'], settings['key'])
+                if observed is None:
+                    return {'status': 'absent'}
+                if not isinstance(observed['document'], dict) or len(json.dumps(observed['document']).encode()) > MAX_DOCUMENT_BYTES:
+                    return {'status': 'error'}
+                return {'status': 'present', **observed}
+            generation = intent['condition'].get('if_match', '0')
+            if not isinstance(generation, str) or not re.fullmatch(r'[0-9]+', generation):
+                return {'status': 'error'}
+            written = await gcs_put(request, settings['bucket'], settings['key'], intent['document'], generation)
+            if written and written.get('conflict'):
+                return {'status': 'conflict'}
+            return {'status': 'written', 'etag': written['generation']} if written and written.get('generation') else {'status': 'error'}
         with tempfile.TemporaryDirectory(prefix='colors-compute-journal-') as directory:
             path = Path(directory)
             os.chmod(path, 0o700)

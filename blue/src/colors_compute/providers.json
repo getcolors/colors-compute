@@ -22,6 +22,15 @@
       ],
       "secrets": [],
       "tofu-env": {}
+    },
+    "gcs": {
+      "required": [
+        "gcs-bucket",
+        "gcs-region",
+        "google-project"
+      ],
+      "secrets": [],
+      "tofu-env": {}
     }
   },
   "compute": {
