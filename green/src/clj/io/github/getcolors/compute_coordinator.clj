@@ -70,10 +70,9 @@
          ;; Workflow options contain runtime callbacks; only backend identity
          ;; belongs in this private transport snapshot.
          opts (detached (select-keys opts [:profile :provider-compute :provider-backend
-                                            :s3-bucket :s3-region :r2-bucket :r2-endpoint]))
+                                            :s3-bucket :s3-region :r2-bucket :r2-endpoint :gcs-bucket :gcs-region :google-project]))
          environment (json/parse-string (json/generate-string environment))
-         backend (get-in (compute/backend-plan opts (str (:profile opts) "/compute/coordination.json"))
-                         [:config :terraform :backend :s3])
+         backend (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))
          identity {:profile (:profile opts) :provider (:provider-compute opts)
                    :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket backend) :region (:region backend)}
                               (= "r2" (:provider-backend opts)) (assoc :endpoint (get-in backend [:endpoints :s3])))}]

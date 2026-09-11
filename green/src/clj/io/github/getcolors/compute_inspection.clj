@@ -16,7 +16,7 @@
      (let [observed ((get dependencies :journal-get journal/journal-get) opts environment)]
        (if (= observed {:status "absent"}) {:status "absent"}
            (let [doc (:document observed)
-                 config (get-in (compute/backend-plan opts (str (:profile opts) "/compute/coordination.json")) [:config :terraform :backend :s3])
+                 config (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))
                  expected {:profile (:profile opts) :provider (:provider-compute opts)
                            :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket config) :region (:region config)}
                                       (= "r2" (:provider-backend opts)) (assoc :endpoint (get-in config [:endpoints :s3])))}]

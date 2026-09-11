@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-journal
   "AWS CLI conditional journal object transport. No retries or provider dispatch."
   (:require [cheshire.core :as json]
+            [io.github.getcolors.compute-gcs :as gcs]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [io.github.getcolors.compute :as compute]
@@ -38,7 +39,7 @@
   (compute/state-keys (:profile opts) [])
   (let [key (str (:profile opts) "/compute/coordination.json")
         plan (compute/backend-plan opts key)
-        backend (get-in plan [:config :terraform :backend :s3])]
+        backend (compute/backend-settings opts key)]
     (when-not (and (nonblank? (:bucket backend)) (nonblank? (:region backend)))
       (throw (ex-info "invalid backend settings" {})))
     {:kind (:provider-backend opts) :bucket (:bucket backend) :region (:region backend)
@@ -84,7 +85,7 @@
       (let [document (parse-one (str (.decode (.newDecoder StandardCharsets/UTF_8) (ByteBuffer/wrap bytes))))]
         (when-not (map? document) (throw (ex-info "invalid document" {})))
         document))))
-(defn- call-session [opts environment runner intent]
+(defn- s3-call-session [opts environment runner intent]
   (let [settings (settings opts)
         credentials (credentials settings environment)
         write? (some? intent)
@@ -129,6 +130,23 @@
                    (and write? (contains? #{"PreconditionFailed" "ConditionalRequestConflict"} code)) {:status "conflict"}
                    :else {:status "error"}))) credentials))
       (finally (cleanup! directory)))))
+
+(defn- call-session [opts environment runner intent]
+  (if (not= "gcs" (:provider-backend opts)) (s3-call-session opts environment runner intent)
+    (let [settings (settings opts) bucket (:bucket settings) key (:key settings)
+          expected {:profile (:profile opts) :provider (:provider-compute opts) :backend (select-keys settings [:kind :bucket :region])}]
+      (if (nil? intent)
+        (if-let [result (gcs/get-object (gcs/client environment runner) bucket key)] (assoc result :status "present") {:status "absent"})
+        (let [condition (:condition intent) generation (or (:if_match condition) "0")]
+          (when-not (and (exact? intent #{:condition :document})
+                         (or (coordination/valid-document? (:document intent)) (lifecycle/valid-document? (:document intent)))
+                         (= expected (get-in intent [:document :identity]))
+                         (or (and (exact? condition #{:if_none_match}) (= "*" (:if_none_match condition)))
+                             (and (exact? condition #{:if_match}) (string? (:if_match condition)) (re-matches #"[0-9]+" (:if_match condition)))))
+            (throw (ex-info "invalid journal intention" {})))
+          (serialized (:document intent))
+          (let [result (gcs/put-object (gcs/client environment runner) bucket key (:document intent) generation)]
+            (cond (:conflict result) {:status "conflict"} (:generation result) {:status "written" :etag (:generation result)} :else {:status "error"})))))))
 
 (defn journal-get
   "Read the derived coordination object; present content remains untrusted."

@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-managed-backend
   "Owned S3 bootstrap and disposal after the entire deployment retires."
   (:require [cheshire.core :as json]
+            [io.github.getcolors.compute-managed-gcs-backend :as gcs]
             [clojure.string :as str]
             [io.github.getcolors.compute-runtime :as runtime]
             [io.github.getcolors.compute-coordinator :as coordinator])
@@ -8,7 +9,7 @@
            [java.nio.file.attribute PosixFilePermissions FileAttribute]))
 (def marker-key "_colors/backend-owner.json")
 (defn- require-valid [condition message] (when-not condition (throw (ex-info message {}))))
-(defn- lifecycle [opts action environment runner factory]
+(defn- s3-lifecycle [opts action environment runner factory]
   (let [mode (get opts :s3-bucket-mode "external")]
     (require-valid (contains? #{"managed" "external"} mode) "invalid S3 bucket mode")
     (if (= mode "external") {:status "skipped"}
@@ -92,6 +93,10 @@
                 (try (when (and @owner (not @deleting)) (coordinator/release! @owner))
                      (finally (with-open [paths (Files/walk directory (make-array java.nio.file.FileVisitOption 0))]
                                 (doseq [path (reverse (sort-by #(.getNameCount ^Path %) (iterator-seq (.iterator paths))))] (Files/deleteIfExists ^Path path)))))))))))))
+(defn- lifecycle [opts action environment runner factory]
+  (if (= "gcs" (:provider-backend opts))
+    (gcs/lifecycle opts action environment runner factory)
+    (s3-lifecycle opts action environment runner factory)))
 (defn bootstrap-backend!
   ([opts] (bootstrap-backend! opts (into {} (System/getenv))))
   ([opts environment] (bootstrap-backend! opts environment runtime/run-command))

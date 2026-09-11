@@ -15,7 +15,7 @@
     (nil? (entry :compute (:provider-compute opts)))
     (conj (str ":provider-compute must be one of " (str/join ", " (sort (map name (keys (:compute registry)))))))
     (nil? (entry :backend (:provider-backend opts)))
-    (conj ":provider-backend must be one of r2, s3")))
+    (conj ":provider-backend must be one of gcs, r2, s3")))
 
 (defn validate [opts]
   (into (cond-> (selection-errors opts)
@@ -138,7 +138,7 @@
   [opts state-key]
   (let [selection (:provider-backend opts)
         backend (entry :backend selection)]
-    (when-not backend (fail ":provider-backend must be one of r2, s3"))
+    (when-not backend (fail ":provider-backend must be one of gcs, r2, s3"))
     (doseq [key (sort (:required backend))]
       (when (missing? (get opts (keyword key))) (fail (str ":" key " is required"))))
     (when-not (and (string? state-key)
@@ -159,7 +159,7 @@
                     :skip_region_validation true
                     :skip_requesting_account_id true
                     :skip_s3_checksum true}))]
-      {:config {:terraform {:backend {:s3 settings}}}
+      {:config {:terraform {:backend (if (= "gcs" selection) {:gcs {:bucket (:gcs-bucket opts) :prefix state-key}} {:s3 settings})}}
        :credential_bindings
        (into {} (map (fn [[key option]]
                        [(str "COLORS_PAR_" (str/upper-case (str/replace (name key) "-" "_"))) option])
@@ -171,3 +171,9 @@
 
 (defn controller-artifact [& args]
   (apply (requiring-resolve 'io.github.getcolors.compute-controller/controller-artifact) args))
+
+(defn backend-settings [opts state-key]
+  (let [plan (backend-plan opts state-key)]
+    (if (= "gcs" (:provider-backend opts))
+      (assoc (get-in plan [:config :terraform :backend :gcs]) :region (:gcs-region opts))
+      (get-in plan [:config :terraform :backend :s3]))))
