@@ -21,10 +21,10 @@
                            :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket config) :region (:region config)}
                                       (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in config [:endpoints :s3])))}]
              (require-valid (and (= "present" (:status observed)) (lifecycle/valid-document? doc)
-                                 (= expected (:identity doc))
-                                 (= "idle" (get-in doc [:lock :state]))))
+                                 (= expected (:identity doc))))
              (if (= "retired" (:status doc)) {:status "destroyed"}
-                 (let [shared ((get dependencies :read-state (fn [opts key env] (runtime/read-state opts key env runtime/run-command true))) opts (:shared (compute/state-keys (:profile opts) [])) environment)
+                 (let [_ (require-valid (= "idle" (get-in doc [:lock :state])))
+                       shared ((get dependencies :read-state (fn [opts key env] (runtime/read-state opts key env runtime/run-command true))) opts (:shared (compute/state-keys (:profile opts) [])) environment)
                        _ (require-valid (and (= "present" (:status shared)) (= (:provider-compute opts) (get-in shared [:params :provider]))))
                        selected (ssh/mode opts)
                        _ (require-valid (= (:mode selected) (get-in doc [:key :mode])))

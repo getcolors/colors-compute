@@ -167,3 +167,10 @@
         (is (= {:status (if (true? empty?) "destroyed" "error")}
                (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps)))
         (is (not-any? #(and (vector? %) (re-find #"/nodes/" (first %))) @calls))))))
+
+(deftest retired-journal-held-by-finalizer-reports-destroyed
+  (let [{:keys [deps storage]} (world)]
+    (o/orchestrate opts topology requirements {} deps)
+    (is (= {:status "destroyed"} (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps)))
+    (swap! (:state storage) assoc-in [:observation :document :lock] {:state "held" :run_id "finalizer"})
+    (is (= {:status "destroyed"} (inspection/read-deployment opts {} {:journal-get (fn [& _] ((:read storage)))})))))

@@ -15,8 +15,9 @@ export async function read_deployment(opts:Map,environment:Map=process.env,depen
   if(observed.status==='absent'&&Object.keys(observed).length===1)return {status:'absent'};
   if(observed.status!=='present')return {status:'error'};
   const doc=observed.document;
-  if(!lifecycleDocumentValid(doc)||!identityEqual(doc.identity,identity(opts))||doc.lock.state!=='idle')return {status:'error'};
+  if(!lifecycleDocumentValid(doc)||!identityEqual(doc.identity,identity(opts)))return {status:'error'};
   if(doc.status==='retired')return {status:'destroyed'};
+  if(doc.lock.state!=='idle')return {status:'error'};
   const shared=await call('read_state',readState,opts,state_keys(opts.profile,[]).shared,env,undefined,true);
   if(shared.status!=='present'||shared.params?.provider!==opts['provider-compute']||!shared.outputs)return {status:'error'};
   const records=Object.values(doc.nodes).filter((node:any)=>node.phase!=='destroyed') as Map[];

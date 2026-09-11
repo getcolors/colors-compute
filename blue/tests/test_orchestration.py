@@ -265,3 +265,12 @@ async def test_recovered_declared_empty_nodes_delete_without_convergence(empty):
     result = await orchestrate({**OPTS, 'blue/event': 'delete', 'compute-prevent-destroy': False}, [{'count': 2}], {}, {}, deps)
     assert result == {'status': 'destroyed' if empty is True else 'error'}
     assert not any(event.startswith('delete:0') or event.startswith('delete:1') for event in runtime.events)
+
+@pytest.mark.asyncio
+async def test_retired_journal_held_by_finalizer_reports_destroyed():
+    from colors_compute.inspection import read_deployment
+    runtime = Runtime()
+    assert (await runtime.run())['status'] == 'ready'
+    assert (await runtime.run(event='delete'))['status'] == 'destroyed'
+    runtime.store.observed['document']['lock'] = {'state': 'held', 'run_id': 'finalizer'}
+    assert await read_deployment(OPTS, {}, {'journal_get': lambda *_: runtime.store.observed}) == {'status': 'destroyed'}

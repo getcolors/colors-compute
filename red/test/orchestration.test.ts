@@ -99,3 +99,9 @@ test('recovered declared nodes require verified empty state and delete without c
   expect(r.events.some(event=>event==='delete:undefined'||event==='delete:0'||event==='delete:1')).toBe(false);
  }
 });
+
+test('retired journal held by finalizer reports destroyed without reading node state',async()=>{
+ const {read_deployment}=await import('../src/inspection.ts');const r=new Runtime();await r.run();expect(await r.run(2,'delete')).toEqual({status:'destroyed'});
+ r.observed.document.lock={state:'held',run_id:'finalizer'};
+ expect(await read_deployment(opts,{}, {journal_get:async()=>r.observed})).toEqual({status:'destroyed'});
+});

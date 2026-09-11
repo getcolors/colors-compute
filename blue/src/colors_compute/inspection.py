@@ -28,10 +28,10 @@ async def read_deployment(opts, environment=None, dependencies=None, requirement
         document = observed.get('document')
         if not lifecycle_document_valid(document) or document['identity'] != _identity(opts, _settings(opts)):
             return {'status': 'error'}
-        if document['lock']['state'] != 'idle':
-            return {'status': 'error'}
         if document['status'] == 'retired':
             return {'status': 'destroyed'}
+        if document['lock']['state'] != 'idle':
+            return {'status': 'error'}
         shared = await call('read_state', read_state, opts, state_keys(opts['profile'], [])['shared'], env, include_outputs=True)
         if shared.get('status') != 'present' or shared.get('params', {}).get('provider') != opts['provider-compute']:
             return {'status': 'error'}
