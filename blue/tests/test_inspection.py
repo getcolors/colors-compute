@@ -36,3 +36,19 @@ async def test_inspect_refuses_active_or_unknown_ownership():
     for observed in ({'status': 'error'}, {'status': 'present', 'document': DOCUMENT}):
         assert await read_deployment(OPTS, {}, {'journal_get': lambda *_: observed}) == {'status': 'error'}
     assert await read_deployment(OPTS, {}, {'journal_get': lambda *_: {'status': 'absent'}}) == {'status': 'absent'}
+
+
+@pytest.mark.asyncio
+async def test_inspect_treats_missing_managed_bucket_as_absent():
+    def presence(status):
+        return {'journal_get': lambda *_: {'status': 'error'}, 'backend_presence': lambda *_: {'status': status}}
+    assert await read_deployment(OPTS, {}, presence('absent')) == {'status': 'absent'}
+    assert await read_deployment(OPTS, {}, presence('present')) == {'status': 'error'}
+    assert await read_deployment(OPTS, {}, presence('skipped')) == {'status': 'error'}
+    def refuse(*_):
+        raise ValueError('no credentials')
+    assert await read_deployment(OPTS, {}, {'journal_get': lambda *_: {'status': 'error'}, 'backend_presence': refuse}) == {'status': 'error'}
+    asked = []
+    deps = {'journal_get': lambda *_: {'status': 'absent'}, 'backend_presence': lambda *_: asked.append(1) or {'status': 'present'}}
+    assert await read_deployment(OPTS, {}, deps) == {'status': 'absent'}
+    assert asked == []

@@ -14,12 +14,14 @@ export async function managedOciBackend(opts:Map,action:string,environment:Map=p
  try{
   if(observed===null){
    let page:string|undefined;do{const listed=await request('GET',collection,undefined,{compartmentId:compartment,...(page?{page}:{})});check(listed&&Array.isArray(listed.data)&&!listed.data.some((b:Map)=>b.name===bucket),'OCI bucket absence unconfirmed');page=listed.headers['opc-next-page'];}while(page);
+   if(action==='presence')return {status:'absent'};
    if(action==='finalize'||['blue','red','green'].some(c=>opts[`${c}/event`]==='delete'))return {status:'absent'};
    check(opts['compute-require-existing-state']!==true,'existing managed backend required');
    observed=await request('POST',collection,{name:bucket,compartmentId:compartment,freeformTags:tags,publicAccessType:'NoPublicAccess',versioning:'Enabled'});
    check(observed&&!observed.conflict,'managed backend creation conflict');
    const written=await request('PUT',objectPath(opts,MARKER),{schema:1,identity,status:'active'},{},{'if-none-match':'*','content-type':'application/json'});check(written&&!written.conflict,'managed backend ownership conflict');
   }
+  if(action==='presence')return {status:'present'};
   const metadata=observed.data;check(metadata?.compartmentId===compartment&&Object.entries(tags).every(([k,v])=>metadata.freeformTags?.[k]===v),'managed backend ownership mismatch');
   const markerResponse=await request('GET',objectPath(opts,MARKER));let marker=markerResponse?.data;
   if(!marker&&action==='finalize'&&metadata.freeformTags['colors-phase']==='deleting')marker={schema:1,identity,status:'deleting'};

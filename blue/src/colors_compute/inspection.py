@@ -7,6 +7,7 @@ from .backend import read_state
 from .contract import collect, state_keys
 from .journal import journal_get, _identity, _settings
 from .lifecycle import lifecycle_document_valid
+from .managed_backend import backend_presence
 from .ssh import _mode
 
 
@@ -21,6 +22,10 @@ async def read_deployment(opts, environment=None, dependencies=None, requirement
         if not isinstance(requirements, dict):
             return {"status": "error"}
         observed = await call('journal_get', journal_get, opts, env)
+        if observed.get('status') != 'present' and observed != {'status': 'absent'}:
+            # A managed bucket that no longer exists is a retired deployment, not a transport error.
+            if await call('backend_presence', backend_presence, opts, env) == {'status': 'absent'}:
+                observed = {'status': 'absent'}
         if observed == {'status': 'absent'}:
             return {'status': 'absent'}
         if observed.get('status') != 'present':

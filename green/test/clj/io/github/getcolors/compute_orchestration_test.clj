@@ -65,6 +65,17 @@
       (swap! (:state storage) assoc-in [:observation :document :lock] {:state "held" :run_id "foreign"})
       (is (= {:status "error"} (inspection/read-deployment opts {} reader))))))
 
+(deftest inspection-treats-a-missing-managed-bucket-as-absent
+  (let [reader {:journal-get (fn [& _] {:status "error"})}
+        presence (fn [status] (assoc reader :backend-presence (fn [& _] {:status status})))]
+    (is (= {:status "absent"} (inspection/read-deployment opts {} (presence "absent"))))
+    (is (= {:status "error"} (inspection/read-deployment opts {} (presence "present"))))
+    (is (= {:status "error"} (inspection/read-deployment opts {} (presence "skipped"))))
+    (is (= {:status "error"} (inspection/read-deployment opts {} (assoc reader :backend-presence (fn [& _] (throw (ex-info "no credentials" {})))))))
+    (let [asked (atom false)]
+      (is (= {:status "absent"} (inspection/read-deployment opts {} {:journal-get (fn [& _] {:status "absent"}) :backend-presence (fn [& _] (reset! asked true) {:status "present"})})))
+      (is (false? @asked)))))
+
 (defn role-world []
   (let [{:keys [deps states] :as w} (world) renders (atom [])
         role-policy {:broker {:security {}}}

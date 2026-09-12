@@ -68,6 +68,12 @@ require those files either. Cleanup still verifies any remaining managed key
 material against the journal fingerprint after resource destruction. Missing
 files are accepted; foreign or unsafe files refuse cleanup and retain the lock.
 
+Read-only inspection reports `absent` for a journal object that does not exist
+and, for a managed backend, for a bucket that no longer exists after
+finalization. A failed journal read is otherwise `error`; inspection never
+treats a transport failure as absence without the backend's own presence
+confirmation (see [managed backend](managed-backend.md)).
+
 If key preparation never began, delete verifies absent or empty states, records
 declared resources as destroyed and retires with the key still absent. It skips
 provider rendering, compute credentials and local key work. A deletion that

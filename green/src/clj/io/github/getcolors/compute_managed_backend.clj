@@ -44,8 +44,11 @@
                                      (s3 "put-object" (into ["--key" marker-key "--body" (str file) "--content-type" "application/json"]
                                                            (if etag ["--if-match" etag] ["--if-none-match" "*"])))))
                       present (s3 "head-bucket" [] #{"404" "NoSuchBucket" "NotFound"})]
-                  (if (and (nil? present) (or (= action "finalize") (some #(contains? #{:delete "delete"} (get opts (keyword % "event"))) ["blue" "red" "green"])))
+                  (cond
+                    (= action "presence") {:status (if (nil? present) "absent" "present")}
+                    (and (nil? present) (or (= action "finalize") (some #(contains? #{:delete "delete"} (get opts (keyword % "event"))) ["blue" "red" "green"])))
                     {:status "absent"}
+                    :else
                     (do
                       (when (nil? present)
                         (require-valid (not (true? (:compute-require-existing-state opts))) "existing managed backend required")
@@ -102,6 +105,11 @@
   ([opts] (bootstrap-backend! opts (into {} (System/getenv))))
   ([opts environment] (bootstrap-backend! opts environment runtime/run-command))
   ([opts environment runner] (lifecycle opts "bootstrap" environment runner nil)))
+(defn backend-presence
+  "Read-only: does the managed bucket exist? skipped for external mode, build and dry-run."
+  ([opts] (backend-presence opts (into {} (System/getenv))))
+  ([opts environment] (backend-presence opts environment runtime/run-command))
+  ([opts environment runner] (lifecycle opts "presence" environment runner nil)))
 (defn finalize-backend!
   ([opts] (finalize-backend! opts (into {} (System/getenv))))
   ([opts environment] (finalize-backend! opts environment runtime/run-command))

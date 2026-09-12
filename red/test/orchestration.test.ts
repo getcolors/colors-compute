@@ -55,6 +55,15 @@ test('read-only inventory requires idle validated journal and complete node para
  const owner=new Coordinator(opts,{eventPrefix:'lifecycle/',read:async()=>structuredClone(r.observed),write:async(intent:Map)=>{r.observed={status:'present',etag:'held',document:intent.document};return {status:'written',etag:'held'};}});await owner.acquire();
  expect(await read_deployment(opts,{},deps)).toEqual({status:'error'});
 });
+test('inspection treats a missing managed bucket as absent',async()=>{
+ const {read_deployment}=await import('../src/inspection.ts');
+ const presence=(status:string)=>({journal_get:async()=>({status:'error'}),backend_presence:async()=>({status})});
+ expect(await read_deployment(opts,{},presence('absent'))).toEqual({status:'absent'});
+ expect(await read_deployment(opts,{},presence('present'))).toEqual({status:'error'});
+ expect(await read_deployment(opts,{},presence('skipped'))).toEqual({status:'error'});
+ expect(await read_deployment(opts,{},{journal_get:async()=>({status:'error'}),backend_presence:async()=>{throw Error('no credentials');}})).toEqual({status:'error'});
+ let asked=false;expect(await read_deployment(opts,{},{journal_get:async()=>({status:'absent'}),backend_presence:async()=>{asked=true;return {status:'present'};}})).toEqual({status:'absent'});expect(asked).toBe(false);
+});
 test('SDK callback options survive orchestration and coordinator snapshots',async()=>{
  const r=new Runtime();
  expect((await orchestrate({...opts,'red/callback':()=>true},[{count:1}],{},{},r.deps())).status).toBe('ready');

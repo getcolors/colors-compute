@@ -34,6 +34,7 @@ async function lifecycle(opts:Map,action:string,environment:Map=process.env,runn
   const get=async(key:string)=>{const path=join(directory,'read.json');const r=await s3('get-object',['--key',key,path],key===MARKER?['NoSuchKey']:[]);if(r===null)return {document:null,etag:null};return {document:JSON.parse(readFileSync(path,'utf8')),etag:r.ETag};};
   const put=async(document:Map,etag?:string)=>{const path=join(directory,'write.json');writeFileSync(path,JSON.stringify(document),{mode:0o600});return s3('put-object',['--key',MARKER,'--body',path,'--content-type','application/json',...(etag?['--if-match',etag]:['--if-none-match','*'])]);};
   const present=await s3('head-bucket',[],['404','NoSuchBucket','NotFound']);
+  if(action==='presence')return {status:present===null?'absent':'present'};
   if(present===null){
    if(action==='finalize'||['blue','red','green'].some(c=>opts[`${c}/event`]==='delete'))return {status:'absent'};
    if(opts['compute-require-existing-state']===true)throw Error('existing managed backend required');
@@ -76,4 +77,6 @@ async function lifecycle(opts:Map,action:string,environment:Map=process.env,runn
  }finally{try{if(owner&&!deleting)await owner.release();}finally{rmSync(directory,{recursive:true,force:true});}}
 }
 export const bootstrap_backend=(opts:Map,environment:Map=process.env,runner:BackendRunner=executeBackendCommand)=>lifecycle(opts,'bootstrap',environment,runner);
+/** Read-only: does the managed bucket exist? skipped for external mode, build and dry-run. */
+export const backend_presence=(opts:Map,environment:Map=process.env,runner:BackendRunner=executeBackendCommand)=>lifecycle(opts,'presence',environment,runner);
 export const finalize_backend=(opts:Map,environment:Map=process.env,runner:BackendRunner=executeBackendCommand,coordinatorFactory?:any)=>lifecycle(opts,'finalize',environment,runner,coordinatorFactory);

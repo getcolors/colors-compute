@@ -20,8 +20,11 @@
          identity {:project project :bucket bucket :region region :profile profile}
          labels {:colors_profile profile :colors_project project :colors_purpose "managed-backend"}
          present (request "GET" path nil {}) owner (atom nil) deleting (atom false)]
-    (if (and (nil? present) (or (= action "finalize") (some #(contains? #{:delete "delete"} (get opts (keyword % "event"))) ["blue" "red" "green"])))
+    (cond
+     (= action "presence") {:status (if (nil? present) "absent" "present")}
+     (and (nil? present) (or (= action "finalize") (some #(contains? #{:delete "delete"} (get opts (keyword % "event"))) ["blue" "red" "green"])))
      {:status "absent"}
+     :else
      (try
       (let [metadata (or present
                         (do (check (not (true? (:compute-require-existing-state opts))) "existing managed backend required")

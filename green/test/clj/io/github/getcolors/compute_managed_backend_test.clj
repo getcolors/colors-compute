@@ -50,3 +50,12 @@
     (swap! state assoc :marker nil :phase "deleting")
     (is (thrown? Exception (backend/bootstrap-backend! opts {} runner)))
     (is (= {:status "destroyed"} (backend/finalize-backend! opts {} runner)))))
+(deftest presence-is-read-only
+  (let [{:keys [state runner]} (fake false)]
+    (is (= {:status "absent"} (backend/backend-presence opts {} runner)))
+    (is (= ["get-caller-identity" "head-bucket"] (:calls @state)))
+    (is (= {:status "skipped"} (backend/backend-presence (assoc opts :s3-bucket-mode "external") {} runner)))
+    (is (= {:status "skipped"} (backend/backend-presence (assoc opts :green/dry-run true) {} runner))))
+  (let [{:keys [state runner]} (fake true)]
+    (is (= {:status "present"} (backend/backend-presence opts {} runner)))
+    (is (= ["get-caller-identity" "head-bucket"] (:calls @state)))))

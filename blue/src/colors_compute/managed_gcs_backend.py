@@ -29,6 +29,8 @@ async def managed_gcs_backend(opts, action, environment=None, runner=None, coord
     owner = None
     deleting = False
     try:
+        if action == 'presence':
+            return {'status': 'absent' if metadata is None else 'present'}
         if metadata is None:
             if action == 'finalize' or any(opts.get(f'{c}/event') == 'delete' for c in ('blue', 'red', 'green')):
                 return {'status': 'absent'}

@@ -76,6 +76,8 @@ async def _lifecycle(opts, action, environment=None, runner=None, coordinator_fa
                 '--content-type', 'application/json', *(['--if-match', etag] if etag else ['--if-none-match', '*']))
 
         present = await s3('head-bucket', missing=('404', 'NoSuchBucket', 'NotFound'))
+        if action == 'presence':
+            return {'status': 'absent' if present is None else 'present'}
         if present is None:
             if action == 'finalize' or any(opts.get(f'{c}/event') == 'delete' for c in ('blue', 'red', 'green')):
                 return {'status': 'absent'}
@@ -157,6 +159,11 @@ async def _lifecycle(opts, action, environment=None, runner=None, coordinator_fa
 
 async def bootstrap_backend(opts, environment=None, runner=None):
     return await _lifecycle(opts, 'bootstrap', environment, runner)
+
+
+async def backend_presence(opts, environment=None, runner=None):
+    """Read-only: does the managed bucket exist? skipped for external mode, build and dry-run."""
+    return await _lifecycle(opts, 'presence', environment, runner)
 
 
 async def finalize_backend(opts, environment=None, runner=None, coordinator_factory=None):

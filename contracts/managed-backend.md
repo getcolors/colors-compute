@@ -56,3 +56,17 @@ tags, region, and durable deleting tag authorize the empty-bucket cleanup retry.
 A missing marker without that deleting receipt is refused. A missing bucket is
 an idempotent `absent` result. Failed AWS requests retain resources for review;
 these operations do not print raw AWS diagnostics or credential values.
+
+`backend_presence(opts, environment?)` (Green `backend-presence`) is the
+read-only companion: it resolves the caller account and issues one
+owner-scoped `head-bucket`, returning `present` or `absent` and nothing else.
+External mode, build and dry-run return `skipped` without any AWS call. It never
+creates, tags, or acquires the journal. The GCS and OCI managed backends expose
+the same operation through their own bucket reads, and OCI still confirms
+absence with the compartment listing before answering `absent`.
+
+Deployment inspection uses this operation to distinguish a retired managed
+backend from a transport error: when the journal read fails and presence
+confirms the managed bucket is gone, inspection reports `absent`, so a repeated
+delete routes to finalization instead of refusing. A present bucket, an
+external bucket, or a failed presence check leaves the read as `error`.

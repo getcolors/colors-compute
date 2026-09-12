@@ -23,8 +23,11 @@
       (let [listed (request "GET" collection nil (cond-> {:compartmentId compartment} page (assoc :page page)) {})]
        (check (and listed (vector? (:data listed)) (not-any? #(= bucket (:name %)) (:data listed))) "OCI bucket absence unconfirmed")
        (when-let [next-page (get-in listed [:headers :opc-next-page])] (recur next-page)))))
-    (if (and (nil? present) (or (= action "finalize") (some #(contains? #{:delete "delete"} (get opts (keyword % "event"))) ["blue" "red" "green"])))
+    (cond
+     (= action "presence") {:status (if (nil? present) "absent" "present")}
+     (and (nil? present) (or (= action "finalize") (some #(contains? #{:delete "delete"} (get opts (keyword % "event"))) ["blue" "red" "green"])))
      {:status "absent"}
+     :else
      (try
       (let [observed (or present
                         (do (check (not (true? (:compute-require-existing-state opts))) "existing managed backend required")

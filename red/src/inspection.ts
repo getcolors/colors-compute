@@ -6,12 +6,18 @@ import {identityEqual} from './coordination.ts';
 import {journalGet,identity} from './journal.ts';
 import {lifecycleDocumentValid} from './lifecycle.ts';
 import {mode} from './ssh.ts';
+import {backend_presence} from './managed-backend.ts';
 type Map=Record<string,any>;
 export async function read_deployment(opts:Map,environment:Map=process.env,dependencies:Map={},requirements:Map={}) {
  const env={...environment},call=async(name:string,fn:any,...args:any[])=>await (dependencies[name]??fn)(...args);
  try{
   if(requirements===null||typeof requirements!=='object'||Array.isArray(requirements))return {status:'error'};
-  const observed=await call('journal_get',journalGet,opts,env);
+  let observed=await call('journal_get',journalGet,opts,env);
+  // A managed bucket that no longer exists is a retired deployment, not a transport error.
+  if(observed.status!=='present'&&!(observed.status==='absent'&&Object.keys(observed).length===1)){
+   const presence=await call('backend_presence',backend_presence,opts,env);
+   if(presence?.status==='absent'&&Object.keys(presence).length===1)observed={status:'absent'};
+  }
   if(observed.status==='absent'&&Object.keys(observed).length===1)return {status:'absent'};
   if(observed.status!=='present')return {status:'error'};
   const doc=observed.document;

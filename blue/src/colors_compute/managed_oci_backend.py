@@ -35,6 +35,8 @@ async def managed_oci_backend(opts, action, environment=None, runner=None, coord
                 page = listed['headers'].get('opc-next-page')
                 if not page:
                     break
+            if action == 'presence':
+                return {'status': 'absent'}
             if action == 'finalize' or any(opts.get(c+'/event') == 'delete' for c in ('blue', 'red', 'green')):
                 return {'status': 'absent'}
             check(opts.get('compute-require-existing-state') is not True, 'existing managed backend required')
@@ -42,6 +44,8 @@ async def managed_oci_backend(opts, action, environment=None, runner=None, coord
             check(observed and not observed.get('conflict'), 'managed backend creation conflict')
             written = await request('PUT', object_path(opts, MARKER), dict(schema=1, identity=identity, status='active'), headers={'if-none-match': '*', 'content-type': 'application/json'})
             check(written and not written.get('conflict'), 'managed backend ownership conflict')
+        if action == 'presence':
+            return {'status': 'present'}
         metadata = observed['data']
         check(metadata.get('compartmentId') == compartment and all(metadata.get('freeformTags', {}).get(k) == v for k, v in tags.items()), 'managed backend ownership mismatch')
         marker_response = await request('GET', object_path(opts, MARKER))

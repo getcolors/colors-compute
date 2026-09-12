@@ -4,7 +4,8 @@
             [io.github.getcolors.compute-runtime :as runtime]
             [io.github.getcolors.compute-journal :as journal]
             [io.github.getcolors.compute-ssh :as ssh]
-            [io.github.getcolors.compute-lifecycle :as lifecycle]))
+            [io.github.getcolors.compute-lifecycle :as lifecycle]
+            [io.github.getcolors.compute-managed-backend :as managed-backend]))
 (defn- require-valid [value] (when-not value (throw (ex-info "compute inspection failed" {}))))
 (defn read-deployment
   ([opts] (read-deployment opts (into {} (System/getenv)) {}))
@@ -13,7 +14,12 @@
   ([opts environment dependencies requirements]
    (try
      (require-valid (map? requirements))
-     (let [observed ((get dependencies :journal-get journal/journal-get) opts environment)]
+     (let [observed ((get dependencies :journal-get journal/journal-get) opts environment)
+           ;; A managed bucket that no longer exists is a retired deployment, not a
+           ;; transport error; confirm it with the backend's own presence check.
+           observed (if (and (not= "present" (:status observed)) (not= observed {:status "absent"})
+                             (= {:status "absent"} ((get dependencies :backend-presence managed-backend/backend-presence) opts environment)))
+                      {:status "absent"} observed)]
        (if (= observed {:status "absent"}) {:status "absent"}
            (let [doc (:document observed)
                  config (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))

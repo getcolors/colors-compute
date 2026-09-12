@@ -15,6 +15,7 @@ export async function managedGcsBackend(opts:Map,action:string,environment:Map=p
  const labels={colors_profile:profile,colors_project:project,colors_purpose:'managed-backend'};
  let metadata=await request('GET',path),owner:any,deleting=false;
  try{
+  if(action==='presence')return {status:metadata===null?'absent':'present'};
   if(metadata===null){
    if(action==='finalize'||['blue','red','green'].some(c=>opts[`${c}/event`]==='delete'))return {status:'absent'};
    if(opts['compute-require-existing-state']===true)throw Error('existing managed backend required');

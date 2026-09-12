@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import pytest
 from colors_compute.backend import ProcessResult
-from colors_compute.managed_backend import bootstrap_backend, finalize_backend, MARKER
+from colors_compute.managed_backend import bootstrap_backend, finalize_backend, backend_presence, MARKER
 
 OPTS = {'provider-backend': 's3', 'provider-compute': 'aws', 's3-bucket-mode': 'managed',
         's3-bucket': 'demo-state-123456789012-us-east-1', 's3-region': 'us-east-1',
@@ -140,3 +140,15 @@ async def test_marker_absent_without_deleting_receipt_refuses():
     aws = AWS(True); aws.objects.pop(MARKER)
     with pytest.raises(ValueError): await finalize_backend(OPTS, {}, aws)
     assert 'delete-bucket' not in aws.calls
+
+
+@pytest.mark.asyncio
+async def test_presence_is_read_only():
+    missing = AWS()
+    assert await backend_presence(OPTS, {}, missing) == {'status': 'absent'}
+    assert missing.calls == ['get-caller-identity', 'head-bucket']
+    assert await backend_presence({**OPTS, 's3-bucket-mode': 'external'}, {}, missing) == {'status': 'skipped'}
+    assert await backend_presence({**OPTS, 'blue/dry-run': True}, {}, missing) == {'status': 'skipped'}
+    existing = AWS(True)
+    assert await backend_presence(OPTS, {}, existing) == {'status': 'present'}
+    assert existing.calls == ['get-caller-identity', 'head-bucket']

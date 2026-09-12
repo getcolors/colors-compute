@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {readFileSync,writeFileSync} from 'node:fs';
-import {bootstrap_backend,finalize_backend} from '../src/managed-backend.ts';
+import {bootstrap_backend,finalize_backend,backend_presence} from '../src/managed-backend.ts';
 const opts={'provider-backend':'s3','s3-bucket-mode':'managed','s3-bucket':'demo-state-123456789012-us-east-1','s3-region':'us-east-1',profile:'demo','compute-prevent-destroy':false};
 function aws(exists=false){
  const calls:string[]=[];let marker:any={schema:1,identity:{account:'123456789012',bucket:opts['s3-bucket'],region:'us-east-1',profile:'demo'},status:'active'};
@@ -23,3 +23,9 @@ test('access denied cannot authorize bucket creation',async()=>{const calls:stri
 test('finalize refuses active Terraform state',async()=>{const a=aws(true);a.objects['demo/dns.tfstate']={version:4,resources:[{instances:[{}]}]};let released=false;const factory=()=>({acquire:async()=>{},snapshot:async()=>({document:{status:'retired'}}),release:async()=>{released=true;}});await expect(finalize_backend(opts,{},a.runner,factory)).rejects.toThrow();expect(a.calls).not.toContain('delete-bucket');expect(released).toBe(true);});
 test('deleting tag permits retry after last marker version removed',async()=>{const a=aws(true);a.setMarker(null);a.setPhase('deleting');await expect(bootstrap_backend(opts,{},a.runner)).rejects.toThrow();expect(await finalize_backend(opts,{},a.runner)).toEqual({status:'destroyed'});});
 test('external buckets perform no AWS calls',async()=>{const a=aws();expect(await bootstrap_backend({...opts,'s3-bucket-mode':'external'},{},a.runner)).toEqual({status:'skipped'});expect(a.calls).toEqual([]);});
+test('presence is read-only and reports the managed bucket',async()=>{
+ const missing=aws();expect(await backend_presence(opts,{},missing.runner)).toEqual({status:'absent'});expect(missing.calls).toEqual(['get-caller-identity','head-bucket']);
+ expect(await backend_presence({...opts,'s3-bucket-mode':'external'},{},missing.runner)).toEqual({status:'skipped'});
+ expect(await backend_presence({...opts,'red/dry-run':true},{},missing.runner)).toEqual({status:'skipped'});
+ const existing=aws(true);expect(await backend_presence(opts,{},existing.runner)).toEqual({status:'present'});expect(existing.calls).toEqual(['get-caller-identity','head-bucket']);
+});
