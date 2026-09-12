@@ -17,7 +17,8 @@ async def gcs_client(environment=None, runner=None):
         raise ValueError('GCS authentication failed')
 
     async def request(method, path, body=None, query=None):
-        url = 'https://storage.googleapis.com/' + path
+        base = 'https://cloudresourcemanager.googleapis.com/' if path.startswith('v1/projects/') else 'https://storage.googleapis.com/'
+        url = base + path
         if query:
             url += '?' + urlencode({k: str(v).lower() if isinstance(v, bool) else str(v) for k, v in query.items()})
         headers = {'Authorization': 'Bearer ' + token.out.strip()}
@@ -37,7 +38,15 @@ async def gcs_client(environment=None, runner=None):
                 if error.code == 412:
                     return {'conflict': True}
                 raise ValueError(f'GCS operation failed ({error.code})') from None
-        return await asyncio.to_thread(send)
+        result = await asyncio.to_thread(send)
+        if result is None and method == 'GET' and path.startswith('storage/v1/b/') and '/o/' in path:
+            parent = path.split('/o/', 1)[0]
+            bucket = await request('GET', parent)
+            if bucket is None:
+                raise ValueError('GCS bucket missing')
+            if not isinstance(bucket, dict) or not isinstance(bucket.get('name'), str) or bucket_path(bucket['name']) != parent:
+                raise ValueError('invalid GCS bucket metadata')
+        return result
     return request
 
 

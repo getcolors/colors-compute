@@ -52,7 +52,7 @@ export function lifecycleDocumentValid(value:unknown):value is Map {
   const allDestroyed=[value.shared,...Object.values(value.nodes)].every((record:any)=>record.phase==='destroyed');
   const allUndesired=Object.values(value.nodes).every((node:any)=>!node.desired);
   if(value.status==='deleting'&&!allUndesired)return false;
-  if(value.status==='retired'&&(value.key.phase!=='removed'||!allDestroyed||!allUndesired))return false;
+  if(value.status==='retired'&&(!['absent','removed'].includes(value.key.phase)||!allDestroyed||!allUndesired))return false;
   if(['cleanup','removed'].includes(value.key.phase)&&(!['deleting','retired'].includes(value.status)||!allDestroyed))return false;
   if(desiredRoles.has(null)&&desiredRoles.size!==1)return false;
   if(![...desiredRoles.values()].every(indices=>indices.sort((a,b)=>a-b).every((index,position)=>index===position)))return false;
@@ -127,7 +127,7 @@ export function lifecycle(observation:unknown,identity:unknown,event:unknown) {
       case 'begin-delete':requireTransition(next.status!=='retired'&&!activeWork());next.status='deleting';for(const node of Object.values(next.nodes) as Map[])node.desired=false;break;
       case 'key-cleanup':requireTransition(next.status==='deleting'&&allDestroyed()&&next.key.phase==='prepared');next.key.phase='cleanup';break;
       case 'key-removed':requireTransition(next.key.phase==='cleanup');next.key.phase='removed';break;
-      case 'retire':requireTransition(next.status==='deleting'&&next.key.phase==='removed'&&allDestroyed());next.status='retired';break;
+      case 'retire':requireTransition(next.status==='deleting'&&['absent','removed'].includes(next.key.phase)&&allDestroyed());next.status='retired';break;
       case 'recreate':requireTransition(next.status==='retired'&&!activeWork()&&next.generation<Number.MAX_SAFE_INTEGER);next.generation++;next.status='active';next.key={mode:null,phase:'absent',fingerprint:null};next.shared=idleShared();next.topology_declared=false;break;
       case 'release':requireTransition(!activeWork()&&!['intent','cleanup'].includes(next.key.phase));next.lock={state:'idle',run_id:null};break;
       default:requireTransition(false);

@@ -57,3 +57,20 @@ history. This API must only follow operator review of the failed invocation;
 it is never called automatically and does not authorize recovery of resources
 whose ownership tags/names were changed outside the deployment. Ordinary failed
 applies still require readable state. No synthetic state is written.
+
+
+Delete does not prepare a local keypair. For a prepared managed key, it renders
+destroy documents with a fixed valid public-key placeholder. The executor only
+accepts no-op, read and delete actions in the approved destroy plan. It never
+uses this placeholder for create or scale-down within create. External key
+file references use planning resolution during deletion, so deletion does not
+require those files either. Cleanup still verifies any remaining managed key
+material against the journal fingerprint after resource destruction. Missing
+files are accepted; foreign or unsafe files refuse cleanup and retain the lock.
+
+If key preparation never began, delete verifies absent or empty states, records
+declared resources as destroyed and retires with the key still absent. It skips
+provider rendering, compute credentials and local key work. A deletion that
+committed key removal can finish retirement without repeating cleanup. See
+[manual key-phase recovery](key-phase-recovery.md) for interrupted intent or
+cleanup, which continue to refuse automatic lock takeover.

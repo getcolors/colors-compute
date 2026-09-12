@@ -4706,5 +4706,657 @@
     "expected": {
       "error": "invalid lifecycle document"
     }
+  },
+  {
+    "name": "retire absent key after verified destruction",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-46",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-test"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 2,
+        "write_id": "write-46",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 1,
+        "status": "retired",
+        "topology_declared": false,
+        "key": {
+          "mode": null,
+          "phase": "absent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "release retired absent key",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 2,
+          "write_id": "write-46",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "retired",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/release",
+        "run_id": "run-1",
+        "write_id": "write-47",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-test"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 3,
+        "write_id": "write-47",
+        "lock": {
+          "state": "idle",
+          "run_id": null
+        },
+        "generation": 1,
+        "status": "retired",
+        "topology_declared": false,
+        "key": {
+          "mode": null,
+          "phase": "absent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "destroyed",
+          "operation": "destroy",
+          "operation_id": "destroy-shared"
+        },
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "recreate retired absent key",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 2,
+          "write_id": "write-46",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "retired",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/recreate",
+        "run_id": "run-1",
+        "write_id": "write-48",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_match": "etag-test"
+      },
+      "document": {
+        "schema_version": 2,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "s3",
+            "bucket": "states",
+            "region": "eu-west-1"
+          }
+        },
+        "revision": 3,
+        "write_id": "write-48",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "generation": 2,
+        "status": "active",
+        "topology_declared": false,
+        "key": {
+          "mode": null,
+          "phase": "absent",
+          "fingerprint": null
+        },
+        "shared": {
+          "phase": "declared",
+          "operation": null,
+          "operation_id": null
+        },
+        "nodes": {}
+      }
+    }
+  },
+  {
+    "name": "retire absent key refuses shared declared",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "declared",
+            "operation": null,
+            "operation_id": null
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-49",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "retire absent key refuses shared ready",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "ready",
+            "operation": "create",
+            "operation_id": "attempt-shared"
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-50",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "retire absent key refuses shared failed",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "failed",
+            "operation": "create",
+            "operation_id": "attempt-shared"
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-51",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "retire absent key refuses undeleted node",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": null,
+            "phase": "absent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {
+            "0": {
+              "state_key": "demo/compute/nodes/0.tfstate",
+              "role": null,
+              "index": 0,
+              "desired": false,
+              "phase": "declared",
+              "operation": null,
+              "operation_id": null
+            }
+          }
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-52",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "retire refuses uncertain key intent",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": "external",
+            "phase": "intent",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-53",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
+  },
+  {
+    "name": "retire refuses uncertain key prepared",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "present",
+        "etag": "etag-test",
+        "document": {
+          "schema_version": 2,
+          "identity": {
+            "profile": "demo",
+            "provider": "vultr",
+            "backend": {
+              "kind": "s3",
+              "bucket": "states",
+              "region": "eu-west-1"
+            }
+          },
+          "revision": 1,
+          "write_id": "write-1",
+          "lock": {
+            "state": "held",
+            "run_id": "run-1"
+          },
+          "generation": 1,
+          "status": "deleting",
+          "topology_declared": false,
+          "key": {
+            "mode": "external",
+            "phase": "prepared",
+            "fingerprint": null
+          },
+          "shared": {
+            "phase": "destroyed",
+            "operation": "destroy",
+            "operation_id": "destroy-shared"
+          },
+          "nodes": {}
+        }
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "s3",
+          "bucket": "states",
+          "region": "eu-west-1"
+        }
+      },
+      {
+        "type": "lifecycle/retire",
+        "run_id": "run-1",
+        "write_id": "write-54",
+        "target_etag": "etag-test"
+      }
+    ],
+    "expected": {
+      "error": "lifecycle transition refused"
+    }
   }
 ]

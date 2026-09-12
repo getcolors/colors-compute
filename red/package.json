@@ -14,11 +14,12 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "red": "github:getcolors/red#db9bfe61282e2093f4098bf5a6ee0cd10added6e"
-  },
   "devDependencies": {
     "@types/bun": "^1.2.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "red": "github:getcolors/red#e24217c32ab00ffd29d4767a53c880795f86f977"
+  },
+  "peerDependencies": {
+    "red": "*"
   }
 }

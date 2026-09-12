@@ -14,6 +14,9 @@
                        (string? project) (re-matches #"[a-z][a-z0-9-]+" project)
                        (string? profile) (re-matches #"[a-z0-9][a-z0-9_-]{0,62}" profile)) "invalid managed GCS identity")
          request (gcs/client environment runner) path (gcs/bucket-path bucket)
+         resolved (request "GET" (str "v1/projects/" project) nil {})
+         _ (check (and (= project (:projectId resolved)) (string? (:projectNumber resolved)) (re-matches #"[1-9][0-9]*" (:projectNumber resolved))) "managed backend project verification failed")
+         project-number (:projectNumber resolved)
          identity {:project project :bucket bucket :region region :profile profile}
          labels {:colors_profile profile :colors_project project :colors_purpose "managed-backend"}
          present (request "GET" path nil {}) owner (atom nil) deleting (atom false)]
@@ -25,8 +28,9 @@
                             (let [created (request "POST" "storage/v1/b" {:name bucket :location region :labels labels
                               :iamConfiguration {:uniformBucketLevelAccess {:enabled true} :publicAccessPrevention "enforced"}
                               :versioning {:enabled true} :softDeletePolicy {:retentionDurationSeconds "0"}} {:project project})]
+                             (check (= project-number (:projectNumber created)) "managed backend ownership mismatch")
                              (check (not (:conflict (gcs/put-object request bucket marker-key {:schema 1 :identity identity :status "active"} "0"))) "managed backend ownership conflict") created)))
-            _ (check (and (= labels (select-keys (:labels metadata) (keys labels))) (= region (str/lower-case (:location metadata)))) "managed backend ownership mismatch")
+            _ (check (and (= project-number (:projectNumber metadata)) (= labels (select-keys (:labels metadata) (keys labels))) (= region (str/lower-case (:location metadata)))) "managed backend ownership mismatch")
             observed (gcs/get-object request bucket marker-key)
             marker (or (:document observed) (when (and (= action "finalize") (= "deleting" (get-in metadata [:labels :colors_phase]))) {:schema 1 :identity identity :status "deleting"}))
             _ (check (and (= 1 (:schema marker)) (= identity (:identity marker)) (contains? #{"active" "deleting"} (:status marker))) "managed backend ownership mismatch")

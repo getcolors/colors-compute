@@ -73,7 +73,7 @@ Begin-delete requires no running work; it sets status deleting and every node
 desired=false. Node destroy requires desired=false, phase not running/destroying/
 destroyed, and records destroying/destroy with a fresh operation ID. Shared
 destroy requires every node destroyed and shared not running/destroying/destroyed.
-Key-cleanup requires deleting status, all nodes/shared destroyed, and key prepared. Key-removed requires cleanup. Retire requires deleting, key removed,
+Key-cleanup requires deleting status, all nodes/shared destroyed, and key prepared. Key-removed requires cleanup. Retire requires deleting, key absent or removed,
 and all resources destroyed; set retired. Release refuses any running/destroying
 work or key intent/cleanup; it keeps all history and sets idle/null. Failed
 resources may be released only after runtime has established process quiescence.
@@ -91,7 +91,7 @@ Colors join and Ansible. Direct API actors outside the coordinator remain outsid
 its exclusion guarantee.
 
 Strict document invariants: deleting requires every node desired=false. Retired
-requires key removed, shared and all nodes destroyed, and every node undesired.
+requires key absent or removed, shared and all nodes destroyed, and every node undesired.
 Key cleanup/removed requires deleting or retired status and all shared/node
 resources destroyed. These invariants prevent forged tombstones from authorizing
 recreation. Desired node indices are contiguous within each current role;
@@ -101,3 +101,16 @@ Shared-start also requires topology_declared=true and no running/destroying
 shared or node attempt. Shared-retry has only evidence=readable-state and resets
 a failed/create shared attempt to declared, without dispatch. Key-cleanup is
 permitted only from prepared, never from uncertain intent.
+
+
+An absent-key retirement preserves mode=null and fingerprint=null. Runtime must
+first verify that every shared/node record is declared or destroyed and that
+its state is absent or a verified empty object. It then records destroy and
+completion for each declared node, followed by shared, before retire. It never
+runs OpenTofu or touches SSH files. Any ready, failed, running or destroying
+record prevents this shortcut. Removed-key deletion can finish retire after the
+same state checks without repeating cleanup.
+
+Interrupted key intent and cleanup retain their locks. Follow
+[manual key-phase recovery](key-phase-recovery.md) after proving the original
+process and its children have stopped. A held lock never expires.

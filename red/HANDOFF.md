@@ -3,8 +3,9 @@
 Implemented six pure operations in `src/index.ts`, a distributable copy of
 `contracts/providers.json`, and JSONL driver `../scripts/contract-red.ts`.
 Registry data is deeply frozen; a test rejects drift from the canonical file.
-The manifest and Bun lockfile pin Red SDK commit
-`db9bfe61282e2093f4098bf5a6ee0cd10added6e`.
+The development manifest and Bun lockfile pin Red SDK commit
+`e24217c32ab00ffd29d4767a53c880795f86f977`. Both package manifests declare
+Red as a peer dependency, so installed consumers use their own SDK pin.
 
 ## Cluster workflow adapter
 

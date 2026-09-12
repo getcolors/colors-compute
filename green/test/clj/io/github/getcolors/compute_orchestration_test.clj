@@ -1,5 +1,7 @@
 (ns io.github.getcolors.compute-orchestration-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [io.github.getcolors.compute-ssh-test :as ssh-test]
+            [clojure.java.io :as io]
+            [clojure.test :refer [deftest is]]
             [io.github.getcolors.compute-orchestration :as o]
             [io.github.getcolors.compute-coordinator :as c]
             [io.github.getcolors.compute-coordinator-test :as ct]
@@ -174,3 +176,69 @@
     (is (= {:status "destroyed"} (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps)))
     (swap! (:state storage) assoc-in [:observation :document :lock] {:state "held" :run_id "finalizer"})
     (is (= {:status "destroyed"} (inspection/read-deployment opts {} {:journal-get (fn [& _] ((:read storage)))})))))
+
+(deftest delete-before-key-preparation-verifies-states-and-retires
+  (doseq [empty [true false nil]]
+    (let [{:keys [deps storage states calls]} (world)
+          refused (assoc deps :validate-deployment (fn [& _] false))]
+      (is (= {:status "error"} (o/orchestrate opts topology requirements {} refused)))
+      (swap! states assoc "demo/compute/nodes/broker-0.tfstate" {:status "present" :state_empty empty})
+      (let [forbidden (fn [& _] (throw (ex-info "unexpected key or provider work" {})))
+            deletion (reduce #(assoc %1 %2 forbidden) deps [:prepare-keypair :cleanup-keypair :provider-request :compute-credential-errors])]
+        (is (= {:status (if (true? empty) "destroyed" "error")}
+               (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deletion))))
+      (is (= "idle" (get-in @(:state storage) [:observation :document :lock :state])))
+      (when (true? empty)
+        (let [doc (get-in @(:state storage) [:observation :document])]
+          (is (= "retired" (:status doc)))
+          (is (= "absent" (get-in doc [:key :phase])))
+          (is (= "destroyed" (get-in doc [:shared :phase])))
+          (is (every? #(= "destroyed" (:phase %)) (vals (:nodes doc)))))
+        (reset! states {})
+        (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
+        (is (= 2 (get-in @(:state storage) [:observation :document :generation])))))))
+
+(deftest delete-skips-key-preparation-and-preserves-cleanup-ownership
+  (let [{:keys [deps states]} (world)]
+    (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
+    (is (= {:status "destroyed"}
+           (o/orchestrate (assoc opts :green/event :delete) topology requirements {}
+             (assoc deps :prepare-keypair (fn [& _] (throw (ex-info "local keypair missing" {})))
+                         :cleanup-keypair (fn [_ ownership authority _]
+                                            (is (= {:status "prepared" :fingerprint fp} ownership))
+                                            (is (= {:all_resources_destroyed true} authority))
+                                            (is (every? :state_empty (vals @states)))
+                                            {:cleaned true})))))))
+
+(deftest delete-resumes-after-key-removed-before-retire
+  (let [{:keys [deps storage]} (world)]
+    (o/orchestrate opts topology requirements {} deps)
+    (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps)
+    (swap! (:state storage) assoc-in [:observation :document :status] "deleting")
+    (swap! (:state storage) assoc-in [:observation :document :lock] {:state "held" :run_id "interrupted-owner"})
+    (is (= {:status "error"} (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deps)))
+    (is (= "interrupted-owner" (get-in @(:state storage) [:observation :document :lock :run_id])))
+    (swap! (:state storage) assoc-in [:observation :document :lock] {:state "idle" :run_id nil})
+    (let [forbidden (fn [& _] (throw (ex-info "unexpected work" {})))
+          deletion (reduce #(assoc %1 %2 forbidden) deps [:prepare-keypair :cleanup-keypair :compute-credential-errors :provider-request])]
+      (is (= {:status "destroyed"} (o/orchestrate (assoc opts :green/event :delete) topology requirements {} deletion))))
+    (is (= "retired" (get-in @(:state storage) [:observation :document :status])))
+    (is (= "idle" (get-in @(:state storage) [:observation :document :lock :state])))))
+
+
+(deftest real-managed-cleanup-accepts-missing-or-partial-pairs
+  (doseq [remaining [:none :private :public :new-home]]
+    (ssh-test/with-home
+      (fn [home env]
+        (let [{:keys [deps]} (world)
+              deps (dissoc deps :prepare-keypair :cleanup-keypair)
+              private (io/file (str home) ".ssh/demo")
+              public (io/file (str home) ".ssh/demo.pub")]
+          (is (= "ready" (:status (o/orchestrate opts topology requirements env deps))))
+          (when (not= remaining :private) (io/delete-file private))
+          (when (not= remaining :public) (io/delete-file public))
+          (is (= {:status "destroyed"}
+                 (o/orchestrate (assoc opts :green/event :delete) topology requirements
+                                (if (= remaining :new-home) (assoc env "HOME" (str home "/other-machine")) env) deps)))
+          (is (not (.exists private)))
+          (is (not (.exists public))))))))

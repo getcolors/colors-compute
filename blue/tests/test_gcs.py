@@ -36,11 +36,13 @@ class GCS:
         self.created = 0
         self.versions = []
     async def request(self, method, path, body=None, query=None):
+        if path.startswith('v1/projects/'):
+            return {'projectId': 'demo-project', 'projectNumber': '123456789'}
         query = query or {}
         name = unquote(path.split('/o/', 1)[1]) if '/o/' in path else None
         if method == 'POST' and path == 'storage/v1/b':
             self.created += 1
-            self.metadata = {**body, 'metageneration': '1'}
+            self.metadata = {**body, 'metageneration': '1', 'projectNumber': '123456789'}
             return self.metadata
         if path.startswith('upload/'):
             self.objects[query['name']] = body
@@ -129,3 +131,102 @@ async def test_bounded_generation_read_rejects_before_download():
     with pytest.raises(ValueError, match='too large'):
         await gcs_get(request, 'states', 'journal', 2097152)
     assert len(calls) == 1
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('action', ['bootstrap', 'finalize'])
+@pytest.mark.parametrize('number', ['987654321', None, 123456789])
+async def test_matching_marker_cannot_authorize_foreign_project(monkeypatch, action, number):
+    api = GCS()
+    monkeypatch.setattr('colors_compute.managed_gcs_backend.gcs_client', api.client)
+    await bootstrap_backend(OPTS)
+    api.metadata['projectNumber'] = number
+    calls = []
+    original = api.request
+    async def observed(method, *args, **kwargs):
+        calls.append(method)
+        return await original(method, *args, **kwargs)
+    api.request = observed
+    with pytest.raises(ValueError, match='ownership mismatch'):
+        await (bootstrap_backend(OPTS) if action == 'bootstrap' else finalize_backend(OPTS))
+    assert set(calls) == {'GET'}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('resolved', [None, {}, {'projectId': 'foreign-project', 'projectNumber': '123456789'},
+    {'projectId': 'demo-project', 'projectNumber': 123456789}, {'projectId': 'demo-project', 'projectNumber': '1.2'},
+    {'projectId': 'demo-project', 'projectNumber': '0'}])
+async def test_project_resolution_fails_before_bucket_access(monkeypatch, resolved):
+    calls = []
+    async def request(method, path, *args, **kwargs):
+        calls.append((method, path))
+        return resolved
+    async def client(*args): return request
+    monkeypatch.setattr('colors_compute.managed_gcs_backend.gcs_client', client)
+    with pytest.raises(ValueError, match='project verification failed'):
+        await bootstrap_backend(OPTS)
+    assert calls == [('GET', 'v1/projects/demo-project')]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('bucket_status', [200, 404, 403])
+async def test_wire_object_404_requires_existing_readable_bucket(monkeypatch, bucket_status):
+    async def runner(*args): return ProcessResult(0, 'test-token', '')
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def read(self): return b'{"name":"demo-states"}'
+    def send(req, **kwargs):
+        status = 404 if '/o/' in req.full_url else bucket_status
+        if status != 200: raise HTTPError(req.full_url, status, 'error', {}, None)
+        return Response()
+    monkeypatch.setattr('colors_compute.gcs.urlopen', send)
+    request = await gcs_client({}, runner)
+    if bucket_status == 200:
+        assert await request('GET', 'storage/v1/b/demo-states/o/missing') is None
+    else:
+        with pytest.raises(ValueError, match='bucket missing' if bucket_status == 404 else '403'):
+            await request('GET', 'storage/v1/b/demo-states/o/missing')
+    if bucket_status == 404:
+        assert await request('GET', 'storage/v1/b/demo-states') is None
+
+
+@pytest.mark.asyncio
+async def test_project_lookup_uses_resource_manager_and_rejects_denial(monkeypatch):
+    async def runner(*args): return ProcessResult(0, 'test-token', '')
+    def send(req, **kwargs):
+        assert req.full_url == 'https://cloudresourcemanager.googleapis.com/v1/projects/demo-project'
+        assert req.headers['Authorization'] == 'Bearer test-token'
+        raise HTTPError(req.full_url, 403, 'forbidden', {}, None)
+    monkeypatch.setattr('colors_compute.gcs.urlopen', send)
+    with pytest.raises(ValueError, match='403'):
+        await bootstrap_backend(OPTS, environment={}, runner=runner)
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('payload', [{}, {'conflict': True}, {'name': 'foreign'}, []])
+async def test_wire_object_404_rejects_unverified_bucket_metadata(monkeypatch, payload):
+    async def runner(*args): return ProcessResult(0, 'test-token', '')
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def read(self): return json.dumps(payload).encode()
+    def send(req, **kwargs):
+        if '/o/' in req.full_url: raise HTTPError(req.full_url, 404, 'missing', {}, None)
+        return Response()
+    monkeypatch.setattr('colors_compute.gcs.urlopen', send)
+    with pytest.raises(ValueError, match='invalid GCS bucket metadata'):
+        await (await gcs_client({}, runner))('GET', 'storage/v1/b/demo-states/o/missing')
+
+
+@pytest.mark.asyncio
+async def test_created_bucket_project_must_match_before_marker_write(monkeypatch):
+    api = GCS()
+    original = api.request
+    async def request(method, path, *args, **kwargs):
+        result = await original(method, path, *args, **kwargs)
+        if method == 'POST' and path == 'storage/v1/b': result['projectNumber'] = '987654321'
+        return result
+    api.request = request
+    monkeypatch.setattr('colors_compute.managed_gcs_backend.gcs_client', api.client)
+    with pytest.raises(ValueError, match='ownership mismatch'):
+        await bootstrap_backend(OPTS)
+    assert not api.objects

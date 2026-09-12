@@ -81,7 +81,7 @@ def lifecycle_document_valid(value):
         return False
     destroyed = value['shared']['phase'] == 'destroyed' and all(node['phase'] == 'destroyed' for node in value['nodes'].values())
     undesired = all(not node['desired'] for node in value['nodes'].values())
-    if value['status'] == 'retired' and not (key['phase'] == 'removed' and destroyed and undesired):
+    if value['status'] == 'retired' and not (key['phase'] in ('absent', 'removed') and destroyed and undesired):
         return False
     if value['status'] == 'deleting' and not undesired:
         return False
@@ -229,7 +229,7 @@ def lifecycle(observation, identity, event):
             require(result['key']['phase'] == 'cleanup')
             result['key']['phase'] = 'removed'
         elif name == 'retire':
-            require(result['status'] == 'deleting' and result['key']['phase'] == 'removed' and destroyed())
+            require(result['status'] == 'deleting' and result['key']['phase'] in ('absent', 'removed') and destroyed())
             result['status'] = 'retired'
         elif name == 'recreate':
             require(result['status'] == 'retired' and not active() and result['generation'] < MAX_INTEGER)

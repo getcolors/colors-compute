@@ -6,6 +6,7 @@
   "license": "MIT",
   "exports": {".": "./red/src/index.ts", "./workflow": "./red/src/workflow.ts"},
   "files": ["red/src", "red/resources", "providers", "contracts"],
-  "dependencies": {"red": "github:getcolors/red#db9bfe61282e2093f4098bf5a6ee0cd10added6e"},
+  "peerDependencies": {"red": "*"},
+  "devDependencies": {"red": "github:getcolors/red#e24217c32ab00ffd29d4767a53c880795f86f977"},
   "scripts": {"test": "cd red && bun test", "typecheck": "cd red && bun run typecheck"}
 }

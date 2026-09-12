@@ -32,6 +32,8 @@ isolation, backend locking, or safe migration of an existing deployment.
   writes and confirmation of ambiguous responses.
 - [Lifecycle journal](contracts/lifecycle-journal.md): shared resources, nodes,
   key ownership, scale-down, deletion, and recreation.
+- [Interrupted key recovery](contracts/key-phase-recovery.md): operator checks
+  and conditional journal repair for held key-phase locks.
 - [Application requests](contracts/deployment-request.md): naming, external public
   key references, and deterministic builds.
 - [Provider request resolution](contracts/provider-request.md): library-owned
@@ -50,7 +52,8 @@ isolation, backend locking, or safe migration of an existing deployment.
 The registry declares eight target compute providers: Azure, AWS, Google,
 DigitalOcean, hcloud, Vultr, Yandex, and OCI. A registry entry is not evidence
 of completed provider lifecycle support. `no-infra` is refused. Backends are
-R2 and S3; SMTP, DNS, and GitHub integrations remain outside this library.
+R2, S3, GCS, and OCI Object Storage. SMTP, DNS, and GitHub integrations remain
+outside this library.
 
 ## Language packages
 
@@ -60,8 +63,13 @@ R2 and S3; SMTP, DNS, and GitHub integrations remain outside this library.
 | Red | Root Git/npm facade `colors-compute-red` | main export | `colors-compute-red/workflow` |
 | Blue | Python Git dependency with `subdirectory=blue`, distribution `colors-compute-blue` | `colors_compute` | `colors_compute.workflow.cluster_workflow` |
 
-Consumers must pin an existing published commit. Green and Red pin their SDK
-dependencies inside each package. Blue declares a normal SDK requirement; the consuming application must
+Consumers must pin an existing published commit. Green pins its SDK dependency
+inside the package. Red declares an SDK peer dependency. Red applications must
+add `"red": "github:getcolors/red#e24217c32ab00ffd29d4767a53c880795f86f977"`
+or another reviewed Red SDK commit to their own dependencies. The peer version
+range does not select the Getcolors Git repository. The library then uses the
+application's SDK copy, including its fan-out and join fixes.
+Blue declares a normal SDK requirement; the consuming application must
 supply an explicit Blue git pin. The Blue development group pins the SDK for
 this repository's tests, without imposing that git source on consumers. Green,
 Red, and Blue must be interchangeable for the same inputs and state identities.
@@ -144,6 +152,9 @@ The test suite includes synthetic local HTTPS calls and OCI CLI input generation
 these checks do not prove live permissions or availability.
 
 ### GCS state backend
+
+See the [managed GCS backend contract](contracts/managed-gcs-backend.md) for
+ownership checks, required permissions, and deletion recovery.
 
 Select `provider-backend=gcs` with `gcs-bucket`, `gcs-region`, and
 `google-project`. OpenTofu uses each logical state key as its GCS prefix, so

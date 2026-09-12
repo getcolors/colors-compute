@@ -9,6 +9,9 @@ export async function managedGcsBackend(opts:Map,action:string,environment:Map=p
  const bucket=opts['gcs-bucket'],region=opts['gcs-region'],project=opts['google-project'],profile=opts.profile;
  if(!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket??'')||!/^[a-z][a-z0-9-]+$/.test(region??'')||!/^[a-z][a-z0-9-]+$/.test(project??'')||!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(profile??''))throw Error('invalid managed GCS identity');
  const request=await gcsClient(environment,runner),path=bucketPath(bucket),identity={project,bucket,region,profile};
+ const resolved=await request('GET',`v1/projects/${project}`);
+ if(resolved?.projectId!==project||typeof resolved.projectNumber!=='string'||!/^[1-9][0-9]*$/.test(resolved.projectNumber))throw Error('managed backend project verification failed');
+ const projectNumber=resolved.projectNumber;
  const labels={colors_profile:profile,colors_project:project,colors_purpose:'managed-backend'};
  let metadata=await request('GET',path),owner:any,deleting=false;
  try{
@@ -16,9 +19,10 @@ export async function managedGcsBackend(opts:Map,action:string,environment:Map=p
    if(action==='finalize'||['blue','red','green'].some(c=>opts[`${c}/event`]==='delete'))return {status:'absent'};
    if(opts['compute-require-existing-state']===true)throw Error('existing managed backend required');
    metadata=await request('POST','storage/v1/b',{name:bucket,location:region,labels,iamConfiguration:{uniformBucketLevelAccess:{enabled:true},publicAccessPrevention:'enforced'},versioning:{enabled:true},softDeletePolicy:{retentionDurationSeconds:'0'}},{project});
+   if(metadata?.projectNumber!==projectNumber)throw Error('managed backend ownership mismatch');
    const written=await gcsPut(request,bucket,MARKER,{schema:1,identity,status:'active'},'0');if(written?.conflict)throw Error('managed backend ownership conflict');
   }
-  if(Object.entries(labels).some(([k,v])=>metadata.labels?.[k]!==v)||metadata.location?.toLowerCase()!==region)throw Error('managed backend ownership mismatch');
+  if(metadata.projectNumber!==projectNumber||Object.entries(labels).some(([k,v])=>metadata.labels?.[k]!==v)||metadata.location?.toLowerCase()!==region)throw Error('managed backend ownership mismatch');
   const observed=await gcsGet(request,bucket,MARKER);let marker=observed?.document;
   if(!marker&&action==='finalize'&&metadata.labels.colors_phase==='deleting')marker={schema:1,identity,status:'deleting'};
   if(!marker||marker.schema!==1||!marker.identity||Object.keys(marker.identity).length!==4||Object.entries(identity).some(([k,v])=>marker.identity[k]!==v)||!['active','deleting'].includes(marker.status))throw Error('managed backend ownership mismatch');

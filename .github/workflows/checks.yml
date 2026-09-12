@@ -42,6 +42,7 @@ jobs:
           tofu_wrapper: false
       - run: bun install --frozen-lockfile
         working-directory: red
+      - run: python3 scripts/red_package.py
       - run: python3 scripts/registry.py
       - run: python3 scripts/network_reference.py --tofu "$(command -v tofu)"
       - run: python3 scripts/network_none.py

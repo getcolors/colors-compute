@@ -81,3 +81,11 @@ library neither creates nor deletes that account key. Build validates the path
 shape and uses a deterministic all-zero fingerprint without reading the file.
 Applications whose contract retires this legacy option must remove it before
 calling the library; otherwise explicit presence selects external ownership.
+
+
+Orchestrated delete bypasses preparation. Its managed key fingerprint remains
+cleanup authority, even when the operator uses a new machine with no key files.
+Remaining private-only or public-only files must match that fingerprint before
+cleanup removes them. A missing pair never authorizes generation during delete.
+See [manual key-phase recovery](key-phase-recovery.md) for a held remote lock or
+stale local reservation after an interrupted key operation.

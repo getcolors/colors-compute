@@ -12,6 +12,7 @@ import {deployment_requests} from './deployment-request.ts';
 import {prepareKeypair,cleanupKeypair,mode} from './ssh.ts';
 import {clusterWorkflow} from './workflow.ts';
 type Map=Record<string,any>;
+const DESTROY_PUBLIC_KEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA destroy-only';
 export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map,environment:Map=process.env,dependencies:Map={}) {
  const opts=copy(input),topology=structuredClone(topologyInput),request=structuredClone(requestInput),env={...environment},deps=dependencies;
  let coordinator:any,acquired=false,keys:any;
@@ -64,6 +65,12 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
    await coordinator.declare(topology);
   }else await coordinator.transition('begin-delete');
   doc=await snapshot();
+  if(operation==='delete'&&doc.key.phase==='removed'){await coordinator.transition('retire');return {status:'destroyed'};}
+  if(operation==='delete'&&doc.key.phase==='absent'){
+   require([doc.shared,...Object.values(doc.nodes)].every((record:any)=>['declared','destroyed'].includes(record.phase)));
+   for(const id of Object.keys(doc.nodes))await attempt(id,{},'delete');
+   await attempt(null,{},'delete');await coordinator.transition('retire');return {status:'destroyed'};
+  }
   const missingCredentials=await call('compute_credential_errors',compute_credential_errors,opts,env);
   if(missingCredentials.length)return {status:'error',errors:missingCredentials};
   if(operation==='create'){
@@ -72,7 +79,6 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
    await call('registration_preflight',defaultPreflight,opts,selected.mode,sharedRead?.outputs?.registration,undefined,env);
   }
   const keyRecord=doc.key;
-  if(operation==='delete'&&keyRecord.phase==='absent')require(doc.shared.phase==='declared'&&Object.values(doc.nodes).every((n:any)=>n.phase==='declared'));
   require(['absent','prepared'].includes(keyRecord.phase));
   const ownership=keyRecord.mode==='managed'?{status:'prepared',fingerprint:keyRecord.fingerprint}:{status:'fresh'};
   const recordIntent=async()=>{await coordinator.transition('key-intent',{mode:'managed'});return true;};
@@ -81,8 +87,9 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
   if(operation==='create'){
    key=await call('prepare_keypair',prepareKeypair,opts,ownership,env,recordIntent,recordPrepared);
    if(key.mode==='external'&&keyRecord.phase==='absent'){await coordinator.transition('key-intent',{mode:'external'});await coordinator.transition('key-prepared',{fingerprint:null});}
-  }else{require(keyRecord.phase==='prepared');key=await call('prepare_keypair',prepareKeypair,{...opts,'red/event':'create'},ownership,env,recordIntent,recordPrepared);}
-  const normalized=await call('key_request',key_request,opts,key,env);
+  }else{require(keyRecord.phase==='prepared');key=selected.mode==='managed'?{mode:'managed',public_key:DESTROY_PUBLIC_KEY}:selected;}
+  const normalized=await call('key_request',key_request,operation==='delete'?{...opts,'red/event':'build'}:opts,key,env);
+  if(operation==='delete'&&Object.hasOwn(normalized,'public_key'))normalized.public_key=DESTROY_PUBLIC_KEY;
   const assembly=await call('deployment_requests',deployment_requests,opts,topology,request,normalized);
   const sharedRequest=assembly.shared;
   if(sharedRequest.roles){const desired=new Set(declarations.map(n=>n.node_id));sharedRequest.peers=Object.fromEntries(Object.entries(observedNodes).filter(([id,peer])=>(operation==='delete'||desired.has(id))&&Object.hasOwn(sharedRequest.roles,peer.role)));}

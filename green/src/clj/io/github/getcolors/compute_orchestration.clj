@@ -14,6 +14,7 @@
             [io.github.getcolors.compute-registration :as registration]
             [io.github.getcolors.compute-ssh :as ssh]
             [io.github.getcolors.compute-workflow :as workflow]))
+(def ^:private destroy-public-key "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA destroy-only")
 (defn- require-valid [condition] (when-not condition (throw (ex-info "compute lifecycle refused" {}))))
 (defn orchestrate
   ([opts topology requirements] (orchestrate opts topology requirements (into {} (System/getenv)) {}))
@@ -90,6 +91,14 @@
                                      (presence-for (node-key (:node_id node)) {:phase "declared"}))
                                    (coordinator/declare! @owner topology))
                                (transition "begin-delete" {}))
+                             (if (and (= operation "delete") (contains? #{"absent" "removed"} (get-in (snapshot) [:key :phase])))
+                               (let [current (snapshot)]
+                                 (require-valid (every? #(contains? #{"declared" "destroyed"} (:phase %)) (cons (:shared current) (vals (:nodes current)))))
+                                 (doseq [id (clojure.core/keys (:nodes current))] (attempt (name id) {} "delete"))
+                                 (attempt nil {} "delete")
+                                 (transition "retire" {})
+                                 {:status "destroyed"})
+                               (do
                              (let [errors (call :compute-credential-errors compute/compute-credential-errors opts environment)]
                                (when (seq errors) (throw (ex-info "missing compute credentials" {:compute/credential-errors errors}))))
                              (when (= operation "create")
@@ -104,10 +113,11 @@
                                    key (if (= operation "create")
                                          (call :prepare-keypair ssh/prepare-keypair! opts ownership environment intent prepared)
                                          (do (require-valid (= "prepared" (:phase key-record)))
-                                             (call :prepare-keypair ssh/prepare-keypair! (assoc opts :green/event :create) ownership environment intent prepared)))]
+                                             (if (= "managed" (:mode selected)) {:mode "managed" :public_key destroy-public-key} selected)))]
                                (when (and (= operation "create") (= "external" (:mode key)) (= "absent" (:phase key-record)))
                                  (transition "key-intent" {:mode "external"}) (transition "key-prepared" {:fingerprint nil}))
-                               (let [normalized (call :key-request key-request/key-request opts key environment)
+                               (let [normalized (call :key-request key-request/key-request (if (= operation "delete") (assoc opts :green/event :build) opts) key environment)
+                                     normalized (cond-> normalized (and (= operation "delete") (contains? normalized :public_key)) (assoc :public_key destroy-public-key))
                                      assembly (call :deployment-requests deployment/deployment-requests opts topology requirements normalized)
                                      shared-request (cond-> (:shared assembly)
                                        (contains? (:shared assembly) :roles)
@@ -152,7 +162,7 @@
                                      {:status "ready" :cluster (:colors-compute/cluster result) :shared (if (contains? shared-request :roles)
                                        (let [peers (into {} (map (fn [node] [(keyword (:node_id node)) {:role (:role node) :vpc_ip (:vpc_ip node)}]) (get-in result [:colors-compute/cluster :nodes])))
                                              plan (call :provider-request request/provider-request opts "shared" (assoc shared-request :peers peers))]
-                                         (:outputs (attempt nil (:documents plan) "create"))) (:outputs shared)) :key (select-keys key [:mode :private_key_path :fingerprint])})))))))))))]
+                                         (:outputs (attempt nil (:documents plan) "create"))) (:outputs shared)) :key (select-keys key [:mode :private_key_path :fingerprint])})))))))))))))]
        (let [result (try (execute)
                          (catch InterruptedException error (when @owner (coordinator/poison! @owner)) (reset! cancelled error) {:status "error"})
                          (catch Exception error (if-let [errors (:compute/credential-errors (ex-data error))]

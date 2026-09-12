@@ -19,6 +19,10 @@ async def managed_gcs_backend(opts, action, environment=None, runner=None, coord
             raise ValueError('invalid managed GCS identity')
     request = await gcs_client(environment, runner)
     path = bucket_path(bucket)
+    resolved = await request('GET', 'v1/projects/' + project)
+    if not isinstance(resolved, dict) or resolved.get('projectId') != project or not isinstance(resolved.get('projectNumber'), str) or not re.fullmatch(r'[1-9][0-9]*', resolved['projectNumber']):
+        raise ValueError('managed backend project verification failed')
+    project_number = resolved['projectNumber']
     identity = dict(project=project, bucket=bucket, region=region, profile=profile)
     labels = dict(colors_profile=profile, colors_project=project, colors_purpose='managed-backend')
     metadata = await request('GET', path)
@@ -33,10 +37,12 @@ async def managed_gcs_backend(opts, action, environment=None, runner=None, coord
             metadata = await request('POST', 'storage/v1/b', dict(name=bucket, location=region, labels=labels,
                 iamConfiguration={'uniformBucketLevelAccess': {'enabled': True}, 'publicAccessPrevention': 'enforced'},
                 versioning={'enabled': True}, softDeletePolicy={'retentionDurationSeconds': '0'}), {'project': project})
+            if metadata.get('projectNumber') != project_number:
+                raise ValueError('managed backend ownership mismatch')
             written = await gcs_put(request, bucket, MARKER, dict(schema=1, identity=identity, status='active'), '0')
             if written.get('conflict'):
                 raise ValueError('managed backend ownership conflict')
-        if any(metadata.get('labels', {}).get(k) != v for k, v in labels.items()) or metadata.get('location', '').lower() != region:
+        if metadata.get('projectNumber') != project_number or any(metadata.get('labels', {}).get(k) != v for k, v in labels.items()) or metadata.get('location', '').lower() != region:
             raise ValueError('managed backend ownership mismatch')
         observed = await gcs_get(request, bucket, MARKER)
         marker = observed['document'] if observed else None

@@ -274,3 +274,73 @@ async def test_retired_journal_held_by_finalizer_reports_destroyed():
     assert (await runtime.run(event='delete'))['status'] == 'destroyed'
     runtime.store.observed['document']['lock'] = {'state': 'held', 'run_id': 'finalizer'}
     assert await read_deployment(OPTS, {}, {'journal_get': lambda *_: runtime.store.observed}) == {'status': 'destroyed'}
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('empty', [True, False, None])
+async def test_delete_before_key_preparation_retires_only_verified_empty_states(empty):
+    runtime = Runtime()
+    deps = runtime.dependencies()
+    deps['validate_deployment'] = lambda *_: False
+    assert await orchestrate(OPTS, [{'count': 1}], {}, {}, deps) == {'status': 'error'}
+    assert runtime.store.observed['document']['key']['phase'] == 'absent'
+    runtime.states['demo/compute/nodes/0.tfstate'] = {}
+    deps['read_state'] = lambda *args, **kwargs: {'status': 'present', 'state_empty': empty}
+    def forbidden(*args, **kwargs):
+        raise AssertionError('delete must not prepare keys, render or require compute credentials')
+    for name in ('prepare_keypair', 'cleanup_keypair', 'provider_request', 'compute_credential_errors'):
+        deps[name] = forbidden
+    result = await orchestrate({**OPTS, 'blue/event': 'delete', 'compute-prevent-destroy': False}, [{'count': 1}], {}, {}, deps)
+    assert result == {'status': 'destroyed' if empty is True else 'error'}
+    assert runtime.store.observed['document']['lock']['state'] == 'idle'
+    if empty is True:
+        doc = runtime.store.observed['document']
+        assert doc['status'] == 'retired' and doc['key']['phase'] == 'absent'
+        assert doc['shared']['phase'] == doc['nodes']['0']['phase'] == 'destroyed'
+        runtime.states.clear()
+        assert (await runtime.run(count=1))['status'] == 'ready'
+        assert runtime.store.observed['document']['generation'] == 2
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('remaining', ['none', 'private', 'public', 'foreign', 'new-home'])
+async def test_delete_without_complete_managed_keypair(tmp_path, remaining):
+    runtime = Runtime()
+    deps = runtime.dependencies()
+    deps.pop('prepare_keypair')
+    deps.pop('cleanup_keypair')
+    env = {'HOME': str(tmp_path), 'PATH': '/usr/bin:/bin'}
+    assert (await orchestrate(OPTS, [{'count': 1}], {}, env, deps))['status'] == 'ready'
+    private, public = tmp_path / '.ssh/demo', tmp_path / '.ssh/demo.pub'
+    if remaining not in ('private', 'foreign'):
+        private.unlink()
+    if remaining != 'public':
+        public.unlink()
+    if remaining == 'foreign':
+        private.write_text('foreign key file')
+    delete_env = {**env, 'HOME': str(tmp_path / 'other-machine')} if remaining == 'new-home' else env
+    result = await orchestrate({**OPTS, 'blue/event': 'delete', 'compute-prevent-destroy': False}, [{'count': 1}], {}, delete_env, deps)
+    assert not runtime.states
+    if remaining == 'foreign':
+        assert result == {'status': 'error'} and private.read_text() == 'foreign key file'
+        assert runtime.store.observed['document']['lock']['state'] == 'held'
+    else:
+        assert result == {'status': 'destroyed'}
+        assert not private.exists() and not public.exists()
+
+@pytest.mark.asyncio
+async def test_delete_resumes_after_key_removed_before_retire():
+    runtime = Runtime()
+    assert (await runtime.run(count=1))['status'] == 'ready'
+    assert (await runtime.run(count=1, event='delete'))['status'] == 'destroyed'
+    runtime.store.observed['document']['status'] = 'deleting'
+    runtime.store.observed['document']['lock'] = {'state': 'held', 'run_id': 'interrupted-owner'}
+    assert (await runtime.run(count=1, event='delete')) == {'status': 'error'}
+    assert runtime.store.observed['document']['lock']['run_id'] == 'interrupted-owner'
+    runtime.store.observed['document']['lock'] = {'state': 'idle', 'run_id': None}
+    deps = runtime.dependencies()
+    def forbidden(*args, **kwargs):
+        raise AssertionError('retirement must not touch keys or compute')
+    for name in ('prepare_keypair', 'cleanup_keypair', 'compute_credential_errors', 'provider_request'):
+        deps[name] = forbidden
+    assert await orchestrate({**OPTS, 'blue/event': 'delete', 'compute-prevent-destroy': False}, [{'count': 1}], {}, {}, deps) == {'status': 'destroyed'}
+    assert runtime.store.observed['document']['status'] == 'retired'
+    assert runtime.store.observed['document']['lock']['state'] == 'idle'

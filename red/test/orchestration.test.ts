@@ -105,3 +105,60 @@ test('retired journal held by finalizer reports destroyed without reading node s
  r.observed.document.lock={state:'held',run_id:'finalizer'};
  expect(await read_deployment(opts,{}, {journal_get:async()=>r.observed})).toEqual({status:'destroyed'});
 });
+
+test('delete before preparation retires without keys or compute credentials and permits recreate',async()=>{
+ const r=new Runtime(),deps:any=r.deps();deps.validate_deployment=()=>{throw Error('invalid request');};
+ expect(await orchestrate(opts,[{count:1}],{},{},deps)).toEqual({status:'error'});
+ expect(r.observed.document.key.phase).toBe('absent');
+ r.states['demo/compute/nodes/0.tfstate']={};
+ const forbidden=()=>{throw Error('unexpected key or provider work');};
+ for(const name of ['prepare_keypair','cleanup_keypair','provider_request','compute_credential_errors'])deps[name]=forbidden;
+ expect(await orchestrate({...opts,'red/event':'delete'},[{count:1}],{},{},deps)).toEqual({status:'destroyed'});
+ expect(r.observed.document.status).toBe('retired');expect(r.observed.document.key.phase).toBe('absent');
+ expect(r.observed.document.shared.phase).toBe('destroyed');expect(r.observed.document.nodes['0'].phase).toBe('destroyed');
+ expect(r.observed.document.lock.state).toBe('idle');expect((await r.run(1)).status).toBe('ready');expect(r.observed.document.generation).toBe(2);
+});
+test('absent key deletion rejects unverified state before retirement',async()=>{
+ for(const empty of [false,undefined]){
+  const r=new Runtime(),deps:any=r.deps();deps.validate_deployment=()=>{throw Error('invalid request');};
+  await orchestrate(opts,[{count:1}],{},{},deps);r.states['demo/compute/nodes/0.tfstate']={};
+  deps.read_state=()=>({status:'present',state_empty:empty});
+  expect(await orchestrate({...opts,'red/event':'delete'},[{count:1}],{},{},deps)).toEqual({status:'error'});
+  expect(r.observed.document.status).toBe('active');expect(r.observed.document.lock.state).toBe('idle');
+ }
+});
+test('delete does not prepare local keys and retains cleanup ownership',async()=>{
+ const r=new Runtime();expect((await r.run(1)).status).toBe('ready');const deps:any=r.deps();
+ deps.prepare_keypair=()=>{throw Error('local keypair missing');};
+ deps.cleanup_keypair=(_opts:Map,ownership:Map,authority:Map)=>{
+  expect(ownership).toEqual({status:'prepared',fingerprint:'SHA256:'+'A'.repeat(43)});
+  expect(authority).toEqual({all_resources_destroyed:true});expect(r.states).toEqual({});
+ };
+ expect(await orchestrate({...opts,'red/event':'delete'},[{count:1}],{},{},deps)).toEqual({status:'destroyed'});
+});
+test('delete resumes after key removal without compute or local key work',async()=>{
+ const r=new Runtime();await r.run(1);await r.run(1,'delete');r.observed.document.status='deleting';
+ r.observed.document.lock={state:'held',run_id:'interrupted-owner'};
+ expect(await r.run(1,'delete')).toEqual({status:'error'});expect(r.observed.document.lock.run_id).toBe('interrupted-owner');
+ r.observed.document.lock={state:'idle',run_id:null};
+ const deps:any=r.deps();for(const name of ['prepare_keypair','cleanup_keypair','compute_credential_errors','provider_request'])deps[name]=()=>{throw Error('unexpected work');};
+ expect(await orchestrate({...opts,'red/event':'delete'},[{count:1}],{},{},deps)).toEqual({status:'destroyed'});
+ expect(r.observed.document.status).toBe('retired');expect(r.observed.document.lock.state).toBe('idle');
+});
+test('real managed cleanup accepts missing or partial pairs during orchestration',async()=>{
+ const {mkdtempSync,rmSync,unlinkSync,existsSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+ for(const remaining of ['none','private','public','new-home']){
+  const home=mkdtempSync(join(tmpdir(),'colors-delete-'));
+  try{
+   const r=new Runtime(),deps:any=r.deps();delete deps.prepare_keypair;delete deps.cleanup_keypair;
+   const env={HOME:home,PATH:'/usr/bin:/bin'};
+   expect((await orchestrate(opts,[{count:1}],{},env,deps)).status).toBe('ready');
+   if(remaining!=='private')unlinkSync(join(home,'.ssh/demo'));
+   if(remaining!=='public')unlinkSync(join(home,'.ssh/demo.pub'));
+   const deleteEnv=remaining==='new-home'?{...env,HOME:join(home,'other-machine')}:env;
+   expect(await orchestrate({...opts,'red/event':'delete'},[{count:1}],{},deleteEnv,deps)).toEqual({status:'destroyed'});
+   expect(existsSync(join(home,'.ssh/demo'))).toBe(false);expect(existsSync(join(home,'.ssh/demo.pub'))).toBe(false);
+  }finally{rmSync(home,{recursive:true,force:true});}
+ }
+});

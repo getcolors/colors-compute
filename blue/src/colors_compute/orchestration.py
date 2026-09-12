@@ -19,6 +19,9 @@ from .planning import validate_deployment
 from .managed_backend import bootstrap_backend
 
 
+DESTROY_PUBLIC_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA destroy-only'
+
+
 async def orchestrate(opts, topology, request, environment=None, dependencies=None):
     """Return ready cluster, destroyed, or generic error. Never emit raw state."""
     deps = dependencies or {}
@@ -137,6 +140,16 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         else:
             await coordinator.transition('begin-delete')
         doc = await snapshot()
+        if operation == 'delete' and doc['key']['phase'] == 'removed':
+            await coordinator.transition('retire')
+            return {'status': 'destroyed'}
+        if operation == 'delete' and doc['key']['phase'] == 'absent':
+            require(all(record['phase'] in ('declared', 'destroyed') for record in [doc['shared'], *doc['nodes'].values()]))
+            for node_id in doc['nodes']:
+                await attempt(node_id, {}, 'delete')
+            await attempt(None, {}, 'delete')
+            await coordinator.transition('retire')
+            return {'status': 'destroyed'}
         missing_credentials = await call('compute_credential_errors', compute_credential_errors, opts, env)
         if missing_credentials:
             return {'status': 'error', 'errors': missing_credentials}
@@ -145,9 +158,6 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
             ownership_registration = (shared_read or {}).get('outputs', {}).get('registration')
             await call('registration_preflight', registration_preflight, opts, selected['mode'], ownership_registration, environment=env)
         key_record = doc['key']
-        if operation == 'delete' and key_record['phase'] == 'absent':
-            # No successful preparation means no owned private key/resources.
-            require(doc['shared']['phase'] == 'declared' and all(n['phase'] == 'declared' for n in doc['nodes'].values()))
         require(key_record['phase'] in ('absent', 'prepared'))
         ownership = {'status': 'prepared', 'fingerprint': key_record['fingerprint']} if key_record['mode'] == 'managed' else {'status': 'fresh'}
         async def record_intent():
@@ -162,12 +172,12 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
                 await coordinator.transition('key-intent', mode='external')
                 await coordinator.transition('key-prepared', fingerprint=None)
         else:
-            # Verify existing key without generation. Delete uses create semantics
-            # solely for read-only verification of a recorded prepared keypair.
             require(key_record['phase'] == 'prepared')
-            key = await call('prepare_keypair', prepare_keypair, {**opts, 'blue/event': 'create'}, ownership, env,
-                             record_intent, record_prepared)
-        normalized_key = await call('key_request', key_request, opts, key, env)
+            # Destroy plans cannot create or update resources; key content is unused.
+            key = {'mode': 'managed', 'public_key': DESTROY_PUBLIC_KEY} if selected['mode'] == 'managed' else selected
+        normalized_key = await call('key_request', key_request, {**opts, 'blue/event': 'build'} if operation == 'delete' else opts, key, env)
+        if operation == 'delete' and 'public_key' in normalized_key:
+            normalized_key['public_key'] = DESTROY_PUBLIC_KEY
         if 'deployment_requests' in deps:
             assembly = await call('deployment_requests', None, opts, topology, request, normalized_key)
         else:
