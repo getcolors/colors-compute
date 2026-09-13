@@ -242,3 +242,80 @@ def lifecycle(observation, identity, event):
     result['revision'] = int(result['revision']) + 1
     result['write_id'] = event['write_id']
     return {'condition': {'if_match': observation['etag']}, 'document': result}
+
+
+# Reviewed repair of an interrupted resource operation. Not a reducer event: the
+# owner is dead and cannot commit, so an operator who has proven termination and
+# inspected state and provider resources supplies the reconciled records. Each
+# running record becomes declared (absent or empty state) or failed (readable
+# state); each destroying record becomes destroyed (nothing survived) or failed.
+# Every active record must be covered, nothing else may change, and the lock is
+# released in the same conditional write.
+def _allowed_repair(before, after):
+    if not isinstance(after, dict) or set(before) != set(after):
+        return False
+    strip = lambda r: {k: v for k, v in r.items() if k not in ('phase', 'operation', 'operation_id')}
+    if strip(before) != strip(after):
+        return False
+    if before['phase'] == 'running':
+        return ((after['phase'] == 'declared' and after['operation'] is None and after['operation_id'] is None)
+                or (after['phase'] == 'failed' and after['operation'] == before['operation'] and after['operation_id'] == before['operation_id']))
+    if before['phase'] == 'destroying':
+        return after['phase'] in ('destroyed', 'failed') and after['operation'] == before['operation'] and after['operation_id'] == before['operation_id']
+    return False
+
+
+def lifecycle_repair(observation, identity, reviewed_run, write_id, repairs):
+    """Conditional intention reconciling every running or destroying record of a
+    journal held by a dead run. ``repairs`` is ``{'shared': record?, 'nodes': {id: record}}``."""
+    def fail(message):
+        raise ValueError(message)
+    def refuse():
+        fail('lifecycle repair refused')
+    if not _identity(identity):
+        fail('invalid lifecycle identity')
+    if not (_safe(reviewed_run) and _safe(write_id) and isinstance(repairs, dict) and set(repairs) <= {'shared', 'nodes'}
+            and ('nodes' not in repairs or isinstance(repairs['nodes'], dict))):
+        fail('invalid lifecycle repair')
+    if not (isinstance(observation, dict) and observation.get('status') == 'present' and set(observation) == {'status', 'etag', 'document'}
+            and _nonblank(observation['etag'])):
+        fail('invalid lifecycle observation')
+    doc = observation['document']
+    if not lifecycle_document_valid(doc):
+        fail('invalid lifecycle document')
+    if doc['identity'] != identity:
+        fail('lifecycle identity mismatch')
+    if write_id == doc['write_id']:
+        fail('lifecycle write_id reused')
+    if doc['revision'] == MAX_INTEGER:
+        fail('lifecycle revision exhausted')
+    if doc['lock']['state'] != 'held':
+        fail('lifecycle lock not held')
+    if doc['lock']['run_id'] != reviewed_run:
+        fail('lifecycle owner mismatch')
+    records = lambda d: [d['shared'], *d['nodes'].values()]
+    if not any(_running(r) for r in records(doc)):
+        refuse()
+    if doc['key']['phase'] in ('intent', 'cleanup'):
+        refuse()
+    node_repairs = repairs.get('nodes', {})
+    if 'shared' not in repairs and not node_repairs:
+        refuse()
+    if 'shared' in repairs and not _allowed_repair(doc['shared'], repairs['shared']):
+        refuse()
+    for node_id, record in node_repairs.items():
+        if node_id not in doc['nodes'] or not _allowed_repair(doc['nodes'][node_id], record):
+            refuse()
+    result = deepcopy(doc)
+    if 'shared' in repairs:
+        result['shared'] = deepcopy(repairs['shared'])
+    for node_id, record in node_repairs.items():
+        result['nodes'][node_id] = deepcopy(record)
+    if any(_running(r) for r in records(result)):
+        refuse()
+    result['lock'] = {'state': 'idle', 'run_id': None}
+    result['revision'] = doc['revision'] + 1
+    result['write_id'] = write_id
+    if not lifecycle_document_valid(result):
+        fail('invalid lifecycle document')
+    return {'condition': {'if_match': observation['etag']}, 'document': result}

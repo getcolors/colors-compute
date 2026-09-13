@@ -135,3 +135,52 @@
                        (when-not (= (:run_id event) (get-in doc [:lock :run_id])) (fail "lifecycle owner mismatch"))
                        (transition doc event suffix)))]
         {:condition {:if_match (:etag observation)} :document (assoc next :revision (inc (long (:revision doc))) :write_id (:write_id event))}))))
+
+;; Reviewed repair of an interrupted resource operation. Not a reducer event: the
+;; owner is dead and cannot commit, so an operator who has proven termination and
+;; inspected state and provider resources supplies the reconciled records. Each
+;; running record becomes declared (absent or empty state) or failed (readable
+;; state); each destroying record becomes destroyed (nothing survived) or failed.
+;; Every active record must be covered, nothing else may change, and the lock
+;; is released in the same conditional write.
+(defn- allowed-repair? [before after]
+  (and (map? after) (= (set (keys before)) (set (keys after)))
+       (= (dissoc before :phase :operation :operation_id) (dissoc after :phase :operation :operation_id))
+       (case (:phase before)
+         "running" (or (= (select-keys after [:phase :operation :operation_id]) {:phase "declared" :operation nil :operation_id nil})
+                       (= (select-keys after [:phase :operation :operation_id]) {:phase "failed" :operation (:operation before) :operation_id (:operation_id before)}))
+         "destroying" (contains? #{"destroyed" "failed"} (:phase after))
+         false)
+       (or (not= "destroying" (:phase before)) (= (select-keys after [:operation :operation_id]) (select-keys before [:operation :operation_id])))))
+(defn- require-repair [value] (when-not value (fail "lifecycle repair refused")))
+(defn repair
+  "Conditional intention that reconciles every running or destroying record of a
+   journal held by a dead run. `repairs` is {:shared record? :nodes {id record}}."
+  [observation identity reviewed-run write-id repairs]
+  (when-not (coordination/identity? identity) (fail "invalid lifecycle identity"))
+  (when-not (and (safe? reviewed-run) (safe? write-id) (map? repairs) (every? #{:shared :nodes} (keys repairs))
+                 (or (not (contains? repairs :nodes)) (map? (:nodes repairs))))
+    (fail "invalid lifecycle repair"))
+  (when-not (and (exact? observation #{:status :etag :document}) (= "present" (:status observation)) (nonblank? (:etag observation)))
+    (fail "invalid lifecycle observation"))
+  (let [doc (:document observation)]
+    (when-not (valid-document? doc) (fail "invalid lifecycle document"))
+    (when-not (= identity (:identity doc)) (fail "lifecycle identity mismatch"))
+    (when (= write-id (:write_id doc)) (fail "lifecycle write_id reused"))
+    (when (== maximum (:revision doc)) (fail "lifecycle revision exhausted"))
+    (when-not (= "held" (get-in doc [:lock :state])) (fail "lifecycle lock not held"))
+    (when-not (= reviewed-run (get-in doc [:lock :run_id])) (fail "lifecycle owner mismatch"))
+    (require-repair (active-work? doc))
+    (require-repair (not (contains? #{"intent" "cleanup"} (get-in doc [:key :phase]))))
+    (let [node-repairs (into {} (map (fn [[id record]] [(keyword (name id)) record]) (:nodes repairs)))
+          _ (require-repair (or (contains? repairs :shared) (seq node-repairs)))
+          _ (when (contains? repairs :shared) (require-repair (allowed-repair? (:shared doc) (:shared repairs))))
+          _ (doseq [[id record] node-repairs]
+              (require-repair (contains? (:nodes doc) id))
+              (require-repair (allowed-repair? (get-in doc [:nodes id]) record)))
+          next (cond-> (update doc :nodes merge node-repairs)
+                 (contains? repairs :shared) (assoc :shared (:shared repairs)))
+          _ (require-repair (not (active-work? next)))
+          next (assoc next :lock {:state "idle" :run_id nil} :revision (inc (long (:revision doc))) :write_id write-id)]
+      (when-not (valid-document? next) (fail "invalid lifecycle document"))
+      {:condition {:if_match (:etag observation)} :document next})))

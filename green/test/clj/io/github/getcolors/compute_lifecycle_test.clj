@@ -7,9 +7,10 @@
   (walk/postwalk #(if (and (number? %) (== % (Math/floor (double %)))) (long %) %)
                  (json/parse-string-strict (json/generate-string value) true)))
 (deftest schema-two-shared-fixtures
-  (doseq [{:keys [name args expected]} (json/parse-string-strict (slurp "../test/fixtures/lifecycle.json") true)]
+  (doseq [{:keys [name op args expected]} (json/parse-string-strict (slurp "../test/fixtures/lifecycle.json") true)]
     (testing name
-      (let [before (pr-str args) result (try (apply l/lifecycle args) (catch Exception e {:error (.getMessage e)}))]
+      (let [before (pr-str args) f (if (= op "lifecycle_repair") l/repair l/lifecycle)
+            result (try (apply f args) (catch Exception e {:error (.getMessage e)}))]
         (is (= (normalize expected) (normalize result)))
         (is (= before (pr-str args)))
         (when (:document result) (is (l/valid-document? (:document result))))))))

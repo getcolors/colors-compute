@@ -1,4 +1,6 @@
 /** Operator-invoked recovery of a failed initial shared AWS create. */
+import {lifecycleRepair} from './lifecycle.ts';
+import {journalGet,journalPut,identity} from './journal.ts';
 import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -49,4 +51,19 @@ export async function recover_absent_oci_nodes(opts:Map,operations:Map,environme
   for(const id of Object.keys(operations))await owner.transition('retry',{node_id:id,evidence:'verified-provider-absence'});
   return {status:'recovered',nodes:Object.keys(operations).sort()};
  }finally{await owner.release();}
+}
+
+/** Commit one reviewed repair of interrupted resource operations with a precondition and
+ * exact read-back. `observed` is the private snapshot the operator reviewed; `repairs` the
+ * reconciled records. Proves nothing about processes or providers: that review happens first. */
+export async function commit_reviewed_repair(opts:Map,environment:Map,observed:Map,reviewedRun:string,repairs:Map,dependencies:Map={}) {
+  const get=dependencies.journal_get??journalGet,put=dependencies.journal_put??journalPut;
+  const writeId=dependencies.write_id??crypto.randomUUID().replace(/-/g,'');
+  const intent=lifecycleRepair(observed,identity(opts),reviewedRun,writeId,repairs);
+  if(JSON.stringify(await get(opts,environment))!==JSON.stringify(observed))throw Error('lifecycle stale observation');
+  const result=await put(opts,intent,environment);
+  if(result?.status!=='written')throw Error('repair not confirmed; stop and review again');
+  const confirmed=await get(opts,environment);
+  if(confirmed?.status!=='present'||JSON.stringify(confirmed.document)!==JSON.stringify(intent.document))throw Error('repair not confirmed; stop and review again');
+  return result;
 }

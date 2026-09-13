@@ -136,3 +136,47 @@ export function lifecycle(observation:unknown,identity:unknown,event:unknown) {
   next.revision++;next.write_id=event.write_id;
   return {condition:{if_match:observation.etag},document:next};
 }
+
+// Reviewed repair of an interrupted resource operation. Not a reducer event: the
+// owner is dead and cannot commit, so an operator who has proven termination and
+// inspected state and provider resources supplies the reconciled records. Each
+// running record becomes declared (absent or empty state) or failed (readable
+// state); each destroying record becomes destroyed (nothing survived) or failed.
+// Every active record must be covered, nothing else may change, and the lock is
+// released in the same conditional write.
+const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
+function allowedRepair(before:Map,after:unknown):boolean {
+  if(!object(after)||!same(Object.keys(before).sort(),Object.keys(after).sort()))return false;
+  const strip=(r:Map)=>Object.fromEntries(Object.entries(r).filter(([k])=>!['phase','operation','operation_id'].includes(k)).sort());
+  if(!same(strip(before),strip(after)))return false;
+  if(before.phase==='running')return (after.phase==='declared'&&after.operation===null&&after.operation_id===null)||(after.phase==='failed'&&after.operation===before.operation&&after.operation_id===before.operation_id);
+  if(before.phase==='destroying')return ['destroyed','failed'].includes(after.phase)&&after.operation===before.operation&&after.operation_id===before.operation_id;
+  return false;
+}
+export function lifecycleRepair(observation:unknown,identity:unknown,reviewedRun:unknown,writeId:unknown,repairs:unknown) {
+  const refuse=()=>fail('lifecycle repair refused');
+  if(!identityValid(identity))fail('invalid lifecycle identity');
+  if(!safe(reviewedRun)||!safe(writeId)||!fields(repairs,[],['shared','nodes'])||(Object.hasOwn(repairs,'nodes')&&!object(repairs.nodes)))fail('invalid lifecycle repair');
+  if(!object(observation)||observation.status!=='present'||!fields(observation,['status','etag','document'])||!nonblank(observation.etag))fail('invalid lifecycle observation');
+  const doc=observation.document;
+  if(!lifecycleDocumentValid(doc))fail('invalid lifecycle document');
+  if(!identityEqual(doc.identity,identity))fail('lifecycle identity mismatch');
+  if(writeId===doc.write_id)fail('lifecycle write_id reused');
+  if(doc.revision===Number.MAX_SAFE_INTEGER)fail('lifecycle revision exhausted');
+  if(doc.lock.state!=='held')fail('lifecycle lock not held');
+  if(doc.lock.run_id!==reviewedRun)fail('lifecycle owner mismatch');
+  const records=(d:Map)=>[d.shared,...Object.values(d.nodes)] as Map[];
+  if(!records(doc).some(running))refuse();
+  if(['intent','cleanup'].includes(doc.key.phase))refuse();
+  const nodeRepairs:Map=Object.hasOwn(repairs,'nodes')?repairs.nodes:{};
+  if(!Object.hasOwn(repairs,'shared')&&!Object.keys(nodeRepairs).length)refuse();
+  if(Object.hasOwn(repairs,'shared')&&!allowedRepair(doc.shared,repairs.shared))refuse();
+  for(const [id,record] of Object.entries(nodeRepairs)){if(!Object.hasOwn(doc.nodes,id)||!allowedRepair(doc.nodes[id],record))refuse();}
+  const next:Map=structuredClone(doc);
+  if(Object.hasOwn(repairs,'shared'))next.shared=structuredClone(repairs.shared);
+  for(const [id,record] of Object.entries(nodeRepairs))next.nodes[id]=structuredClone(record);
+  if(records(next).some(running))refuse();
+  next.lock={state:'idle',run_id:null};next.revision=doc.revision+1;next.write_id=writeId;
+  if(!lifecycleDocumentValid(next))fail('invalid lifecycle document');
+  return {condition:{if_match:observation.etag},document:next};
+}

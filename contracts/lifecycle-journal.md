@@ -111,6 +111,9 @@ runs OpenTofu or touches SSH files. Any ready, failed, running or destroying
 record prevents this shortcut. Removed-key deletion can finish retire after the
 same state checks without repeating cleanup.
 
-Interrupted key intent and cleanup retain their locks. Follow
-[manual key-phase recovery](key-phase-recovery.md) after proving the original
-process and its children have stopped. A held lock never expires.
+Interrupted key intent and cleanup retain their locks, and so does any
+running or destroying record whose owner died. Follow
+[manual recovery](key-phase-recovery.md) after proving the original process and
+its children have stopped; the reviewed repair of interrupted operations is a
+manual correction with a fixed transition table, not a reducer event. A held
+lock never expires.

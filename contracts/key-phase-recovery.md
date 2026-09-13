@@ -1,4 +1,4 @@
-# Manual recovery of interrupted key phases
+# Manual recovery of interrupted key phases and resource operations
 
 `intent` and `cleanup` deliberately refuse release. A process crash can also
 leave a held lock after key phase `removed`. Neither elapsed time nor an
@@ -149,3 +149,55 @@ read-back verification of the exact intended document; do not submit another
 write or release a different owner. Never delete the journal, reset its revision,
 change its generation, or issue an unconditional upload. Save the before/after
 snapshots and the evidence in the incident record before restarting writers.
+
+## Reconcile an interrupted resource operation
+
+A process killed while a shared or node operation is `running` or `destroying`
+(an out-of-memory kill during node fan-out is the observed case) leaves the
+lock held by a run that no longer exists. `release` refuses active work and
+`acquire` refuses a held lock, so the journal stays wedged until an operator
+reconciles it. This is the same class of manual correction as the key phases
+above: not a reducer transition, never automatic, never a takeover.
+
+Establish exclusive recovery access exactly as above: prove the original
+process and its children stopped, read and save the journal with its ETag,
+validate it, match its identity, and record its held run ID. Then inspect
+every running or destroying record:
+
+- `running` (create) whose state is absent or strictly empty, and whose provider
+  resources do not exist (scan by name as `compute_recovery` does for AWS,
+  including resources whose create may have failed before writing state), is
+  reconciled to `declared` with null operation and operation ID. A later create
+  starts it again.
+- `running` (create) whose state is present and readable is reconciled to
+  `failed`, keeping its operation and operation ID. Create then retries it
+  through the normal readable-state path; delete destroys it.
+- `destroying` whose state is absent or strictly empty and whose resources are
+  gone is reconciled to `destroyed`, keeping operation and operation ID.
+- `destroying` whose state or resources survive is reconciled to `failed`,
+  keeping operation and operation ID. Delete destroys it again.
+
+Every running or destroying record must be reconciled in the same review; no
+other field may change; key phases `intent` and `cleanup` belong to the
+procedure above and refuse this one. The permitted write reconciles the
+reviewed records, releases the lock and increments the revision under the
+saved ETag.
+
+Each colour ships the pure intention builder (`lifecycle_repair`,
+`lifecycleRepair`, `lifecycle/repair`) and a committing helper
+(`commit_reviewed_repair`, Green `commit-reviewed-repair!`) that re-reads the
+journal, requires it to equal the reviewed snapshot, writes with the
+precondition, and reads back the exact document:
+
+```python
+from colors_compute.recovery import commit_reviewed_repair
+
+await commit_reviewed_repair(opts, environment, observed, reviewed_run, {
+    'nodes': {'0': {**observed['document']['nodes']['0'],
+                    'phase': 'declared', 'operation': None, 'operation_id': None}},
+})
+```
+
+The helper proves nothing about processes, state or providers; that review
+happens first and is recorded with the before and after snapshots. A conflict
+or an unconfirmed read-back requires a new complete review.

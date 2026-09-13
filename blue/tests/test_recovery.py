@@ -1,7 +1,7 @@
 import json
 import pytest
 from colors_compute.backend import ProcessResult
-from colors_compute.recovery import recover_absent_aws_shared
+from colors_compute.recovery import recover_absent_aws_shared, commit_reviewed_repair
 OPTS = {'profile': 'demo', 'provider-compute': 'aws', 'provider-backend': 's3', 's3-bucket': 'states', 's3-region': 'us-east-1', 'aws-region': 'us-east-1'}
 class Owner:
     def __init__(self):
@@ -73,3 +73,47 @@ async def test_oci_recovery_matches_operation_and_audits_provider(case):
         with pytest.raises(ValueError): await recover_absent_oci_nodes(opts, operations, {}, runner, lambda *a, **kw: owner)
         assert not owner.transitions
     assert owner.released
+
+
+ROPTS = {'profile': 'demo', 'provider-compute': 'vultr', 'provider-backend': 's3', 's3-bucket': 'states', 's3-region': 'eu-west-1'}
+def _rnode(i, phase, op, oid):
+    return {'state_key': f'demo/compute/nodes/{i}.tfstate', 'role': None, 'index': i, 'desired': True, 'phase': phase, 'operation': op, 'operation_id': oid}
+RDOC = {'schema_version': 2, 'identity': {'profile': 'demo', 'provider': 'vultr', 'backend': {'kind': 's3', 'bucket': 'states', 'region': 'eu-west-1'}},
+        'revision': 7, 'write_id': 'write-7', 'lock': {'state': 'held', 'run_id': 'run-dead'}, 'generation': 1, 'status': 'active', 'topology_declared': True,
+        'key': {'mode': 'managed', 'phase': 'prepared', 'fingerprint': 'SHA256:' + 'A' * 43},
+        'shared': {'phase': 'ready', 'operation': 'create', 'operation_id': 'op-shared'}, 'nodes': {'0': _rnode(0, 'running', 'create', 'op-0')}}
+ROBSERVED = {'status': 'present', 'etag': 'etag-7', 'document': RDOC}
+RDECLARED = {'nodes': {'0': _rnode(0, 'declared', None, None)}}
+
+def _rjournal(reads):
+    puts = []
+    it = iter(reads)
+    last = reads[-1]
+    async def get(*_):
+        return next(it, last)
+    async def put(_opts, intent, _env):
+        puts.append(intent)
+        return {'status': 'written', 'etag': 'etag-8'}
+    return puts, {'write_id': 'write-8', 'journal_get': get, 'journal_put': put}
+
+@pytest.mark.asyncio
+async def test_reviewed_repair_commits_with_precondition_and_read_back():
+    expected = {**json.loads(json.dumps(RDOC)), 'nodes': RDECLARED['nodes'], 'lock': {'state': 'idle', 'run_id': None}, 'revision': 8, 'write_id': 'write-8'}
+    puts, deps = _rjournal([ROBSERVED, {'status': 'present', 'etag': 'etag-8', 'document': expected}])
+    assert await commit_reviewed_repair(ROPTS, {}, ROBSERVED, 'run-dead', RDECLARED, deps) == {'status': 'written', 'etag': 'etag-8'}
+    assert puts == [{'condition': {'if_match': 'etag-7'}, 'document': expected}]
+
+@pytest.mark.asyncio
+async def test_reviewed_repair_refuses_stale_or_unconfirmed_writes():
+    puts, deps = _rjournal([{**ROBSERVED, 'etag': 'etag-moved'}])
+    with pytest.raises(ValueError, match='lifecycle stale observation'):
+        await commit_reviewed_repair(ROPTS, {}, ROBSERVED, 'run-dead', RDECLARED, deps)
+    assert puts == []
+    puts, deps = _rjournal([ROBSERVED, ROBSERVED])
+    with pytest.raises(ValueError, match='repair not confirmed'):
+        await commit_reviewed_repair(ROPTS, {}, ROBSERVED, 'run-dead', RDECLARED, deps)
+    assert len(puts) == 1
+    puts, deps = _rjournal([ROBSERVED])
+    with pytest.raises(ValueError, match='lifecycle owner mismatch'):
+        await commit_reviewed_repair(ROPTS, {}, ROBSERVED, 'run-other', RDECLARED, deps)
+    assert puts == []

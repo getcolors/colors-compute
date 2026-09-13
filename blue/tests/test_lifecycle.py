@@ -7,6 +7,7 @@ import pytest
 from colors_compute.coordination import coordination, _document
 from colors_compute.coordinator import Coordinator
 from test_coordinator import Store, OPTS
+from colors_compute.lifecycle import lifecycle_repair
 
 FIXTURES = json.loads((Path(__file__).resolve().parents[2] / 'test/fixtures/lifecycle.json').read_text())
 
@@ -14,12 +15,13 @@ FIXTURES = json.loads((Path(__file__).resolve().parents[2] / 'test/fixtures/life
 @pytest.mark.parametrize('case', FIXTURES, ids=lambda case: case['name'])
 def test_lifecycle_contract(case):
     args = deepcopy(case['args'])
+    fn = lifecycle_repair if case['op'] == 'lifecycle_repair' else coordination
     if 'error' in case['expected']:
         with pytest.raises(ValueError) as failure:
-            coordination(*args)
+            fn(*args)
         assert str(failure.value) == case['expected']['error']
     else:
-        actual = coordination(*args)
+        actual = fn(*args)
         assert actual == case['expected']
         assert _document(actual['document'])
         actual['document']['identity']['profile'] = 'changed'

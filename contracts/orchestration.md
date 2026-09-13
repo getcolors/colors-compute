@@ -78,5 +78,6 @@ If key preparation never began, delete verifies absent or empty states, records
 declared resources as destroyed and retires with the key still absent. It skips
 provider rendering, compute credentials and local key work. A deletion that
 committed key removal can finish retirement without repeating cleanup. See
-[manual key-phase recovery](key-phase-recovery.md) for interrupted intent or
-cleanup, which continue to refuse automatic lock takeover.
+[manual recovery](key-phase-recovery.md) for interrupted intent or cleanup
+and for running or destroying records left by a dead run; both continue to
+refuse automatic lock takeover.

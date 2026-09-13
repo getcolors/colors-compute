@@ -86,3 +86,25 @@ async def recover_absent_oci_nodes(opts, operations, environment=None, runner=No
         return {'status': 'recovered', 'nodes': sorted(operations)}
     finally:
         await owner.release()
+
+
+async def commit_reviewed_repair(opts, environment, observed, reviewed_run, repairs, dependencies=None):
+    """Commit one reviewed repair of interrupted resource operations with a precondition and
+    exact read-back. ``observed`` is the private snapshot the operator reviewed; ``repairs`` the
+    reconciled records. Proves nothing about processes or providers: that review happens first."""
+    from uuid import uuid4
+    from .journal import journal_get, journal_put, _identity, _settings
+    from .lifecycle import lifecycle_repair
+    deps = dependencies or {}
+    get, put = deps.get('journal_get', journal_get), deps.get('journal_put', journal_put)
+    write_id = deps.get('write_id') or uuid4().hex
+    intent = lifecycle_repair(observed, _identity(opts, _settings(opts)), reviewed_run, write_id, repairs)
+    if await get(opts, environment) != observed:
+        raise ValueError('lifecycle stale observation')
+    result = await put(opts, intent, environment)
+    if not isinstance(result, dict) or result.get('status') != 'written':
+        raise ValueError('repair not confirmed; stop and review again')
+    confirmed = await get(opts, environment)
+    if not isinstance(confirmed, dict) or confirmed.get('status') != 'present' or confirmed.get('document') != intent['document']:
+        raise ValueError('repair not confirmed; stop and review again')
+    return result

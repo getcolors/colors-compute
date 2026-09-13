@@ -4,7 +4,9 @@
             [io.github.getcolors.compute-coordinator :as coordinator]
             [io.github.getcolors.compute-execution :as execution]
             [io.github.getcolors.compute-runtime :as runtime]
-            [io.github.getcolors.compute-oci :as oci])
+            [io.github.getcolors.compute-oci :as oci]
+            [io.github.getcolors.compute-journal :as journal]
+            [io.github.getcolors.compute-lifecycle :as lifecycle])
   (:import [java.nio.file Files] [java.nio.file.attribute FileAttribute]))
 (def scans [["describe-vpcs" "Vpcs" "tag:Name"] ["describe-subnets" "Subnets" "tag:Name"]
             ["describe-internet-gateways" "InternetGateways" "tag:Name"] ["describe-route-tables" "RouteTables" "tag:Name"]
@@ -72,3 +74,22 @@
       (doseq [[id _] operations] (coordinator/transition! owner "retry" {:node_id (name id) :evidence "verified-provider-absence"}))
       {:status "recovered" :nodes (vec (sort (map name (keys operations))))})
      (finally (coordinator/release! owner))))))
+
+(defn commit-reviewed-repair!
+  "Commit one reviewed repair of interrupted resource operations with a
+   precondition and exact read-back. `observed` is the private snapshot the
+   operator reviewed; `repairs` the reconciled records. Proves nothing about
+   processes or providers: that review happens before this call."
+  ([opts environment observed reviewed-run repairs]
+   (commit-reviewed-repair! opts environment observed reviewed-run repairs {}))
+  ([opts environment observed reviewed-run repairs dependencies]
+   (let [journal-get (get dependencies :journal-get journal/journal-get)
+         journal-put (get dependencies :journal-put journal/journal-put)
+         write-id (or (:write-id dependencies) (str/replace (str (java.util.UUID/randomUUID)) "-" ""))
+         intent (lifecycle/repair observed (journal/journal-identity opts) reviewed-run write-id repairs)]
+     (require-valid (= observed (journal-get opts environment)) "lifecycle stale observation")
+     (let [result (journal-put opts intent environment)]
+       (require-valid (= "written" (:status result)) "repair not confirmed; stop and review again")
+       (let [confirmed (journal-get opts environment)]
+         (require-valid (and (= "present" (:status confirmed)) (= (:document intent) (:document confirmed))) "repair not confirmed; stop and review again")
+         result)))))

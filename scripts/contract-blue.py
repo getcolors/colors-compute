@@ -13,6 +13,7 @@ from colors_compute.managed import plan_managed_kubernetes, managed_application_
 from colors_compute.controller import controller_artifact
 from colors_compute.backend import read_state, ProcessResult
 from colors_compute.journal import journal_get, journal_put
+from colors_compute.lifecycle import lifecycle_repair
 from colors_compute.power import provider_power
 
 def read_state_case(opts, key, environment, responses):
@@ -36,7 +37,7 @@ def provider_power_case(opts, action, identity, env, responses):
         'http': lambda *_: next(pending), 'runner': lambda *_: next(pending), 'sleep': lambda _: None}))
 
 operations = {f.__name__: f for f in (
-    provider_power_case, managed_application_artifacts, managed_application_settings, plan_managed_kubernetes, controller_artifact, deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
+    lifecycle_repair, provider_power_case, managed_application_artifacts, managed_application_settings, plan_managed_kubernetes, controller_artifact, deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
 )}
 for line in sys.stdin:
     try:

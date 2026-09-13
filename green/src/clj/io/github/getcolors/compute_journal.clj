@@ -177,6 +177,14 @@
           (let [result (gcs/put-object (gcs/client environment runner) bucket key (:document intent) generation)]
             (cond (:conflict result) {:status "conflict"} (:generation result) {:status "written" :etag (:generation result)} :else {:status "error"})))))))
 
+(defn journal-identity
+  "The identity a journal document must carry for this configuration."
+  [opts]
+  (let [config (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))]
+    {:profile (:profile opts) :provider (:provider-compute opts)
+     :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket config) :region (:region config)}
+                (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in config [:endpoints :s3])))}))
+
 (defn journal-get
   "Read the derived coordination object; present content remains untrusted."
   ([opts] (journal-get opts (into {} (System/getenv)) runtime/run-command))

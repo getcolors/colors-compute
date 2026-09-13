@@ -46,6 +46,7 @@
    "deployment_requests" deployment/deployment-requests
    "plan_deployment" planning/plan-deployment
    "lifecycle" lifecycle/lifecycle
+   "lifecycle_repair" lifecycle/repair
    "provider_request" request/provider-request
    "journal_case" journal-case
    "coordination" coordination/coordination
