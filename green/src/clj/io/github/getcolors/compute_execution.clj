@@ -103,7 +103,7 @@
           retry-policy (when (and (= operation "delete") policy (some #(contains? (:resource %) (keyword (:resource_type policy))) (vals documents))) policy)
           plan (compute/backend-plan opts key)
           local-path (get-in plan [:config :terraform :backend :local :path])
-          _ (when local-path (local/private-owned-directory! (:local-state-dir opts) (.getParent (local/path local-path))) (local/prepare! local-path) (local/prepare! (str local-path ".backup")))]
+          _ (when local-path (local/private-owned-directory! (compute/local-state-directory opts) (.getParent (local/path local-path))) (local/prepare! local-path) (local/prepare! (str local-path ".backup")))]
       (if (and (= operation "delete") (= "absent" (:status presence))) {:status "destroyed"}
           (let [credentials (into {} (for [[variable option] (:credential_bindings plan)]
                                        (let [value (get environment variable)] (require-valid (not (missing? value))) [option value])))

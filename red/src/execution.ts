@@ -1,4 +1,4 @@
-import {localPresence,prepareLocalState,protectLocalState} from './local.ts';
+import {localDirectory,localPresence,prepareLocalState,protectLocalState} from './local.ts';
 import {gcsClient,objectPath} from './gcs.ts';
 import {chmodSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -92,7 +92,7 @@ export async function convergeStateDecoded(opts:Map,key:string,documents:unknown
       const value=source['COLORS_PAR_'+secret.toUpperCase().replaceAll('-','_')];if(missing(value))return {status:'error'};env[variable]=value!;secrets.push(value!);
     }
     if(containsSecret(JSON.stringify(documents),secrets))return {status:'error'};
-    if(opts['provider-backend']==='local')prepareLocalState(plan.config.terraform.backend.local.path,opts['local-state-dir']);
+    if(opts['provider-backend']==='local')prepareLocalState(plan.config.terraform.backend.local.path,localDirectory(opts));
     directory=mkdtempSync(join(tmpdir(),'colors-compute-execution-'));chmodSync(directory,0o700);
     for(const [filename,document] of Object.entries(documents))writePrivate(join(directory,filename),JSON.stringify(document));
     writePrivate(join(directory,'backend.tf.json'),JSON.stringify(plan.config));

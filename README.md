@@ -184,14 +184,14 @@ for configuration, ownership checks, cleanup and explicit failed-node recovery.
 
 ## Local state backend
 
-Set `provider-backend: local` and `local-state-dir` to an absolute directory
-for persistent state on this host. For example:
+Set `provider-backend: local` to store state under `$HOME/.local/state/colors`.
+Each profile has its own subdirectory. For example:
 
 ```yaml
 provider-backend: local
-local-state-dir: /home/operator/.local/share/colors/state
 ```
 
+Set `local-state-dir` to an absolute directory to override the default.
 All three colors use the same state layout and conditional filesystem journal.
 No backend credentials are needed. Compute provider credentials still apply.
 See the [local backend contract](contracts/local-backend.md) for paths,

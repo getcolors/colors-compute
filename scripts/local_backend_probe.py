@@ -59,9 +59,12 @@ def main():
                        if not k.startswith(('TF_', 'TOFU_', 'COLORS_PAR_'))}
         environment['PYTHONPATH'] = str(ROOT / 'blue/src')
         environment.update(TF_IN_AUTOMATION='1', TF_INPUT='0', TF_WORKSPACE='default')
-        state_root = directory / 'states'
+        default = '--default' in sys.argv
+        if default:
+            environment['HOME'] = str(directory / 'home')
+        state_root = directory / 'home/.local/state/colors' if default else directory / 'states'
         opts = {'profile': 'demo', 'provider-compute': 'vultr',
-                'provider-backend': 'local', 'local-state-dir': str(state_root)}
+                'provider-backend': 'local', **({} if default else {'local-state-dir': str(state_root)})}
 
         def call(color, op, *args):
             process = subprocess.run(commands[color], input=json.dumps({'op': op, 'args': args}),

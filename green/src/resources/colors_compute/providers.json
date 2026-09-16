@@ -49,9 +49,7 @@
       "tofu-env": {}
     },
     "local": {
-      "required": [
-        "local-state-dir"
-      ],
+      "required": [],
       "secrets": [],
       "tofu-env": {}
     }

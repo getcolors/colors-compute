@@ -1,4 +1,4 @@
-import {localDirectoryValid,localPath} from './local.ts';
+import {localDirectory,localPath} from './local.ts';
 import {registry} from './index.ts';
 type Json = null | boolean | number | string | Json[] | {[key: string]: Json};
 
@@ -35,8 +35,7 @@ export function backend_plan(opts: Record<string, any>, state_key: string) {
     throw new Error('invalid state key');
   }
   if (backend === 'local') {
-    if (!localDirectoryValid(opts['local-state-dir'])) throw new Error(':local-state-dir must be an absolute normalized POSIX path');
-    return {config:{terraform:{backend:{local:{path:localPath(opts['local-state-dir'],state_key)}}}} as Record<string,any>,credential_bindings:{} as Record<string,string>,environment:{}};
+    return {config:{terraform:{backend:{local:{path:localPath(localDirectory(opts),state_key)}}}} as Record<string,any>,credential_bindings:{} as Record<string,string>,environment:{}};
   }
   if (backend === 'oci') return {config:{terraform:{backend:{s3:{bucket:opts['oci-bucket'],region:opts['oci-region'],key:state_key,use_lockfile:true,endpoints:{s3:`https://${opts['oci-namespace']}.compat.objectstorage.${opts['oci-region']}.oraclecloud.com`},use_path_style:true,skip_credentials_validation:true,skip_metadata_api_check:true,skip_region_validation:true,skip_requesting_account_id:true,skip_s3_checksum:true}}}} as Record<string,any>,credential_bindings:{COLORS_PAR_OCI_ACCESS_KEY_ID:'access_key',COLORS_PAR_OCI_SECRET_ACCESS_KEY:'secret_key'} as Record<string,string>,environment:{}};
   if (backend === 'gcs') return {config:{terraform:{backend:{gcs:{bucket:opts['gcs-bucket'],prefix:state_key}}}} as Record<string,any>,credential_bindings:{} as Record<string,string>,environment:{}};

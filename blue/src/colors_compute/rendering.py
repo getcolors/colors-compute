@@ -4,7 +4,7 @@ from importlib.resources import files
 import json
 import re
 
-from .contract import _missing, _local_path, registry
+from .contract import _missing, local_state_dir, registry
 
 
 def provider_plan(provider: str, stage: str, inputs: dict) -> dict:
@@ -47,10 +47,8 @@ def backend_plan(opts: dict, state_key: str) -> dict:
     ):
         raise ValueError("invalid state key")
     if backend == 'local':
-        if not _local_path(opts.get('local-state-dir')):
-            raise ValueError(':local-state-dir must be an absolute normalized POSIX path')
         return {'config': {'terraform': {'backend': {'local': {
-            'path': opts['local-state-dir'].rstrip('/') + '/' + state_key}}}},
+            'path': local_state_dir(opts).rstrip('/') + '/' + state_key}}}},
                 'credential_bindings': {}, 'environment': {}}
     if backend == 'oci':
         return {'config': {'terraform': {'backend': {'s3': {

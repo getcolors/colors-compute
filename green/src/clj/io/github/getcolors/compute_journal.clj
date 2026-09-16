@@ -179,7 +179,7 @@
                            (and (exact? condition #{:if_match}) (nonblank? (:if_match condition)))))
           (throw (ex-info "invalid journal intention" {})))
         (let [content (serialized (:document intent)) lock (local/path (str value ".lock"))]
-          (local/private-owned-directory! (:local-state-dir opts) (.getParent lock))
+          (local/private-owned-directory! (compute/local-state-directory opts) (.getParent lock))
           (if-not (try (Files/createDirectory lock (local/attrs "rwx------")) true
                        (catch java.nio.file.FileAlreadyExistsException _ false))
             {:status "conflict"}

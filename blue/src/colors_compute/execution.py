@@ -8,7 +8,7 @@ import tempfile
 from importlib.resources import files
 
 from .backend import _run, _params, _outputs
-from .contract import _safe, _missing, registry
+from .contract import _safe, _missing, local_state_dir, registry
 from .journal import _environment, _service_error, _etag, _write, _contains_secret
 from .rendering import backend_plan
 
@@ -175,7 +175,7 @@ async def _converge_state(opts, state_key, documents, operation, presence, envir
         local_path = plan['config']['terraform']['backend'].get('local', {}).get('path')
         if local_path:
             from .local import private_parents, protect_state
-            private_parents(Path(local_path).parent, opts['local-state-dir'])
+            private_parents(Path(local_path).parent, local_state_dir(opts))
             protect_state(local_path)
         with tempfile.TemporaryDirectory(prefix='colors-compute-execution-') as directory:
             path = Path(directory)

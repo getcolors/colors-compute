@@ -8,6 +8,21 @@ export function localDirectoryValid(value:unknown):value is string {
   return typeof value==='string' && value.startsWith('/') && !/[\\\0]/.test(value) && (value==='/' || value.slice(1).split('/').every(part=>part!==''&&part!=='.'&&part!=='..'));
 }
 export const localPath=(directory:string,key:string)=>`${directory==='/'?'':directory}/${key}`;
+export function localDirectory(opts:Record<string,unknown>):string {
+  let directory:unknown;
+  if(Object.hasOwn(opts,'local-state-dir')){
+    directory=opts['local-state-dir'];
+    if(directory==null || (typeof directory==='string' && (!directory.trim() || directory.trim().toUpperCase()==='REPLACE_ME')))
+      throw new Error(':local-state-dir is required');
+  }else{
+    const home=process.env.HOME;
+    if(!localDirectoryValid(home))throw new Error(':local-state-dir must be an absolute normalized POSIX path');
+    directory=localPath(home,'.local/state/colors');
+  }
+  if(!localDirectoryValid(directory))throw new Error(':local-state-dir must be an absolute normalized POSIX path');
+  return directory;
+}
+
 function privateDirectory(directory:string):void {
   if(directory==='/')return;
   checkParents(directory);

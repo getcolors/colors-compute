@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from importlib.resources import files
 
@@ -26,6 +27,21 @@ def _local_path(value):
     return (isinstance(value, str) and value.startswith('/') and '\\' not in value
             and '\x00' not in value and (value == '/' or
                  all(part not in ('', '.', '..') for part in value[1:].split('/'))))
+
+
+def local_state_dir(opts: dict) -> str:
+    if 'local-state-dir' in opts:
+        path = opts['local-state-dir']
+        if _missing(path):
+            raise ValueError(':local-state-dir is required')
+    else:
+        home = os.environ.get('HOME')
+        if not _local_path(home):
+            raise ValueError(':local-state-dir must be an absolute normalized POSIX path')
+        path = home.rstrip('/') + '/.local/state/colors'
+    if not _local_path(path):
+        raise ValueError(':local-state-dir must be an absolute normalized POSIX path')
+    return path
 
 
 def _selection(opts: dict, providers: dict) -> list[str]:
@@ -59,8 +75,11 @@ def validate(opts: dict) -> list[str]:
         for alternatives in entry.get('required-one-of', []):
             if not any(all(not _missing(opts.get(key)) for key in group) for group in alternatives):
                 errors.append('one of ' + ' or '.join(' and '.join(':' + key for key in group) for group in alternatives) + ' is required')
-    if opts.get('provider-backend') == 'local' and not _missing(opts.get('local-state-dir')) and not _local_path(opts.get('local-state-dir')):
-        errors.append(':local-state-dir must be an absolute normalized POSIX path')
+    if opts.get('provider-backend') == 'local':
+        try:
+            local_state_dir(opts)
+        except ValueError as error:
+            errors.append(str(error))
     return errors
 
 

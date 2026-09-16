@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {mkdtempSync,mkdirSync,readFileSync,rmSync,statSync,symlinkSync,writeFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {backend_plan,credential_requirements,coordination,statePresence,convergeState,readState} from '../src/index.ts';
+import {backend_plan,validate,credential_requirements,coordination,statePresence,convergeState,readState} from '../src/index.ts';
 import {identity,journalGet,journalPut} from '../src/journal.ts';
 import {identityEqual,identityValid} from '../src/coordination.ts';
 import {localJournalPut} from '../src/local.ts';
@@ -83,4 +83,65 @@ test('local journal protects existing profile directories without changing the c
   expect((await journalPut(opts,intent,{})).status).toBe('written');
   expect(statSync(join(directory,'demo')).mode&0o777).toBe(0o700);expect(statSync(join(directory,'demo/compute')).mode&0o777).toBe(0o700);expect(statSync(directory).mode&0o777).toBe(mode);
  }finally{rmSync(directory,{recursive:true,force:true});}
+});
+
+function restoreHome(home:string|undefined):void {
+  if(home===undefined)delete process.env.HOME;
+  else process.env.HOME=home;
+}
+test('omitted local directory resolves from HOME independently of cwd without mutating opts',()=>{
+ const directory=root(),home=process.env.HOME,cwd=process.cwd();
+ const opts=Object.freeze({profile:'demo','provider-compute':'aws','provider-backend':'local'});
+ try{
+  process.env.HOME=directory;
+  const path=join(directory,'.local/state/colors');
+  const plan=backend_plan(opts,key);
+  expect(plan.config.terraform.backend.local.path).toBe(join(path,key));
+  expect(validate(opts).filter(error=>error.startsWith(':local-state-dir'))).toEqual([]);
+  expect(identity(opts)).toEqual(identity({...opts,'local-state-dir':path}));
+  process.chdir(directory);
+  expect(backend_plan(opts,key)).toEqual(plan);
+  expect(existsSync(join(directory,'.local'))).toBe(false);
+  expect(Object.hasOwn(opts,'local-state-dir')).toBe(false);
+  process.env.HOME='/';
+  expect(backend_plan(opts,key).config.terraform.backend.local.path).toBe('/.local/state/colors/'+key);
+ }finally{process.chdir(cwd);restoreHome(home);rmSync(directory,{recursive:true,force:true});}
+});
+test('default rejects invalid HOME while explicit paths override it and empty values stay invalid',()=>{
+ const home=process.env.HOME,opts={profile:'demo','provider-compute':'aws','provider-backend':'local'};
+ const invalid=':local-state-dir must be an absolute normalized POSIX path';
+ try{
+  for(const value of [undefined,'','relative','/tmp/','/tmp/../home','/tmp//home']){
+   restoreHome(value);
+   expect(()=>backend_plan(opts,key)).toThrow(invalid);
+   expect(validate(opts).filter(error=>error.startsWith(':local-state-dir'))).toEqual([invalid]);
+   expect(()=>identity(opts)).toThrow(invalid);
+   expect(backend_plan({...opts,'local-state-dir':'/explicit/state'},key).config.terraform.backend.local.path).toBe('/explicit/state/'+key);
+  }
+  process.env.HOME='/valid/home';
+  for(const value of [undefined,null,'','  ','REPLACE_ME']){
+   const explicit={...opts,'local-state-dir':value};
+   expect(()=>backend_plan(explicit,key)).toThrow(':local-state-dir is required');
+   expect(validate(explicit).filter(error=>error.startsWith(':local-state-dir'))).toEqual([':local-state-dir is required']);
+  }
+ }finally{restoreHome(home);}
+});
+test('default journal uses process HOME and preserves the root permission boundary',async()=>{
+ const directory=root(),home=process.env.HOME,path=join(directory,'.local/state/colors');
+ const opts={profile:'demo','provider-compute':'vultr','provider-backend':'local'};
+ try{
+  process.env.HOME=directory;
+  mkdirSync(join(path,'demo/compute'),{recursive:true,mode:0o755});
+  const rootMode=statSync(path).mode&0o777,homeMode=statSync(directory).mode&0o777;
+  const intent=coordination({status:'absent'},identity(opts),{type:'acquire',run_id:'run',write_id:'write',target_etag:null});
+  expect((await journalPut(opts,intent,{HOME:'/ignored/credentials/home'})).status).toBe('written');
+  expect((await journalGet({...opts,'local-state-dir':path},{})).status).toBe('present');
+  expect(statSync(join(path,'demo')).mode&0o777).toBe(0o700);
+  expect(statSync(path).mode&0o777).toBe(rootMode);
+  expect(statSync(directory).mode&0o777).toBe(homeMode);
+ }finally{restoreHome(home);rmSync(directory,{recursive:true,force:true});}
+});
+
+test('invalid explicit local directory returns a journal error',async()=>{
+  expect(await journalPut(options('relative'),{},{})).toEqual({status:'error'});
 });

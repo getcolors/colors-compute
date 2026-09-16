@@ -31,8 +31,9 @@ remain untouched. R2 settings are bucket from `r2-bucket`, region `auto`, key,
 access_key and COLORS_PAR_R2_SECRET_ACCESS_KEY to secret_key. They MUST NOT map
 to AWS environment variables. No credential values enter this result.
 
-Local settings use `path` from the required absolute `local-state-dir` and
-the state key, with no credential bindings. See [local state](local-backend.md).
+Local settings use `path` from the absolute `local-state-dir` and the state key,
+with no credential bindings. An omitted directory defaults to
+`$HOME/.local/state/colors`, resolved from the process environment. See [local state](local-backend.md).
 
 Unknown backend throws `:provider-backend must be one of gcs, local, oci, r2, s3`. Required
 backend keys are validated sorted, with first missing key throwing

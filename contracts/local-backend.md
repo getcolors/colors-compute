@@ -1,24 +1,28 @@
 # Local state backend
 
-Select `provider-backend: local` and set `local-state-dir` to an absolute,
-normalized POSIX directory. The directory must not contain empty, `.` or `..`
+Select `provider-backend: local`. When `local-state-dir` is omitted, it defaults
+to `$HOME/.local/state/colors`. The process environment supplies `HOME`, so the
+default stays the same across working directories. Profiles retain their own
+subdirectories. Set `local-state-dir` to an absolute, normalized POSIX directory
+to override the default. The directory must not contain empty, `.` or `..`
 components, backslashes, or NUL characters. A trailing slash is allowed only
 for `/`. No backend credentials or cloud storage tools are required.
 
 ```yaml
 profile: demo
 provider-backend: local
-local-state-dir: /home/operator/.local/share/colors/state
 ```
 
 Compute provider credentials are still required for provider operations.
-Build and planning validate paths without creating directories or reading state.
+Build and planning resolve the home directory and validate paths without
+creating directories or reading state. An explicitly blank, null, or invalid
+override is an error. If `HOME` is missing or invalid, specify `local-state-dir`.
 
 ## State layout
 
 `backend_plan(opts, state_key)` renders the OpenTofu `local` backend with
 `path` equal to `<local-state-dir>/<state_key>`. For example, the shared state
-above lives at `/home/operator/.local/share/colors/state/demo/compute/shared.tfstate`.
+above, with `HOME=/home/operator`, lives at `/home/operator/.local/state/colors/demo/compute/shared.tfstate`.
 Node states, managed Kubernetes state, and package state retain their existing
 logical keys under that directory.
 

@@ -236,11 +236,12 @@
     }
   },
   {
-    "name": "local directory required",
+    "name": "explicit null local directory rejected",
     "op": "backend_plan",
     "args": [
       {
-        "provider-backend": "local"
+        "provider-backend": "local",
+        "local-state-dir": null
       },
       "demo/compute/shared.tfstate"
     ],

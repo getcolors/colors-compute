@@ -6,7 +6,7 @@ import re
 import tempfile
 
 from .backend import _run
-from .contract import _missing, _safe
+from .contract import _missing, _safe, local_state_dir
 from .coordination import _document, _nonblank, _shape
 from .rendering import backend_plan
 
@@ -43,7 +43,7 @@ def _settings(opts):
 def _identity(opts, settings):
     if opts['provider-backend'] == 'local':
         return {'profile': opts['profile'], 'provider': opts.get('provider-compute'),
-                'backend': {'kind': 'local', 'path': opts['local-state-dir']}}
+                'backend': {'kind': 'local', 'path': local_state_dir(opts)}}
     backend = {'kind': opts['provider-backend'], 'bucket': settings['bucket'], 'region': settings['region']}
     if backend['kind'] in ('r2', 'oci'):
         backend['endpoint'] = settings['endpoints']['s3']
@@ -103,7 +103,7 @@ async def _session(opts, operation, intent, environment, runner):
                 return {'status': 'error'}
         if opts['provider-backend'] == 'local':
             from .local import journal_session
-            return journal_session(settings['path'], payload, intent, opts['local-state-dir'])
+            return journal_session(settings['path'], payload, intent, local_state_dir(opts))
         source = dict(os.environ if environment is None else environment)
         credentials = [source.get(name) for name in (f"COLORS_PAR_{opts['provider-backend'].upper()}_ACCESS_KEY_ID", f"COLORS_PAR_{opts['provider-backend'].upper()}_SECRET_ACCESS_KEY")] if opts['provider-backend'] in ('r2', 'oci') else []
         if opts['provider-backend'] == 'oci':

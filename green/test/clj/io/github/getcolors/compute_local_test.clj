@@ -90,3 +90,19 @@
       (is (= "rwx------" (mode (str profile))))
       (is (= "rwxr-xr-x" (mode (str directory))))
       (finally (journal/cleanup! directory) (journal/cleanup! target)))))
+
+(deftest default-local-directory
+  (let [options (dissoc (opts "/override") :local-state-dir)
+        expected (str (System/getenv "HOME") "/.local/state/colors")]
+    (is (= expected (compute/local-state-directory options)))
+    (is (= (str expected "/demo/compute/shared.tfstate")
+           (get-in (compute/backend-plan options "demo/compute/shared.tfstate") [:config :terraform :backend :local :path])))
+    (is (= expected (get-in (journal/journal-identity options) [:backend :path])))
+    (is (= "/home/test/.local/state/colors" (compute/local-state-directory options "/home/test")))
+    (is (= "/.local/state/colors" (compute/local-state-directory options "/")))
+    (is (= "/override" (compute/local-state-directory (opts "/override") nil)))
+    (doseq [home [nil "" "relative" "/home/../user"]]
+      (is (thrown? Exception (compute/local-state-directory options home))))
+    (doseq [value [nil "" "REPLACE_ME"]]
+      (is (thrown-with-msg? Exception #":local-state-dir is required"
+                           (compute/local-state-directory (assoc options :local-state-dir value) "/home/test"))))))

@@ -23,13 +23,26 @@
        (or (= "/" value)
            (every? #(not (contains? #{"" "." ".."} %)) (str/split (subs value 1) #"/" -1)))))
 
+(defn local-state-directory
+  "Resolve the persistent state root without filesystem access."
+  ([opts] (local-state-directory opts (System/getenv "HOME")))
+  ([opts home]
+   (let [explicit? (contains? opts :local-state-dir)
+         value (if explicit? (:local-state-dir opts)
+                   (when (local-state-dir? home) (str (when-not (= "/" home) home) "/.local/state/colors")))]
+     (when (and explicit? (missing? value)) (fail ":local-state-dir is required"))
+     (when-not (local-state-dir? value) (fail ":local-state-dir must be an absolute normalized POSIX path"))
+     value)))
+
+(defn- local-state-error [opts]
+  (when (= "local" (:provider-backend opts))
+    (try (local-state-directory opts) nil (catch Exception error (.getMessage error)))))
+
 (defn validate [opts]
   (into (cond-> (selection-errors opts)
           (and (contains? opts :compute-require-existing-state) (not (boolean? (:compute-require-existing-state opts))))
           (conj ":compute-require-existing-state must be a boolean")
-          (and (= "local" (:provider-backend opts)) (not (missing? (:local-state-dir opts)))
-               (not (local-state-dir? (:local-state-dir opts))))
-          (conj ":local-state-dir must be an absolute normalized POSIX path")
+          (local-state-error opts) (conj (local-state-error opts))
           (missing? (:profile opts)) (conj ":profile is required")
           (and (not (missing? (:profile opts))) (not (safe? (:profile opts)))) (conj ":profile must be a safe identifier"))
         (concat (for [key (sort (distinct (concat (:required (entry :compute (:provider-compute opts)))
@@ -156,9 +169,8 @@
                                  (re-matches #"[a-zA-Z0-9][a-zA-Z0-9_.-]*" %))
                            (str/split state-key #"/" -1)))
       (fail "invalid state key"))
-    (when (and (= "local" selection) (not (local-state-dir? (:local-state-dir opts))))
-      (fail ":local-state-dir must be an absolute normalized POSIX path"))
-    (let [settings
+    (let [directory (when (= "local" selection) (local-state-directory opts))
+          settings
           (merge {:key state-key :use_lockfile true}
                  (if (= "s3" selection)
                    {:bucket (:s3-bucket opts) :region (:s3-region opts)}
@@ -175,7 +187,7 @@
                 :endpoints {:s3 (str "https://" (:oci-namespace opts) ".compat.objectstorage." (:oci-region opts) ".oraclecloud.com")}
                 :use_path_style true :skip_credentials_validation true :skip_metadata_api_check true
                 :skip_region_validation true :skip_requesting_account_id true :skip_s3_checksum true}}
-          (case selection "gcs" {:gcs {:bucket (:gcs-bucket opts) :prefix state-key}} "local" {:local {:path (str (when-not (= "/" (:local-state-dir opts)) (:local-state-dir opts)) "/" state-key)}} {:s3 settings}))}}
+          (case selection "gcs" {:gcs {:bucket (:gcs-bucket opts) :prefix state-key}} "local" {:local {:path (str (when-not (= "/" directory) directory) "/" state-key)}} {:s3 settings}))}}
        :credential_bindings
        (into {} (map (fn [[key option]]
                        [(str "COLORS_PAR_" (str/upper-case (str/replace (name key) "-" "_"))) option])
@@ -197,6 +209,6 @@
 (defn backend-identity [opts]
   (let [settings (backend-settings opts (str (:profile opts) "/compute/coordination.json"))]
     (if (= "local" (:provider-backend opts))
-      {:kind "local" :path (:local-state-dir opts)}
+      {:kind "local" :path (local-state-directory opts)}
       (cond-> {:kind (:provider-backend opts) :bucket (:bucket settings) :region (:region settings)}
         (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in settings [:endpoints :s3]))))))
