@@ -47,6 +47,13 @@
         "oci-secret-access-key": "secret_key"
       },
       "tofu-env": {}
+    },
+    "local": {
+      "required": [
+        "local-state-dir"
+      ],
+      "secrets": [],
+      "tofu-env": {}
     }
   },
   "compute": {

@@ -3,7 +3,7 @@ from ._copy import deepcopy
 import math
 import re
 
-from .contract import _safe, expand, registry, state_keys
+from .contract import _local_path, _safe, expand, registry, state_keys
 
 MAX_INTEGER = 9007199254740991
 
@@ -34,6 +34,8 @@ def _identity(value):
     if not isinstance(backend, dict):
         return False
     kind = backend.get('kind')
+    if kind == 'local':
+        return _shape(backend, ('kind', 'path')) and _local_path(backend['path'])
     if kind not in ('r2', 's3', 'gcs', 'oci') or not _shape(backend, ('kind', 'bucket', 'region', 'endpoint') if kind in ('r2', 'oci') else ('kind', 'bucket', 'region')):
         return False
     if not isinstance(backend['bucket'], str) or not re.fullmatch(r'[a-z0-9][a-z0-9.-]{0,62}', backend['bucket']) or not _safe(backend['region']):

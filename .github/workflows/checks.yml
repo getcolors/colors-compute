@@ -64,6 +64,8 @@ jobs:
         run: |
           python3 scripts/backend_probe.py --tofu "$(command -v tofu)" --blue-runner
           python3 scripts/backend_http_probe.py
+      - name: Check native local state and cross-color journal writes
+        run: python3 scripts/local_backend_probe.py
       - name: Check conditional journal writes against local HTTPS storage
         run: |
           aws --version

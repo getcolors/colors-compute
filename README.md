@@ -52,7 +52,7 @@ isolation, backend locking, or safe migration of an existing deployment.
 The registry declares eight target compute providers: Azure, AWS, Google,
 DigitalOcean, hcloud, Vultr, Yandex, and OCI. A registry entry is not evidence
 of completed provider lifecycle support. `no-infra` is refused. Backends are
-R2, S3, GCS, and OCI Object Storage. SMTP, DNS, and GitHub integrations remain
+local, R2, S3, GCS, and OCI Object Storage. SMTP, DNS, and GitHub integrations remain
 outside this library.
 
 ## Language packages
@@ -181,3 +181,21 @@ OCI's S3 compatibility endpoint, while journal compare-and-swap writes use the
 native API because OCI's compatibility API accepted stale `If-Match` writes in
 a live test. See [managed OCI backend buckets](contracts/managed-oci-backend.md)
 for configuration, ownership checks, cleanup and explicit failed-node recovery.
+
+## Local state backend
+
+Set `provider-backend: local` and `local-state-dir` to an absolute directory
+for persistent state on this host. For example:
+
+```yaml
+provider-backend: local
+local-state-dir: /home/operator/.local/share/colors/state
+```
+
+All three colors use the same state layout and conditional filesystem journal.
+No backend credentials are needed. Compute provider credentials still apply.
+See the [local backend contract](contracts/local-backend.md) for paths,
+permissions, lock recovery, and migration limits.
+
+Run `python3 scripts/local_backend_probe.py` to check native OpenTofu state
+persistence and cross-color journal contention without cloud access.

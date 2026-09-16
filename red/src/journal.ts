@@ -1,3 +1,4 @@
+import {localJournalGet,localJournalPut} from './local.ts';
 import {ociClient,objectPath as ociObjectPath} from './oci.ts';
 import {gcsClient,gcsGet,gcsPut} from './gcs.ts';
 import {chmodSync,mkdtempSync,readFileSync,rmSync,statSync,writeFileSync} from 'node:fs';
@@ -26,6 +27,7 @@ function configuration(opts:Map) {
 }
 export function identity(opts:Map):Map {
   const kind=opts['provider-backend'];
+  if(kind==='local')return {profile:opts.profile,provider:opts['provider-compute'],backend:{kind,path:opts['local-state-dir']}};
   return {profile:opts.profile,provider:opts['provider-compute'],backend:{kind,bucket:opts[`${kind}-bucket`],region:kind==='r2'?'auto':opts[`${kind}-region`],...(kind==='oci'?{endpoint:`https://${opts['oci-namespace']}.compat.objectstorage.${opts['oci-region']}.oraclecloud.com`}:{}),...(kind==='r2'?{endpoint:opts['r2-endpoint']}:{})}};
 }
 function secrets(opts:Map,environment:Env):string[] {
@@ -85,6 +87,7 @@ export function commonArgs(config:ReturnType<typeof configuration>) {
 
 /** Fetch untrusted journal data. Reducer validation is still required. */
 export async function journalGet(opts:Map,environment:Env=process.env,runner:BackendRunner=executeBackendCommand):Promise<JournalGetResult> {
+  if(opts['provider-backend']==='local'){try{state_keys(opts.profile,[]);const plan=backend_plan(opts,`${opts.profile}/compute/coordination.json`);return localJournalGet(plan.config.terraform.backend.local.path);}catch{return {status:'error'};}}
   if(opts['provider-backend']==='oci'){try{
     backend_plan(opts,`${opts.profile}/compute/coordination.json`);state_keys(opts.profile,[]);
     const result=await (await ociClient(opts,environment,runner))('GET',ociObjectPath(opts,`${opts.profile}/compute/coordination.json`));
@@ -120,6 +123,7 @@ export async function journalPut(opts:Map,intent:unknown,environment:Env=process
   let bodyText:string;
   try{bodyText=JSON.stringify(intent.document);}catch{return {status:'error'};}
   if(Buffer.byteLength(bodyText,'utf8')>limit)return {status:'error'};
+  if(opts['provider-backend']==='local'){try{state_keys(opts.profile,[]);const plan=backend_plan(opts,`${opts.profile}/compute/coordination.json`);return localJournalPut(plan.config.terraform.backend.local.path,condition,bodyText,opts['local-state-dir']);}catch{return {status:'error'};}}
   if(opts['provider-backend']==='oci'){try{
     if(containsSecret(bodyText,['COLORS_PAR_OCI_ACCESS_KEY_ID','COLORS_PAR_OCI_SECRET_ACCESS_KEY'].map(k=>environment[k]).filter((v):v is string=>typeof v==='string'&&!!v)))return {status:'error'};
     const headers:Map=condition.if_match?{'if-match':condition.if_match}:{'if-none-match':'*'};headers['content-type']='application/json';

@@ -22,10 +22,8 @@
                       {:status "absent"} observed)]
        (if (= observed {:status "absent"}) {:status "absent"}
            (let [doc (:document observed)
-                 config (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))
                  expected {:profile (:profile opts) :provider (:provider-compute opts)
-                           :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket config) :region (:region config)}
-                                      (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in config [:endpoints :s3])))}]
+                           :backend (compute/backend-identity opts)}]
              (require-valid (and (= "present" (:status observed)) (lifecycle/valid-document? doc)
                                  (= expected (:identity doc))))
              (if (= "retired" (:status doc)) {:status "destroyed"}

@@ -33,12 +33,17 @@ def _settings(opts):
         raise ValueError('invalid profile')
     key = opts['profile'] + '/compute/coordination.json'
     plan = backend_plan(opts, key)['config']['terraform']['backend']
+    if opts['provider-backend'] == 'local':
+        return plan['local']
     config = ({'bucket': opts['gcs-bucket'], 'key': key, 'region': opts['gcs-region']}
               if opts['provider-backend'] == 'gcs' else plan['s3'])
     return config
 
 
 def _identity(opts, settings):
+    if opts['provider-backend'] == 'local':
+        return {'profile': opts['profile'], 'provider': opts.get('provider-compute'),
+                'backend': {'kind': 'local', 'path': opts['local-state-dir']}}
     backend = {'kind': opts['provider-backend'], 'bucket': settings['bucket'], 'region': settings['region']}
     if backend['kind'] in ('r2', 'oci'):
         backend['endpoint'] = settings['endpoints']['s3']
@@ -96,6 +101,9 @@ async def _session(opts, operation, intent, environment, runner):
             payload = json.dumps(intent['document'], ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode('utf-8')
             if len(payload) > MAX_DOCUMENT_BYTES:
                 return {'status': 'error'}
+        if opts['provider-backend'] == 'local':
+            from .local import journal_session
+            return journal_session(settings['path'], payload, intent, opts['local-state-dir'])
         source = dict(os.environ if environment is None else environment)
         credentials = [source.get(name) for name in (f"COLORS_PAR_{opts['provider-backend'].upper()}_ACCESS_KEY_ID", f"COLORS_PAR_{opts['provider-backend'].upper()}_SECRET_ACCESS_KEY")] if opts['provider-backend'] in ('r2', 'oci') else []
         if opts['provider-backend'] == 'oci':

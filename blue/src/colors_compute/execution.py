@@ -30,6 +30,9 @@ async def state_presence(opts, state_key, environment=None, runner=None, legacy=
         if not _state_key(opts, state_key) and not legacy_key:
             return {'status': 'error'}
         backend = backend_plan(opts, state_key)['config']['terraform']['backend']
+        if opts['provider-backend'] == 'local':
+            from .local import presence
+            return presence(backend['local']['path'])
         if opts['provider-backend'] == 'gcs':
             from .gcs import gcs_client, object_path
             request = await gcs_client(environment, runner)
@@ -169,6 +172,11 @@ async def _converge_state(opts, state_key, documents, operation, presence, envir
             secrets.append(value)
         if _contains_secret(documents, secrets):
             return {'status': 'error'}
+        local_path = plan['config']['terraform']['backend'].get('local', {}).get('path')
+        if local_path:
+            from .local import private_parents, protect_state
+            private_parents(Path(local_path).parent, opts['local-state-dir'])
+            protect_state(local_path)
         with tempfile.TemporaryDirectory(prefix='colors-compute-execution-') as directory:
             path = Path(directory)
             os.chmod(path, 0o700)
@@ -185,14 +193,24 @@ async def _converge_state(opts, state_key, documents, operation, presence, envir
                 command = ['tofu', *arguments]
                 if _contains_secret(command, secrets):
                     raise ValueError('invalid command')
-                result = await execute(command, directory, child, timeout)
+                try:
+                    result = await execute(command, directory, child, timeout)
+                finally:
+                    if local_path:
+                        protect_state(local_path)
                 if result.exit != 0:
                     error = ValueError('execution failed')
                     error.retryable = bool(retry and arguments[0] == 'apply' and isinstance(result.err, str) and len(result.err) <= 1048576 and retry['error_text'] in result.err and not _contains_secret(result.err, secrets))
                     raise error
                 return result.out
             await run(['init', '-input=false', '-no-color', '-reconfigure', f'-backend-config={credential_file}'])
-            before = await run(['state', 'pull'])
+            if local_path and presence == {'status': 'absent'}:
+                from .local import presence as local_presence
+                if local_presence(local_path) != {'status': 'absent'}:
+                    return {'status': 'error'}
+                before = ''
+            else:
+                before = await run(['state', 'pull'])
             if presence == {'status': 'absent'} and _virgin_state(before):
                 before = ''
             if before.strip():

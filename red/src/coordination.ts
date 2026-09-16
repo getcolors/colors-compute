@@ -1,3 +1,4 @@
+import {localDirectoryValid} from './local.ts';
 import {managedCoordination,managedDocumentValid} from './managed-journal.ts';
 import {lifecycle,lifecycleDocumentValid} from './lifecycle.ts';
 import {registry, expand, state_keys} from './index.ts';
@@ -12,6 +13,7 @@ const roleValid = (value: unknown) => value === null || match(value,/^[a-z][a-z0
 export function identityValid(value: unknown): value is Map {
   if (!fields(value,['profile','provider','backend']) || !safe(value.profile) || typeof value.provider !== 'string' || !Object.hasOwn(registry.compute,value.provider)) return false;
   const backend=value.backend;
+  if (object(backend) && backend.kind === 'local') return fields(backend,['kind','path']) && localDirectoryValid(backend.path);
   if (!fields(backend,['kind','bucket','region'],['endpoint']) || !match(backend.bucket,/^[a-z0-9][a-z0-9.-]{0,62}$/) || !safe(backend.region)) return false;
   if ((backend.kind === 's3' || backend.kind === 'gcs')) return !Object.hasOwn(backend,'endpoint');
   return (backend.kind === 'oci' || (backend.kind === 'r2' && backend.region === 'auto')) && Object.hasOwn(backend,'endpoint') && match(backend.endpoint,/^https:\/\/[a-zA-Z0-9.-]+(:[0-9]{1,5})?\/?$/);
@@ -68,7 +70,7 @@ export function documentValid(value: unknown): value is Map {
   return [...roles.values()].every(indices => indices.sort((a,b)=>a-b).every((index,position)=>index === position));
 }
 export function identityEqual(a: Map,b: Map) {
-  return a.profile===b.profile && a.provider===b.provider && ['kind','bucket','region','endpoint'].every(key=>a.backend[key]===b.backend[key]);
+  return a.profile===b.profile && a.provider===b.provider && ['kind','bucket','region','endpoint','path'].every(key=>a.backend[key]===b.backend[key]);
 }
 function fail(message: string): never {throw new Error(message);}
 

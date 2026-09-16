@@ -1720,12 +1720,12 @@
     "args": [
       {
         "provider-compute": "no-infra",
-        "provider-backend": "local"
+        "provider-backend": "unsupported"
       }
     ],
     "expected": [
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
-      ":provider-backend must be one of gcs, oci, r2, s3",
+      ":provider-backend must be one of gcs, local, oci, r2, s3",
       ":profile is required"
     ]
   },
@@ -1740,7 +1740,7 @@
     ],
     "expected": [
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
-      ":provider-backend must be one of gcs, oci, r2, s3",
+      ":provider-backend must be one of gcs, local, oci, r2, s3",
       ":profile is required"
     ]
   },
@@ -2371,7 +2371,7 @@
     ],
     "expected": [
       ":provider-compute must be one of aws, azure, digitalocean, google, hcloud, oci, vultr, yandex",
-      ":provider-backend must be one of gcs, oci, r2, s3",
+      ":provider-backend must be one of gcs, local, oci, r2, s3",
       ":profile is required"
     ]
   },

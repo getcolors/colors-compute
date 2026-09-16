@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-runtime
   "Protected remote-state reads only. No apply, destroy, or state mutation."
   (:require [cheshire.core :as json]
+            [io.github.getcolors.compute-local :as local]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [io.github.getcolors.compute :as compute])
@@ -125,6 +126,9 @@
   ([opts state-key environment runner include-outputs decoder]
    (try
      (let [plan (compute/backend-plan opts state-key)
+           local-path (get-in plan [:config :terraform :backend :local :path])
+           _ (when (and local-path (not= {:status "present"} (local/presence local-path)))
+               (throw (ex-info "local state unavailable" {})))
            credentials (into {} (map (fn [[variable option]]
                                       (let [value (get environment variable)]
                                         (when (missing-credential? value)

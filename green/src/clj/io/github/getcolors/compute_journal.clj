@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-journal
   "AWS CLI conditional journal object transport. No retries or provider dispatch."
   (:require [cheshire.core :as json]
+            [io.github.getcolors.compute-local :as local]
             [io.github.getcolors.compute-gcs :as gcs]
             [io.github.getcolors.compute-oci :as oci]
             [clojure.java.io :as io]
@@ -159,7 +160,40 @@
               etag (get-in result [:headers :etag])]
           (cond (:conflict result) {:status "conflict"} (nonblank? etag) {:status "written" :etag etag} :else {:status "error"}))))))
 
+(defn- local-call-session [opts intent]
+  (let [value (:path (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json")))
+        read-current (fn []
+                       (let [presence (local/presence value)]
+                         (if (= {:status "present"} presence)
+                           (let [bytes (local/read-bytes value limit-bytes)
+                                 document (parse-one (str (.decode (.newDecoder StandardCharsets/UTF_8) (ByteBuffer/wrap bytes))))]
+                             (when-not (map? document) (throw (ex-info "invalid document" {})))
+                             {:status "present" :document document :etag (local/etag bytes)}) presence)))]
+    (if (nil? intent) (read-current)
+      (let [condition (:condition intent)
+            expected {:profile (:profile opts) :provider (:provider-compute opts) :backend (compute/backend-identity opts)}]
+        (when-not (and (exact? intent #{:condition :document})
+                       (or (coordination/valid-document? (:document intent)) (lifecycle/valid-document? (:document intent)))
+                       (= expected (get-in intent [:document :identity]))
+                       (or (and (exact? condition #{:if_none_match}) (= "*" (:if_none_match condition)))
+                           (and (exact? condition #{:if_match}) (nonblank? (:if_match condition)))))
+          (throw (ex-info "invalid journal intention" {})))
+        (let [content (serialized (:document intent)) lock (local/path (str value ".lock"))]
+          (local/private-owned-directory! (:local-state-dir opts) (.getParent lock))
+          (if-not (try (Files/createDirectory lock (local/attrs "rwx------")) true
+                       (catch java.nio.file.FileAlreadyExistsException _ false))
+            {:status "conflict"}
+            (try
+              (let [current (read-current)]
+                (cond (= "error" (:status current)) current
+                      (not (if (:if_none_match condition) (= "absent" (:status current))
+                               (and (= "present" (:status current)) (= (:etag current) (:if_match condition))))) {:status "conflict"}
+                      :else (do (local/write-atomic! value content)
+                                {:status "written" :etag (local/etag (.getBytes content StandardCharsets/UTF_8))})))
+              (finally (Files/delete lock)))))))))
+
 (defn- call-session [opts environment runner intent]
+  (if (= "local" (:provider-backend opts)) (local-call-session opts intent)
   (if (not= "gcs" (:provider-backend opts))
     ((if (= "oci" (:provider-backend opts)) oci-call-session s3-call-session) opts environment runner intent)
     (let [settings (settings opts) bucket (:bucket settings) key (:key settings)
@@ -175,15 +209,13 @@
             (throw (ex-info "invalid journal intention" {})))
           (serialized (:document intent))
           (let [result (gcs/put-object (gcs/client environment runner) bucket key (:document intent) generation)]
-            (cond (:conflict result) {:status "conflict"} (:generation result) {:status "written" :etag (:generation result)} :else {:status "error"})))))))
+            (cond (:conflict result) {:status "conflict"} (:generation result) {:status "written" :etag (:generation result)} :else {:status "error"}))))))))
 
 (defn journal-identity
   "The identity a journal document must carry for this configuration."
   [opts]
-  (let [config (compute/backend-settings opts (str (:profile opts) "/compute/coordination.json"))]
-    {:profile (:profile opts) :provider (:provider-compute opts)
-     :backend (cond-> {:kind (:provider-backend opts) :bucket (:bucket config) :region (:region config)}
-                (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in config [:endpoints :s3])))}))
+  {:profile (:profile opts) :provider (:provider-compute opts)
+   :backend (compute/backend-identity opts)})
 
 (defn journal-get
   "Read the derived coordination object; present content remains untrusted."

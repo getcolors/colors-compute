@@ -1,3 +1,4 @@
+import {localPresence} from './local.ts';
 import {chmodSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -55,6 +56,7 @@ export async function readStateDecoded(
   let directory: string | undefined;
   try {
     const plan = backend_plan(opts, stateKey);
+    if(opts['provider-backend']==='local'&&localPresence(plan.config.terraform.backend.local.path).status!=='present')return {status:'error'};
     const settings: Record<string,string> = {};
     for (const [variable, option] of Object.entries(plan.credential_bindings)) {
       const value = environment[variable];

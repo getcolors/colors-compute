@@ -1,3 +1,4 @@
+import {localDirectoryValid} from './local.ts';
 /** Pure contract foundation. This module does not execute infrastructure. */
 import registryData from '../resources/providers.json';
 function deepFreeze<T>(value: T): T {
@@ -38,6 +39,7 @@ export function validate(opts: Map): string[] {
     if (!alternatives.some((group: string[]) => group.every(key => !missing(opts[key]))))
       errors.push('one of ' + alternatives.map((group: string[]) => group.map(key => ':' + key).join(' and ')).join(' or ') + ' is required');
   }
+  if (opts['provider-backend']==='local' && !missing(opts['local-state-dir']) && !localDirectoryValid(opts['local-state-dir'])) errors.push(':local-state-dir must be an absolute normalized POSIX path');
   return errors;
 }
 export function credential_requirements(opts: Map): string[] {

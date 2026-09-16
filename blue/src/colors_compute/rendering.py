@@ -4,7 +4,7 @@ from importlib.resources import files
 import json
 import re
 
-from .contract import _missing, registry
+from .contract import _missing, _local_path, registry
 
 
 def provider_plan(provider: str, stage: str, inputs: dict) -> dict:
@@ -37,7 +37,7 @@ def backend_plan(opts: dict, state_key: str) -> dict:
     backend = opts.get("provider-backend")
     backends = registry()["backend"]
     if not isinstance(backend, str) or backend not in backends:
-        raise ValueError(":provider-backend must be one of gcs, oci, r2, s3")
+        raise ValueError(":provider-backend must be one of gcs, local, oci, r2, s3")
     for key in sorted(backends[backend]["required"]):
         if _missing(opts.get(key)):
             raise ValueError(f":{key} is required")
@@ -46,6 +46,12 @@ def backend_plan(opts: dict, state_key: str) -> dict:
         for part in state_key.split("/")
     ):
         raise ValueError("invalid state key")
+    if backend == 'local':
+        if not _local_path(opts.get('local-state-dir')):
+            raise ValueError(':local-state-dir must be an absolute normalized POSIX path')
+        return {'config': {'terraform': {'backend': {'local': {
+            'path': opts['local-state-dir'].rstrip('/') + '/' + state_key}}}},
+                'credential_bindings': {}, 'environment': {}}
     if backend == 'oci':
         return {'config': {'terraform': {'backend': {'s3': {
             'bucket': opts['oci-bucket'], 'region': opts['oci-region'], 'key': state_key, 'use_lockfile': True,

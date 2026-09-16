@@ -1,3 +1,4 @@
+import {localPresence,prepareLocalState,protectLocalState} from './local.ts';
 import {gcsClient,objectPath} from './gcs.ts';
 import {chmodSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -22,6 +23,7 @@ function stateKey(opts:Map,key:unknown):boolean {
 }
 export async function statePresence(opts:Map,key:string,environment:Env=process.env,runner:BackendRunner=executeBackendCommand,legacy=false):Promise<{status:'present'|'absent'|'error'}> {
   if(!object(opts)||!(stateKey(opts,key)||(legacy===true&&safe(opts.profile)&&typeof key==='string'&&key.startsWith(opts.profile+'/')&&key.endsWith('.tfstate')&&safe(key.slice(opts.profile.length+1,-8)))))return {status:'error'};
+  if(opts['provider-backend']==='local'){try{return localPresence(backend_plan(opts,key).config.terraform.backend.local.path);}catch{return {status:'error'};}}
   if(opts['provider-backend']==='gcs'){try{backend_plan(opts,key);const result=await (await gcsClient(environment,runner))('GET',objectPath(opts['gcs-bucket'],key+'/default.tfstate'));return {status:result===null?'absent':result.generation?'present':'error'};}catch{return {status:'error'};}}
   return session(opts,environment,async(directory,env,secrets,config)=>{
     const body=join(directory,'state.json');writePrivate(body,'');
@@ -90,6 +92,7 @@ export async function convergeStateDecoded(opts:Map,key:string,documents:unknown
       const value=source['COLORS_PAR_'+secret.toUpperCase().replaceAll('-','_')];if(missing(value))return {status:'error'};env[variable]=value!;secrets.push(value!);
     }
     if(containsSecret(JSON.stringify(documents),secrets))return {status:'error'};
+    if(opts['provider-backend']==='local')prepareLocalState(plan.config.terraform.backend.local.path,opts['local-state-dir']);
     directory=mkdtempSync(join(tmpdir(),'colors-compute-execution-'));chmodSync(directory,0o700);
     for(const [filename,document] of Object.entries(documents))writePrivate(join(directory,filename),JSON.stringify(document));
     writePrivate(join(directory,'backend.tf.json'),JSON.stringify(plan.config));
@@ -98,10 +101,15 @@ export async function convergeStateDecoded(opts:Map,key:string,documents:unknown
     Object.assign(env,{TF_IN_AUTOMATION:'1',TF_INPUT:'0',TF_WORKSPACE:'default',TF_DATA_DIR:join(directory,'.terraform')});
     const execute=async(args:string[],timeoutMs=120000):Promise<string>=>{
       const command=['tofu',...args];if(containsSecret(JSON.stringify(command),secrets))throw new Error('invalid command');
-      const result=await runner(command,{cwd:directory!,env,timeoutMs});if(result.exit!==0){const error:any=new Error('execution failed');error.retryable=!!(retry&&args[0]==='apply'&&typeof result.err==='string'&&result.err.length<=1048576&&result.err.includes(retry.error_text)&&!containsSecret(result.err,secrets));throw error;}return result.out;
+      try{const result=await runner(command,{cwd:directory!,env,timeoutMs});if(result.exit!==0){const error:any=new Error('execution failed');error.retryable=!!(retry&&args[0]==='apply'&&typeof result.err==='string'&&result.err.length<=1048576&&result.err.includes(retry.error_text)&&!containsSecret(result.err,secrets));throw error;}return result.out;}finally{if(opts['provider-backend']==='local')protectLocalState(plan.config.terraform.backend.local.path);}
     };
     await execute(['init','-input=false','-no-color','-reconfigure',`-backend-config=${credentialFile}`]);
-    let before=await execute(['state','pull']);
+    let before:string;
+    if(opts['provider-backend']==='local'){
+      const fresh=localPresence(plan.config.terraform.backend.local.path);
+      if(fresh.status==='error'||(fresh.status==='absent'&&presence.status!=='absent'))return {status:'error'};
+      before=fresh.status==='absent'?'':await execute(['state','pull']);
+    }else before=await execute(['state','pull']);
     if(presence.status==='absent'&&virginState(before))before='';
     if(before.trim()) {
       const current=state(before);

@@ -80,6 +80,10 @@ async def _read_state(opts, state_key, environment=None, runner=None, include_ou
     try:
         source = dict(os.environ if environment is None else environment)
         plan = backend_plan(opts, state_key)
+        if opts.get('provider-backend') == 'local':
+            from .local import presence
+            if presence(plan['config']['terraform']['backend']['local']['path']) != {'status': 'present'}:
+                return {'status': 'error'}
         credentials = {}
         for variable, setting in plan["credential_bindings"].items():
             value = source.get(variable)

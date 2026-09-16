@@ -1,0 +1,336 @@
+[
+  {
+    "name": "local backend demo/compute/shared.tfstate",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/var/lib/colors"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "config": {
+        "terraform": {
+          "backend": {
+            "local": {
+              "path": "/var/lib/colors/demo/compute/shared.tfstate"
+            }
+          }
+        }
+      },
+      "credential_bindings": {},
+      "environment": {}
+    }
+  },
+  {
+    "name": "local backend demo/compute/nodes/worker-0.tfstate",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/var/lib/colors"
+      },
+      "demo/compute/nodes/worker-0.tfstate"
+    ],
+    "expected": {
+      "config": {
+        "terraform": {
+          "backend": {
+            "local": {
+              "path": "/var/lib/colors/demo/compute/nodes/worker-0.tfstate"
+            }
+          }
+        }
+      },
+      "credential_bindings": {},
+      "environment": {}
+    }
+  },
+  {
+    "name": "local backend demo/compute/managed-kubernetes.tfstate",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/var/lib/colors"
+      },
+      "demo/compute/managed-kubernetes.tfstate"
+    ],
+    "expected": {
+      "config": {
+        "terraform": {
+          "backend": {
+            "local": {
+              "path": "/var/lib/colors/demo/compute/managed-kubernetes.tfstate"
+            }
+          }
+        }
+      },
+      "credential_bindings": {},
+      "environment": {}
+    }
+  },
+  {
+    "name": "local backend demo/app.tfstate",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/var/lib/colors"
+      },
+      "demo/app.tfstate"
+    ],
+    "expected": {
+      "config": {
+        "terraform": {
+          "backend": {
+            "local": {
+              "path": "/var/lib/colors/demo/app.tfstate"
+            }
+          }
+        }
+      },
+      "credential_bindings": {},
+      "environment": {}
+    }
+  },
+  {
+    "name": "reject invalid local directory 'state'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "state"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory '/state/../other'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/state/../other"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory '/state/./other'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/state/./other"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory '/state//other'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/state//other"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory '/state/'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/state/"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory '//state'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "//state"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory '/state\\\\other'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/state\\other"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory '/state\\x00other'",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/state\u0000other"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory True",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": true
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "reject invalid local directory 123",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": 123
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir must be an absolute normalized POSIX path"
+    }
+  },
+  {
+    "name": "local directory required",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "error": ":local-state-dir is required"
+    }
+  },
+  {
+    "name": "local root directory",
+    "op": "backend_plan",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/"
+      },
+      "demo/compute/shared.tfstate"
+    ],
+    "expected": {
+      "config": {
+        "terraform": {
+          "backend": {
+            "local": {
+              "path": "/demo/compute/shared.tfstate"
+            }
+          }
+        }
+      },
+      "credential_bindings": {},
+      "environment": {}
+    }
+  },
+  {
+    "name": "local backend adds no credentials",
+    "op": "credential_requirements",
+    "args": [
+      {
+        "provider-backend": "local",
+        "local-state-dir": "/var/lib/colors",
+        "provider-compute": "vultr"
+      }
+    ],
+    "expected": [
+      "COLORS_PAR_VULTR_API_KEY"
+    ]
+  },
+  {
+    "name": "acquire local ownership",
+    "op": "coordination",
+    "args": [
+      {
+        "status": "absent"
+      },
+      {
+        "profile": "demo",
+        "provider": "vultr",
+        "backend": {
+          "kind": "local",
+          "path": "/var/lib/colors"
+        }
+      },
+      {
+        "type": "acquire",
+        "run_id": "run-1",
+        "write_id": "write-1",
+        "target_etag": null
+      }
+    ],
+    "expected": {
+      "condition": {
+        "if_none_match": "*"
+      },
+      "document": {
+        "schema_version": 1,
+        "identity": {
+          "profile": "demo",
+          "provider": "vultr",
+          "backend": {
+            "kind": "local",
+            "path": "/var/lib/colors"
+          }
+        },
+        "revision": 1,
+        "write_id": "write-1",
+        "lock": {
+          "state": "held",
+          "run_id": "run-1"
+        },
+        "topology_declared": false,
+        "nodes": {}
+      }
+    }
+  }
+]

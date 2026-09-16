@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-execution
   "Internal guarded execution: caller must first commit a schema-2 attempt."
   (:require [cheshire.core :as json]
+            [io.github.getcolors.compute-local :as local]
             [io.github.getcolors.compute-gcs :as gcs]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -29,6 +30,8 @@
      (require-valid (and (map? opts) (or (state-key? opts key)
                                         (and (true? legacy) (safe? (:profile opts)) (string? key)
                                              (re-matches (re-pattern (str (java.util.regex.Pattern/quote (:profile opts)) "/[A-Za-z0-9][A-Za-z0-9_-]{0,62}\\.tfstate")) key)))))
+     (if (= "local" (:provider-backend opts))
+       (local/presence (:path (compute/backend-settings opts key)))
      (if (= "gcs" (:provider-backend opts))
        (do (compute/backend-plan opts key)
            (let [result ((gcs/client environment runner) "GET" (gcs/object-path (:gcs-bucket opts) (str key "/default.tfstate")) nil {})]
@@ -44,7 +47,7 @@
              (if (= 0 (:exit result))
                (let [etag (:ETag (journal/parse-one (:out result)))]
                  (if (and (nonblank? etag) (not (journal/bound-secret? etag credentials))) {:status "present"} {:status "error"}))
-               {:status (if (= "NoSuchKey" (journal/service-code result "GetObject")) "absent" "error")}))))))
+               {:status (if (= "NoSuchKey" (journal/service-code result "GetObject")) "absent" "error")})))))))
      (catch InterruptedException error (throw error))
      (catch Exception _ {:status "error"}))))
 (defn- virgin-state? [output]
@@ -98,7 +101,9 @@
                         (string? provider) (contains? (:compute compute/registry) (keyword provider)) (valid-documents? documents provider)))
     (let [policy (get-in execution-policy [(keyword provider) :destroy_retry])
           retry-policy (when (and (= operation "delete") policy (some #(contains? (:resource %) (keyword (:resource_type policy))) (vals documents))) policy)
-          plan (compute/backend-plan opts key)]
+          plan (compute/backend-plan opts key)
+          local-path (get-in plan [:config :terraform :backend :local :path])
+          _ (when local-path (local/private-owned-directory! (:local-state-dir opts) (.getParent (local/path local-path))) (local/prepare! local-path) (local/prepare! (str local-path ".backup")))]
       (if (and (= operation "delete") (= "absent" (:status presence))) {:status "destroyed"}
           (let [credentials (into {} (for [[variable option] (:credential_bindings plan)]
                                        (let [value (get environment variable)] (require-valid (not (missing? value))) [option value])))
@@ -125,7 +130,7 @@
                                       (string? (:err result)) (<= (count (:err result)) 1048576) (str/includes? (:err result) (:error_text retry-policy))
                                       (not (journal/bound-secret? (:err result) secrets))))}))) (:out result))))]
                 (execute ["init" "-input=false" "-no-color" "-reconfigure" (str "-backend-config=" credential-file)] 120000)
-                (let [raw-before (execute ["state" "pull"] 120000)
+                (let [raw-before (if (and local-path (= {:status "absent"} presence) (= {:status "absent"} (local/presence local-path))) "" (execute ["state" "pull"] 120000))
                       before (if (and (= {:status "absent"} presence) (virgin-state? raw-before)) "" raw-before)
                       current (when (nonblank? before) (state before))]
                   (require-valid (or current (= "absent" (:status presence))))
@@ -155,7 +160,7 @@
                                   (let [outputs (if decoder (decoder after) (runtime/flatten-outputs document))]
                                     (require-valid (and (= provider (:provider params)) (not (journal/bound-secret? outputs secrets))))
                                     {:status "ready" :params params :outputs outputs}))))))))))
-              (finally (journal/cleanup! directory))))))))
+              (finally (try (when local-path (local/prepare! local-path) (local/prepare! (str local-path ".backup"))) (finally (journal/cleanup! directory))))))))))
 (defn converge-state
   ([opts key documents operation presence] (converge-state opts key documents operation presence (into {} (System/getenv)) runtime/run-command))
   ([opts key documents operation presence environment] (converge-state opts key documents operation presence environment runtime/run-command))

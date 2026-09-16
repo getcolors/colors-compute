@@ -47,6 +47,7 @@ def main():
                       "expected": {name: json.loads((directory / source).read_text())
                                    for name, source in example["files"].items()}})
     cases.extend(json.loads((ROOT / "test/fixtures/managed-plans.json").read_text()))
+    cases.extend(json.loads((ROOT / "test/fixtures/local-backend.json").read_text()))
     fixture = "".join(json.dumps({"op": case["op"], "args": case["args"]}) + "\n" for case in cases)
     for color, command in {
         "green": [os.environ.get("BB", "bb"), "scripts/contract-green.clj"],
