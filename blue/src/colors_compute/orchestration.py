@@ -17,17 +17,19 @@ from .ssh import prepare_keypair, cleanup_keypair, _mode
 from .workflow import cluster_workflow
 from .planning import validate_deployment
 from .managed_backend import bootstrap_backend
+from .diagnostics import LifecycleDiagnostic, missing_tools
 
 
 DESTROY_PUBLIC_KEY = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA destroy-only'
 
 
 async def orchestrate(opts, topology, request, environment=None, dependencies=None):
-    """Return ready cluster, destroyed, or generic error. Never emit raw state."""
+    """Return ready, destroyed, or safe diagnostics. Never emit raw state."""
     deps = dependencies or {}
     env = dict(os.environ if environment is None else environment)
     opts, topology, request = deepcopy(opts), deepcopy(topology), deepcopy(request)
     coordinator, acquired, keys = None, False, None
+    node_diagnostics = []
 
     async def call(name, default, *args, **kwargs):
         value = deps.get(name, default)(*args, **kwargs)
@@ -42,16 +44,23 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
 
     async def readable(key):
         result = await call('read_state', read_state, opts, key, env, include_outputs=True)
-        require(result.get('status') == 'present' and result.get('params', {}).get('provider') == opts['provider-compute'])
+        if result.get('status') != 'present':
+            raise LifecycleDiagnostic('state-unreadable')
+        require(result.get('params', {}).get('provider') == opts['provider-compute'])
         return result
 
     async def presence_for(key, record):
         presence = await call('state_presence', state_presence, opts, key, env)
-        require(presence in ({'status': 'present'}, {'status': 'absent'}))
+        if presence not in ({'status': 'present'}, {'status': 'absent'}):
+            raise LifecycleDiagnostic('state-unreadable')
+        if presence == {'status': 'absent'} and record['phase'] not in ('declared', 'destroyed'):
+            raise LifecycleDiagnostic('failed-operation-without-state' if record['phase'] == 'failed' else 'recorded-state-missing')
         if record['phase'] in ('declared', 'destroyed'):
             if presence == {'status': 'present'}:
                 empty = await call('read_state', read_state, opts, key, env, include_outputs=True)
-                require(empty.get('status') == 'present' and empty.get('state_empty') is True)
+                if empty.get('status') != 'present':
+                    raise LifecycleDiagnostic('state-unreadable')
+                require(empty.get('state_empty') is True)
         elif record['phase'] != 'destroyed':
             require(presence == {'status': 'present'})
         if record['phase'] == 'failed':
@@ -95,6 +104,9 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         nonlocal coordinator, acquired, keys
         declarations = _topology(topology)
         require(declarations is not None and opts.get('blue/event', 'create') in ('create', 'delete') and opts.get('blue/dry-run') is not True)
+        missing = await call('runtime_preflight', missing_tools, opts, env)
+        if missing:
+            raise LifecycleDiagnostic('missing-tool', missing)
         if request.get('private') is True:
             declarations = [{**node, 'private': True} for node in declarations]
         await call('bootstrap_backend', bootstrap_backend, opts, env)
@@ -102,6 +114,8 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
         require(isinstance(legacy_keys, list) and len(legacy_keys) == len(set(legacy_keys)))
         for legacy_key in legacy_keys:
             observed = await call('state_presence', state_presence, opts, legacy_key, env, legacy=True)
+            if observed not in ({'status': 'present'}, {'status': 'absent'}):
+                raise LifecycleDiagnostic('state-unreadable')
             require(observed == {'status': 'absent'})
         operation = opts.get('blue/event', 'create')
         require(operation != 'delete' or opts.get('compute-prevent-destroy') is False)
@@ -229,7 +243,9 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
                 if key.get('private_key_path'):
                     params['ssh_identity_file'] = key['private_key_path']
                 return {**values, 'colors-compute/params': params}
-            except Exception:
+            except Exception as error:
+                if isinstance(error, LifecycleDiagnostic):
+                    node_diagnostics.append(error)
                 return {**values, 'blue/exit': 1, 'blue/err': 'compute node failed'}
         task = asyncio.create_task(call('run', run, cluster_workflow(declarations, assembly.get('entry_node_id', declarations[0]['node_id']), node_step), opts))
         try:
@@ -250,8 +266,10 @@ async def orchestrate(opts, topology, request, environment=None, dependencies=No
     except asyncio.CancelledError as error:
         cancelled = error
         result = {'status': 'error'}
+    except LifecycleDiagnostic as error:
+        result = error.result()
     except Exception:
-        result = {'status': 'error'}
+        result = min(node_diagnostics, key=lambda e: e.diagnostic['code']).result() if node_diagnostics else {'status': 'error'}
     if acquired:
         try:
             await coordinator.release()

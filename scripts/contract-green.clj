@@ -3,7 +3,8 @@
 (let [root (.getParentFile (.getParentFile (.getCanonicalFile (io/file *file*))))]
   (deps/add-deps {:deps {'io.github.getcolors/colors-compute {:local/root (str (io/file root "green"))}}})
   (cp/add-classpath (str (io/file root "green/src/clj") ":" (io/file root "green/src/resources"))))
-(require '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
+(require '[io.github.getcolors.compute-diagnostics :as diagnostics]
+         '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
          '[io.github.getcolors.compute-power :as power]
          '[io.github.getcolors.compute-runtime :as runtime]
          '[io.github.getcolors.compute-request :as request]
@@ -38,7 +39,9 @@
   (let [pending (atom responses) take-result (fn [& _] (let [result (first @pending)] (swap! pending subvec 1) result))]
     (power/provider-power opts action id (into {} (map (fn [[k v]] [(name k) v]) env)) {:http take-result :runner take-result :sleep (fn [_] nil)})))
 (def operations
-  {"provider_power_case" provider-power-case
+  {"required_tools" diagnostics/required-tools
+   "lifecycle_diagnostic" (fn [code tools] (diagnostics/result (diagnostics/failure code tools)))
+   "provider_power_case" provider-power-case
    "managed_application_artifacts" managed/managed-application-artifacts
    "managed_application_settings" managed/managed-application-settings
    "plan_managed_kubernetes" managed/plan-managed-kubernetes

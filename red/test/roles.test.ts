@@ -29,7 +29,7 @@ test('entry, role sizes, exact peer rules and IPv6 use data-driven recipes',()=>
 });
 test('native SDK waits for siblings then updates peers, preserving them on reconverge',async()=>{
  let observed:any={status:'absent'},writes=0;const states:Map={},events:string[]=[],sharedPlans:Map[]=[];let failNode=false;
- const deps:any={compute_credential_errors:()=>[],validate_deployment:()=>true,registration_preflight:()=>({status:'checked'}),
+ const deps:any={runtime_preflight:()=>[],compute_credential_errors:()=>[],validate_deployment:()=>true,registration_preflight:()=>({status:'checked'}),
  coordinator:(o:Map,config:Map)=>new Coordinator(o,{...config,read:async()=>structuredClone(observed),write:async(intent:any)=>{if(intent.condition.if_match&&intent.condition.if_match!==observed.etag)return {status:'conflict'};observed={status:'present',etag:'e'+(++writes),document:structuredClone(intent.document)};return {status:'written',etag:observed.etag};}}),
  prepare_keypair:async(o:any,owned:any,env:any,intent:any,prepared:any)=>{if(owned.status==='fresh'){await intent();await prepared('SHA256:'+'A'.repeat(43));}return {mode:'managed',public_key:'ssh-ed25519 public'};},
  state_presence:async(o:any,key:string)=>({status:Object.hasOwn(states,key)?'present':'absent'}),read_state:async(o:any,key:string)=>({status:'present',params:states[key].params,outputs:states[key]}),

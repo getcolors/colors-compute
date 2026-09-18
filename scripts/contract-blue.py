@@ -15,6 +15,10 @@ from colors_compute.backend import read_state, ProcessResult
 from colors_compute.journal import journal_get, journal_put
 from colors_compute.lifecycle import lifecycle_repair
 from colors_compute.power import provider_power
+from colors_compute.diagnostics import LifecycleDiagnostic, required_tools
+
+def lifecycle_diagnostic(code, tools):
+    return LifecycleDiagnostic(code, tools).result()
 
 def read_state_case(opts, key, environment, responses):
     pending = iter(responses)
@@ -37,7 +41,7 @@ def provider_power_case(opts, action, identity, env, responses):
         'http': lambda *_: next(pending), 'runner': lambda *_: next(pending), 'sleep': lambda _: None}))
 
 operations = {f.__name__: f for f in (
-    lifecycle_repair, provider_power_case, managed_application_artifacts, managed_application_settings, plan_managed_kubernetes, controller_artifact, deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
+    required_tools, lifecycle_diagnostic, lifecycle_repair, provider_power_case, managed_application_artifacts, managed_application_settings, plan_managed_kubernetes, controller_artifact, deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
 )}
 for line in sys.stdin:
     try:

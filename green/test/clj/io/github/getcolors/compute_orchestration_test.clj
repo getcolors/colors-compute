@@ -1,5 +1,6 @@
 (ns io.github.getcolors.compute-orchestration-test
-  (:require [io.github.getcolors.compute-ssh-test :as ssh-test]
+  (:require [io.github.getcolors.compute-diagnostics :as diagnostics]
+            [io.github.getcolors.compute-ssh-test :as ssh-test]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [io.github.getcolors.compute-orchestration :as o]
@@ -13,7 +14,7 @@
 (defn world []
   (let [storage (ct/store) states (atom {}) calls (atom []) failures (atom #{}) id-factory (ct/ids)]
     {:storage storage :states states :calls calls :failures failures
-     :deps {:validate-deployment (fn [& _] true) :compute-credential-errors (fn [& _] [])
+     :deps {:runtime-preflight (fn [& _] []) :validate-deployment (fn [& _] true) :compute-credential-errors (fn [& _] [])
             :coordinator (fn [opts env] (c/coordinator opts env (:read storage) (:write storage) id-factory {:event-prefix "lifecycle/"}))
             :registration-preflight (fn [& _] {:status "checked"})
             :prepare-keypair (fn [_ ownership _ intent prepared]
@@ -253,3 +254,63 @@
                                 (if (= remaining :new-home) (assoc env "HOME" (str home "/other-machine")) env) deps)))
           (is (not (.exists private)))
           (is (not (.exists public))))))))
+
+
+(deftest missing-tools-stop-before-backend-and-ownership
+  (let [{:keys [deps storage]} (world)
+        never (fn [& _] (throw (AssertionError. "must not touch backend or ownership")))
+        result (o/orchestrate opts topology requirements {"PATH" "/nonexistent-colors-test-path"}
+                 (assoc (dissoc deps :runtime-preflight) :bootstrap-backend never :coordinator never))]
+    (is (= "missing-tool" (get-in result [:diagnostics 0 :code])))
+    (is (= ["aws" "ssh-keygen" "tofu"] (get-in result [:diagnostics 0 :tools])))
+    (is (clojure.string/includes? (first (:errors result)) "load the deployment environment"))
+    (is (= "absent" (get-in @(:state storage) [:observation :status])))))
+
+(deftest state-diagnostics-preserve-guards-and-redact-errors
+  (doseq [[presence code] [[{:status "error" :secret "PRIVATE"} "state-unreadable"]
+                          [{:status "absent"} "recorded-state-missing"]]]
+    (let [{:keys [deps calls storage]} (world)]
+      (is (= "ready" (:status (o/orchestrate opts topology requirements {} deps))))
+      (reset! calls [])
+      (let [result (o/orchestrate opts topology requirements {} (assoc deps :state-presence (fn [& _] presence)))]
+        (is (= code (get-in result [:diagnostics 0 :code])))
+        (is (not (clojure.string/includes? (pr-str result) "PRIVATE")))
+        (is (empty? @calls))
+        (is (= "idle" (get-in @(:state storage) [:observation :document :lock :state]))))))
+  (let [{:keys [deps]} (world)]
+    (is (= {:status "error"} (o/orchestrate opts topology requirements {}
+       (assoc deps :bootstrap-backend (fn [& _] (throw (ex-info "PRIVATE provider output" {:secret "PRIVATE"})))))))))
+
+(deftest failed-shared-create-without-state-needs-reviewed-recovery
+  (let [{:keys [deps failures calls storage]} (world)]
+    (swap! failures conj "demo/compute/shared.tfstate")
+    (is (= {:status "error"} (o/orchestrate opts topology requirements {} deps)))
+    (reset! calls [])
+    (let [result (o/orchestrate opts topology requirements {} deps)]
+      (is (= "failed-operation-without-state" (get-in result [:diagnostics 0 :code])))
+      (is (empty? @calls))
+      (is (= "failed" (get-in @(:state storage) [:observation :document :shared :phase]))))))
+
+(deftest node-diagnostic-survives-fanout-while-siblings-settle
+  (let [{:keys [deps calls storage]} (world) reads (atom 0)
+        presence (fn [opts key env]
+                   (if (and (= key "demo/compute/nodes/broker-0.tfstate") (= 2 (swap! reads inc)))
+                     {:status "error"} ((:state-presence deps) opts key env)))
+        result (o/orchestrate opts topology requirements {} (assoc deps :state-presence presence))]
+    (is (= "state-unreadable" (get-in result [:diagnostics 0 :code])))
+    (is (some #{["demo/compute/nodes/broker-1.tfstate" "create"]} @calls))
+    (is (not-any? #{["demo/compute/nodes/broker-0.tfstate" "create"]} @calls))
+    (is (= "idle" (get-in @(:state storage) [:observation :document :lock :state])))))
+
+(deftest tool-lookup-requires-executable-files-in-supplied-path
+  (let [dir (java.nio.file.Files/createTempDirectory "compute-tools-" (make-array java.nio.file.attribute.FileAttribute 0))
+        tool (io/file (str dir) "tofu") input (assoc opts :provider-backend "local" :aws-ssh-authorized-keys "external.pub")]
+    (try
+      (is (= ["tofu"] (diagnostics/missing-tools input {})))
+      (.mkdir tool)
+      (is (= ["tofu"] (diagnostics/missing-tools input {"PATH" (str dir)})))
+      (.delete tool) (spit tool "#!/bin/sh\nexit 0\n") (.setExecutable tool false false)
+      (is (= ["tofu"] (diagnostics/missing-tools input {"PATH" (str dir)})))
+      (.setExecutable tool true true)
+      (is (= [] (diagnostics/missing-tools input {"PATH" (str dir)})))
+      (finally (.delete tool) (.delete (.toFile dir))))))

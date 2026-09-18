@@ -33,9 +33,44 @@ deletes retain journal history. Explicit recreation starts a new generation.
 All operations preserve failed state for review. Generic error results contain
 no provider diagnostics, credentials, or private key material.
 
+## Actionable lifecycle errors
+
+Green, Red and Blue check the supplied environment's `PATH` before backend
+bootstrap, journal writes or SSH key generation. They require `tofu`, the
+backend CLI (`aws` for S3/R2, `gcloud` for GCS, `oci` for OCI), `oci` for OCI
+compute, and `ssh-keygen` for managed SSH keys. Local state needs no backend
+CLI. Application tools such as Ansible and redis-cli remain the package's
+responsibility. Build and dry-run continue using the pure planning API and
+do not inspect executables.
+
+Recognized failures retain `status: error` and add `diagnostics` and `errors`:
+
+```json
+{
+  "status": "error",
+  "diagnostics": [{
+    "code": "failed-operation-without-state",
+    "message": "A previous infrastructure operation failed and its state file is missing. Cloud resources may still exist.",
+    "hint": "Inspect provider resources and reconcile the failed operation using the reviewed recovery procedure before retrying."
+  }],
+  "errors": ["A previous infrastructure operation failed and its state file is missing. Cloud resources may still exist. Next: Inspect provider resources and reconcile the failed operation using the reviewed recovery procedure before retrying."]
+}
+```
+
+The stable codes are `missing-tool`, `state-unreadable`,
+`failed-operation-without-state`, and `recorded-state-missing`. `missing-tool`
+also includes a sorted `tools` list. Consumers should display `errors` rather
+than replacing them with a generic refusal; richer interfaces may use the
+structured diagnostics. Messages contain fixed, reviewed text and tool names,
+never raw exception text, credentials, state contents or provider responses.
+Unclassified exceptions and ambiguous release failures remain generic errors.
+These diagnostics do not permit automatic recovery or relax ownership guards.
+
 Dependency injection replaces coordinator construction, SSH preparation/cleanup,
 request assembly/rendering, state presence/read/convergence, or native workflow
-execution in tests. Production defaults use library implementations. Dependencies
+execution in tests. `runtime_preflight` (Green `:runtime-preflight`) returns the
+missing tool names; tests with a simulated runtime inject an empty list.
+Production defaults use library implementations. Dependencies
 are trusted application code, never profile input. No test injects cloud writes.
 
 When `s3-bucket-mode=managed`, orchestration bootstraps the owned backend before

@@ -1,6 +1,7 @@
 (ns io.github.getcolors.compute-orchestration
   "Deployment journal ownership around the real Colors fan-out and join."
-  (:require [green.workflow :as engine]
+  (:require [io.github.getcolors.compute-diagnostics :as diagnostics]
+            [green.workflow :as engine]
             [io.github.getcolors.compute-managed-backend :as managed-backend]
             [io.github.getcolors.compute :as compute]
             [io.github.getcolors.compute-coordination :as coordination]
@@ -20,21 +21,26 @@
   ([opts topology requirements] (orchestrate opts topology requirements (into {} (System/getenv)) {}))
   ([opts topology requirements environment] (orchestrate opts topology requirements environment {}))
   ([opts topology requirements environment dependencies]
-   (let [owner (atom nil) acquired (atom false) keys (atom nil) cancelled (atom nil)]
+   (let [owner (atom nil) acquired (atom false) keys (atom nil) cancelled (atom nil) node-diagnostics (atom [])]
      (letfn [(call [name default & args] (apply (get dependencies name default) args))
              (snapshot [] (:document (coordinator/snapshot @owner)))
              (transition [type fields] (coordinator/transition! @owner type fields))
              (readable [key]
                (let [result (call :read-state (fn [opts key env] (runtime/read-state opts key env runtime/run-command true)) opts key environment)]
-                 (require-valid (and (= "present" (:status result)) (= (:provider-compute opts) (get-in result [:params :provider])))) result))
+                 (when-not (= "present" (:status result)) (throw (diagnostics/failure "state-unreadable")))
+                 (require-valid (= (:provider-compute opts) (get-in result [:params :provider]))) result))
              (node-key [id] (if (nil? id) (:shared @keys) (get-in (compute/state-keys (:profile opts) [id]) [:nodes id])))
              (presence-for [key record]
                (let [presence (call :state-presence execution/state-presence opts key environment)]
-                 (require-valid (contains? #{{:status "present"} {:status "absent"}} presence))
+                 (when-not (contains? #{{:status "present"} {:status "absent"}} presence)
+                   (throw (diagnostics/failure "state-unreadable")))
+                 (when (and (= presence {:status "absent"}) (not (contains? #{"declared" "destroyed"} (:phase record))))
+                   (throw (diagnostics/failure (if (= "failed" (:phase record)) "failed-operation-without-state" "recorded-state-missing"))))
                  (if (contains? #{"declared" "destroyed"} (:phase record))
                    (when (= presence {:status "present"})
                      (let [state (call :read-state (fn [opts key env] (runtime/read-state opts key env runtime/run-command true)) opts key environment)]
-                       (require-valid (and (= "present" (:status state)) (true? (:state_empty state))))))
+                       (when-not (= "present" (:status state)) (throw (diagnostics/failure "state-unreadable")))
+                       (require-valid (true? (:state_empty state)))))
                    (require-valid (= presence {:status "present"})))
                  (when (= "failed" (:phase record)) (require-valid (= (:provider-compute opts) (get-in (readable key) [:params :provider])))) presence))
              (outcome [id operation-id success?]
@@ -61,13 +67,18 @@
                      operation (get opts :green/event :create) operation (if (keyword? operation) (name operation) operation)
                      declarations (if (true? (:private requirements)) (mapv #(assoc % :private true) declarations) declarations)]
                  (require-valid (and (seq declarations) (contains? #{"create" "delete"} operation) (not (true? (:green/dry-run opts)))))
+                 (let [missing (call :runtime-preflight diagnostics/missing-tools opts environment)]
+                   (when (seq missing) (throw (diagnostics/failure "missing-tool" missing))))
                  (call :bootstrap-backend managed-backend/bootstrap-backend! opts environment)
                  (let [legacy-keys (get requirements :legacy_state_keys [])]
                    (require-valid (and (vector? legacy-keys) (= (count legacy-keys) (count (set legacy-keys)))))
                    (doseq [legacy legacy-keys]
-                     (require-valid (= {:status "absent"} (call :legacy-state-presence
-                                                               (fn [opts key env] (execution/state-presence opts key env runtime/run-command true))
-                                                               opts legacy environment)))))
+                     (let [observed (call :legacy-state-presence
+                                          (fn [opts key env] (execution/state-presence opts key env runtime/run-command true))
+                                          opts legacy environment)]
+                       (when-not (contains? #{{:status "present"} {:status "absent"}} observed)
+                         (throw (diagnostics/failure "state-unreadable")))
+                       (require-valid (= {:status "absent"} observed)))))
                  (require-valid (or (= operation "create") (false? (:compute-prevent-destroy opts))))
                  (reset! keys (compute/state-keys (:profile opts) (mapv :node_id declarations)))
                  (reset! owner (call :coordinator (fn [opts env] (coordinator/coordinator opts env nil nil nil {:event-prefix "lifecycle/"})) opts environment))
@@ -149,7 +160,9 @@
                                                               result (attempt id (:documents plan) "create")]
                                                           (assoc values :colors-compute/params (cond-> (:params result) (:private_key_path key) (assoc :ssh_identity_file (:private_key_path key)))))
                                                         (catch InterruptedException error (coordinator/poison! @owner) (throw error))
-                                                        (catch Exception _ (assoc values :green/exit 1 :green/err "compute node failed")))))
+                                                        (catch Exception error
+                                                          (when-let [diagnostic (diagnostics/result error)] (swap! node-diagnostics conj diagnostic))
+                                                          (assoc values :green/exit 1 :green/err "compute node failed")))))
                                          task (future (call :run engine/run (workflow/cluster-workflow declarations (get assembly :entry_node_id (:node_id (first declarations))) callback) opts))
                                          result (try @task
                                                      (catch InterruptedException error
@@ -166,7 +179,7 @@
        (let [result (try (execute)
                          (catch InterruptedException error (when @owner (coordinator/poison! @owner)) (reset! cancelled error) {:status "error"})
                          (catch Exception error (if-let [errors (:compute/credential-errors (ex-data error))]
-                                                  {:status "error" :errors errors} {:status "error"})))
+                                                  {:status "error" :errors errors} (or (diagnostics/result error) (first (sort-by #(get-in % [:diagnostics 0 :code]) @node-diagnostics)) {:status "error"}))))
              result (if @acquired
                       (try (coordinator/release! @owner) result
                            (catch InterruptedException error (reset! cancelled error) {:status "error"})

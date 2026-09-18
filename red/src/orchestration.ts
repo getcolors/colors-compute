@@ -1,3 +1,4 @@
+import {LifecycleDiagnostic,missingTools} from './diagnostics.ts';
 import {bootstrap_backend} from './managed-backend.ts';
 import {copy} from './copy.ts';
 import {validate_deployment} from './planning.ts';
@@ -15,14 +16,16 @@ type Map=Record<string,any>;
 const DESTROY_PUBLIC_KEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA destroy-only';
 export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map,environment:Map=process.env,dependencies:Map={}) {
  const opts=copy(input),topology=structuredClone(topologyInput),request=structuredClone(requestInput),env={...environment},deps=dependencies;
- let coordinator:any,acquired=false,keys:any;
+ let coordinator:any,acquired=false,keys:any;const nodeDiagnostics:LifecycleDiagnostic[]=[];
  const call=async(name:string,defaultFn:any,...args:any[])=>await (deps[name]??defaultFn)(...args);
  const require=(value:any)=>{if(!value)throw Error('compute lifecycle refused');};
  const snapshot=async()=> (await coordinator.snapshot()).document;
- const readable=async(key:string)=>{const r=await call('read_state',readState,opts,key,env,undefined,true);require(r.status==='present'&&r.params?.provider===opts['provider-compute']);return r;};
+ const readable=async(key:string)=>{const r=await call('read_state',readState,opts,key,env,undefined,true);if(r.status!=='present')throw new LifecycleDiagnostic('state-unreadable');require(r.params?.provider===opts['provider-compute']);return r;};
  const presenceFor=async(key:string,record:Map)=>{
-  const p=await call('state_presence',statePresence,opts,key,env);require(p&&Object.keys(p).length===1&&['present','absent'].includes(p.status));
-  if(['declared','destroyed'].includes(record.phase)){if(p.status==='present'){const state=await call('read_state',readState,opts,key,env,undefined,true);require(state.status==='present'&&state.state_empty===true);}}else require(p.status==='present');
+  const p=await call('state_presence',statePresence,opts,key,env);
+  if(!(p&&Object.keys(p).length===1&&['present','absent'].includes(p.status)))throw new LifecycleDiagnostic('state-unreadable');
+  if(p.status==='absent'&&!['declared','destroyed'].includes(record.phase))throw new LifecycleDiagnostic(record.phase==='failed'?'failed-operation-without-state':'recorded-state-missing');
+  if(['declared','destroyed'].includes(record.phase)){if(p.status==='present'){const state=await call('read_state',readState,opts,key,env,undefined,true);if(state.status!=='present')throw new LifecycleDiagnostic('state-unreadable');require(state.state_empty===true);}}else require(p.status==='present');
   if(record.phase==='failed')await readable(key);return p;
  };
  const attempt=async(nodeId:string|null,documents:Map,operation:string)=>{
@@ -43,10 +46,11 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
  };
  const execute=async()=>{
   let declarations=expand(topology);require(declarations.length&&declarations.length<=1000&&['create','delete'].includes(opts['red/event']??'create')&&opts['red/dry-run']!==true);
+  const missing=await call('runtime_preflight',missingTools,opts,env);if(missing.length)throw new LifecycleDiagnostic('missing-tool',missing);
   if(request.private===true)declarations=declarations.map(node=>({...node,private:true}));
   await call('bootstrap_backend',bootstrap_backend,opts,env);
   const legacy=request.legacy_state_keys??[];require(Array.isArray(legacy)&&new Set(legacy).size===legacy.length);
-  for(const key of legacy){const observed=await call('state_presence',statePresence,opts,key,env,undefined,true);require(observed.status==='absent'&&Object.keys(observed).length===1);}
+  for(const key of legacy){const observed=await call('state_presence',statePresence,opts,key,env,undefined,true);if(!(observed&&Object.keys(observed).length===1&&['present','absent'].includes(observed.status)))throw new LifecycleDiagnostic('state-unreadable');require(observed.status==='absent');}
   const operation=opts['red/event']??'create';require(operation!=='delete'||opts['compute-prevent-destroy']===false);
   keys=state_keys(opts.profile,declarations.map(node=>node.node_id));
   coordinator=deps.coordinator?deps.coordinator(opts,{environment:env,eventPrefix:'lifecycle/'}):new Coordinator(opts,{environment:env,eventPrefix:'lifecycle/'});
@@ -110,7 +114,7 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
   const shared=await attempt(null,sharedPlan.documents,'create');const requests=Object.fromEntries(assembly.nodes.map((node:Map)=>[node.node_id,node]));
   const nodeStep=async(values:Map)=>{const nodeId=values['colors-compute/request'].node_id;
    try{const plan=await call('provider_request',provider_request,opts,'node',requests[nodeId],shared.outputs);const result=await attempt(nodeId,plan.documents,'create');return {...values,'colors-compute/params':{...result.params,...(key.private_key_path?{ssh_identity_file:key.private_key_path}:{})}};}
-   catch(error){if(error instanceof Error&&error.name==='AbortError')throw error;return {...values,'red/exit':1,'red/err':'compute node failed'};}
+   catch(error){if(error instanceof Error&&error.name==='AbortError')throw error;if(error instanceof LifecycleDiagnostic)nodeDiagnostics.push(error);return {...values,'red/exit':1,'red/err':'compute node failed'};}
   };
   const result=await call('run',run,clusterWorkflow(declarations,assembly.entry_node_id??declarations[0].node_id,nodeStep),opts);
   require(result['red/exit']===0&&result['colors-compute/cluster']);
@@ -118,7 +122,7 @@ export async function orchestrate(input:Map,topologyInput:Map[],requestInput:Map
   return {status:'ready',cluster:result['colors-compute/cluster'],shared:sharedOutputs,key:Object.fromEntries(Object.entries(key).filter(([k])=>['mode','private_key_path','fingerprint'].includes(k)))};
  };
  let result:any,cancelled:any;
- try{result=await execute();}catch(error){if(error instanceof Error&&error.name==='AbortError')cancelled=error;result={status:'error'};}
+ try{result=await execute();}catch(error){if(error instanceof Error&&error.name==='AbortError')cancelled=error;result=error instanceof LifecycleDiagnostic?error.result():nodeDiagnostics.sort((a,b)=>a.diagnostic.code.localeCompare(b.diagnostic.code))[0]?.result()??{status:'error'};}
  if(acquired)try{await coordinator.release();}catch(error){if(error instanceof Error&&error.name==='AbortError')cancelled=error;result={status:'error'};}
  if(cancelled)throw cancelled;return result;
 }

@@ -1,3 +1,4 @@
+import {LifecycleDiagnostic,requiredTools} from '../red/src/diagnostics.ts';
 import {provider_power} from '../red/src/power.ts';
 import * as contract from '../red/src/index.ts';
 import {controller_artifact} from '../red/src/controller.ts';
@@ -21,7 +22,7 @@ const input = await Bun.stdin.text();
 for (const line of input.split('\n').filter(line => line.trim())) {
   try {
     const {op, args} = JSON.parse(line);
-    const fn = op === "lifecycle_repair" ? lifecycleRepair : op === "provider_power_case" ? provider_power_case : op === "controller_artifact" ? controller_artifact : op === "journal_case" ? journal_case : op === "read_state_case" ? read_state_case : (contract as Record<string, unknown>)[op];
+    const fn = op === "required_tools" ? requiredTools : op === "lifecycle_diagnostic" ? ((code:string,tools:string[])=>new LifecycleDiagnostic(code,tools).result()) : op === "lifecycle_repair" ? lifecycleRepair : op === "provider_power_case" ? provider_power_case : op === "controller_artifact" ? controller_artifact : op === "journal_case" ? journal_case : op === "read_state_case" ? read_state_case : (contract as Record<string, unknown>)[op];
     if (typeof fn !== 'function') throw new Error(`unknown operation: ${op}`);
     console.log(JSON.stringify(await fn(...args)));
   } catch (error) {

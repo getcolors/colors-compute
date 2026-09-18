@@ -5,7 +5,7 @@ type Map=Record<string,any>;
 const opts={profile:'demo','provider-compute':'vultr','provider-backend':'s3','s3-bucket':'states','s3-region':'eu-west-1','compute-prevent-destroy':false};
 export class Runtime {
  observed:Map={status:'absent'};states:Map={};events:string[]=[];fails=new Set<string>();writes=0;
- deps=()=>({validate_deployment:()=>true,compute_credential_errors:()=>[],
+ deps=()=>({runtime_preflight:()=>[],validate_deployment:()=>true,compute_credential_errors:()=>[],
   coordinator:(o:Map,config:Map)=>new Coordinator(o,{...config,read:async()=>structuredClone(this.observed),write:async(intent:Map)=>{
    if(intent.condition.if_match&&intent.condition.if_match!==this.observed.etag)return {status:'conflict'};
    this.observed={status:'present',etag:'etag-'+(++this.writes),document:structuredClone(intent.document)};return {status:'written',etag:this.observed.etag};
@@ -36,7 +36,7 @@ test('native Colors create, scale down, destroy and recreate preserve ordering',
 });
 test('failed sibling settles before release and absent failed state refuses retry',async()=>{
  const r=new Runtime();r.fails.add('0');expect(await r.run()).toEqual({status:'error'});expect(r.events).toContain('ready:1');expect(r.observed.document.lock.state).toBe('idle');
- r.events=[];r.fails.clear();expect(await r.run()).toEqual({status:'error'});expect(r.events).toEqual([]);
+ r.events=[];r.fails.clear();expect((await r.run()).diagnostics[0].code).toBe('failed-operation-without-state');expect(r.events).toEqual([]);
 });
 test('unowned state and protected delete refuse before compute',async()=>{
  const r=new Runtime();r.states['demo/compute/shared.tfstate']={params:{provider:'vultr'}};expect(await r.run()).toEqual({status:'error'});expect(r.events).toEqual([]);
@@ -170,4 +170,42 @@ test('real managed cleanup accepts missing or partial pairs during orchestration
    expect(existsSync(join(home,'.ssh/demo'))).toBe(false);expect(existsSync(join(home,'.ssh/demo.pub'))).toBe(false);
   }finally{rmSync(home,{recursive:true,force:true});}
  }
+});
+
+
+test('missing tools stop before backend and ownership',async()=>{
+ const r=new Runtime(),deps:Map=r.deps();delete deps.runtime_preflight;
+ const never=()=>{throw Error('must not touch backend or ownership');};
+ const result=await orchestrate(opts,[{count:1}],{},{PATH:'/nonexistent-colors-test-path'},{...deps,bootstrap_backend:never,coordinator:never});
+ expect(result.diagnostics[0].code).toBe('missing-tool');
+ expect(result.diagnostics[0].tools).toEqual(['aws','ssh-keygen','tofu']);
+ expect(result.errors[0]).toContain('load the deployment environment');expect(r.writes).toBe(0);
+});
+test('node diagnostics survive fanout while siblings settle',async()=>{
+ const r=new Runtime(),deps=r.deps();let reads=0;
+ const result=await orchestrate(opts,[{count:2}],{},{},{...deps,state_presence:async(o:Map,key:string)=>{
+  if(key.endsWith('/nodes/0.tfstate')&&++reads===2)return {status:'error'};
+  return deps.state_presence(o,key);
+ }});
+ expect(result.diagnostics[0].code).toBe('state-unreadable');expect(r.events).toContain('ready:1');
+ expect(r.events).not.toContain('create:0');expect(r.observed.document.lock.state).toBe('idle');
+});
+test('state diagnostics preserve guards and redact unexpected failures',async()=>{
+ for(const [presence,code] of [[{status:'error',secret:'PRIVATE'},'state-unreadable'],[{status:'absent'},'recorded-state-missing']] as [Map,string][]){
+  const r=new Runtime();expect((await r.run()).status).toBe('ready');r.events=[];
+  const result=await orchestrate(opts,[{count:2}],{},{},{...r.deps(),state_presence:()=>presence});
+  expect(result.diagnostics[0].code).toBe(code);expect(JSON.stringify(result)).not.toContain('PRIVATE');
+  expect(r.events).toEqual([]);expect(r.observed.document.lock.state).toBe('idle');
+ }
+ const r=new Runtime();expect(await orchestrate(opts,[{count:1}],{},{},{...r.deps(),bootstrap_backend:()=>{throw Error('PRIVATE provider output');}})).toEqual({status:'error'});
+});
+test('tool lookup requires executable files in supplied PATH',async()=>{
+ const {mkdtempSync,mkdirSync,rmdirSync,writeFileSync,chmodSync,rmSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+ const {missingTools}=await import('../src/diagnostics.ts');const dir=mkdtempSync(join(tmpdir(),'compute-tools-'));
+ const input={...opts,'provider-backend':'local','vultr-ssh-keys':['external']};
+ try{expect(missingTools(input,{})).toEqual(['tofu']);const tool=join(dir,'tofu');mkdirSync(tool);
+  expect(missingTools(input,{PATH:dir})).toEqual(['tofu']);rmdirSync(tool);writeFileSync(tool,'#!/bin/sh\nexit 0\n',{mode:0o600});
+  expect(missingTools(input,{PATH:dir})).toEqual(['tofu']);chmodSync(tool,0o700);expect(missingTools(input,{PATH:dir})).toEqual([]);
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });

@@ -52,7 +52,7 @@ class Runtime:
         self.events.append('ready:' + node)
         return {'status': 'ready', 'params': params, 'outputs': outputs}
     def dependencies(self):
-        return {'coordinator': self.coordinator, 'prepare_keypair': self.prepare, 'cleanup_keypair': self.cleanup,
+        return {'runtime_preflight': lambda *_: [], 'coordinator': self.coordinator, 'prepare_keypair': self.prepare, 'cleanup_keypair': self.cleanup,
                 'validate_deployment': lambda *_: True,
                 'compute_credential_errors': lambda *_: [],
                 'registration_preflight': lambda *args, **kwargs: {'status': 'checked'}, 'deployment_requests': self.assemble, 'provider_request': self.render,
@@ -91,7 +91,7 @@ async def test_failed_siblings_settle_and_absent_failed_creation_refuses_retry()
     assert doc['nodes']['0']['phase'] == 'failed'
     runtime.events.clear()
     runtime.fail.clear()
-    assert await runtime.run() == {'status': 'error'}
+    assert (await runtime.run())['diagnostics'][0]['code'] == 'failed-operation-without-state'
     assert 'create:0' not in runtime.events
 
 
@@ -343,4 +343,73 @@ async def test_delete_resumes_after_key_removed_before_retire():
         deps[name] = forbidden
     assert await orchestrate({**OPTS, 'blue/event': 'delete', 'compute-prevent-destroy': False}, [{'count': 1}], {}, {}, deps) == {'status': 'destroyed'}
     assert runtime.store.observed['document']['status'] == 'retired'
+    assert runtime.store.observed['document']['lock']['state'] == 'idle'
+
+
+@pytest.mark.asyncio
+async def test_missing_tools_fail_before_backend_or_ownership(tmp_path):
+    runtime = Runtime()
+    deps = runtime.dependencies()
+    deps.pop('runtime_preflight')
+    def never(*_):
+        raise AssertionError('must not touch backend or ownership')
+    deps.update(bootstrap_backend=never, coordinator=never)
+    result = await orchestrate(OPTS, [{'count': 1}], {}, {'PATH': str(tmp_path)}, deps)
+    assert result['diagnostics'][0]['code'] == 'missing-tool'
+    assert result['diagnostics'][0]['tools'] == ['aws', 'ssh-keygen', 'tofu']
+    assert 'load the deployment environment' in result['errors'][0]
+    assert runtime.store.observed == {'status': 'absent'}
+
+
+@pytest.mark.asyncio
+async def test_state_diagnostics_and_redacted_unexpected_errors():
+    for presence, code in [({'status': 'error', 'secret': 'PRIVATE'}, 'state-unreadable'),
+                           ({'status': 'absent'}, 'recorded-state-missing')]:
+        runtime = Runtime()
+        assert (await runtime.run())['status'] == 'ready'
+        runtime.events.clear()
+        deps = runtime.dependencies()
+        deps['state_presence'] = lambda *_: presence
+        result = await orchestrate(OPTS, [{'count': 2}], {}, {}, deps)
+        assert result['diagnostics'][0]['code'] == code
+        assert 'PRIVATE' not in str(result)
+        assert runtime.events == []
+        assert runtime.store.observed['document']['lock']['state'] == 'idle'
+    runtime = Runtime()
+    def broken(*_):
+        raise ValueError('PRIVATE provider output')
+    result = await orchestrate(OPTS, [{'count': 1}], {}, {}, {**runtime.dependencies(), 'bootstrap_backend': broken})
+    assert result == {'status': 'error'}
+
+
+def test_tool_lookup_requires_executable_file_in_supplied_path(tmp_path):
+    from colors_compute.diagnostics import missing_tools
+    opts = {**OPTS, 'provider-backend': 'local', 'vultr-ssh-keys': ['external']}
+    assert missing_tools(opts, {}) == ['tofu']
+    tool = tmp_path / 'tofu'
+    tool.mkdir()
+    assert missing_tools(opts, {'PATH': str(tmp_path)}) == ['tofu']
+    tool.rmdir()
+    tool.write_text('#!/bin/sh\nexit 0\n')
+    tool.chmod(0o600)
+    assert missing_tools(opts, {'PATH': str(tmp_path)}) == ['tofu']
+    tool.chmod(0o700)
+    assert missing_tools(opts, {'PATH': str(tmp_path)}) == []
+
+
+@pytest.mark.asyncio
+async def test_node_diagnostic_survives_fanout_and_siblings_settle():
+    runtime = Runtime()
+    reads = 0
+    async def presence(opts, key, env):
+        nonlocal reads
+        if key.endswith('/nodes/0.tfstate'):
+            reads += 1
+            if reads == 2:
+                return {'status': 'error'}
+        return await runtime.presence(opts, key, env)
+    result = await orchestrate(OPTS, [{'count': 2}], {}, {}, {**runtime.dependencies(), 'state_presence': presence})
+    assert result['diagnostics'][0]['code'] == 'state-unreadable'
+    assert 'ready:1' in runtime.events
+    assert 'create:0' not in runtime.events
     assert runtime.store.observed['document']['lock']['state'] == 'idle'

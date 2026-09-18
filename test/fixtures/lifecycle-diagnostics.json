@@ -1,0 +1,279 @@
+[
+  {
+    "name": "safe lifecycle diagnostic missing-tool",
+    "op": "lifecycle_diagnostic",
+    "args": [
+      "missing-tool",
+      [
+        "tofu",
+        "aws",
+        "tofu",
+        "PRIVATE"
+      ]
+    ],
+    "expected": {
+      "status": "error",
+      "errors": [
+        "Required infrastructure tools are missing from PATH. Missing: aws, tofu. Next: Install the listed tools or load the deployment environment, then retry."
+      ],
+      "diagnostics": [
+        {
+          "code": "missing-tool",
+          "message": "Required infrastructure tools are missing from PATH.",
+          "hint": "Install the listed tools or load the deployment environment, then retry.",
+          "tools": [
+            "aws",
+            "tofu"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "safe lifecycle diagnostic state-unreadable",
+    "op": "lifecycle_diagnostic",
+    "args": [
+      "state-unreadable",
+      []
+    ],
+    "expected": {
+      "status": "error",
+      "errors": [
+        "Cannot read infrastructure state; absence has not been established. Next: Check backend access and credentials before retrying. Do not remove state or ownership records."
+      ],
+      "diagnostics": [
+        {
+          "code": "state-unreadable",
+          "message": "Cannot read infrastructure state; absence has not been established.",
+          "hint": "Check backend access and credentials before retrying. Do not remove state or ownership records."
+        }
+      ]
+    }
+  },
+  {
+    "name": "safe lifecycle diagnostic failed-operation-without-state",
+    "op": "lifecycle_diagnostic",
+    "args": [
+      "failed-operation-without-state",
+      []
+    ],
+    "expected": {
+      "status": "error",
+      "errors": [
+        "A previous infrastructure operation failed and its state file is missing. Cloud resources may still exist. Next: Inspect provider resources and reconcile the failed operation using the reviewed recovery procedure before retrying."
+      ],
+      "diagnostics": [
+        {
+          "code": "failed-operation-without-state",
+          "message": "A previous infrastructure operation failed and its state file is missing. Cloud resources may still exist.",
+          "hint": "Inspect provider resources and reconcile the failed operation using the reviewed recovery procedure before retrying."
+        }
+      ]
+    }
+  },
+  {
+    "name": "safe lifecycle diagnostic recorded-state-missing",
+    "op": "lifecycle_diagnostic",
+    "args": [
+      "recorded-state-missing",
+      []
+    ],
+    "expected": {
+      "status": "error",
+      "errors": [
+        "The ownership journal records infrastructure whose state file is missing. Next: Inspect provider resources and recover the recorded state before retrying. Do not reset the journal."
+      ],
+      "diagnostics": [
+        {
+          "code": "recorded-state-missing",
+          "message": "The ownership journal records infrastructure whose state file is missing.",
+          "hint": "Inspect provider resources and recover the recorded state before retrying. Do not reset the journal."
+        }
+      ]
+    }
+  },
+  {
+    "name": "r2 runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "r2"
+      }
+    ],
+    "expected": [
+      "aws",
+      "ssh-keygen",
+      "tofu"
+    ]
+  },
+  {
+    "name": "r2 external-key runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "r2",
+        "vultr-ssh-keys": [
+          "external"
+        ]
+      }
+    ],
+    "expected": [
+      "aws",
+      "tofu"
+    ]
+  },
+  {
+    "name": "s3 runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3"
+      }
+    ],
+    "expected": [
+      "aws",
+      "ssh-keygen",
+      "tofu"
+    ]
+  },
+  {
+    "name": "s3 external-key runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "s3",
+        "vultr-ssh-keys": [
+          "external"
+        ]
+      }
+    ],
+    "expected": [
+      "aws",
+      "tofu"
+    ]
+  },
+  {
+    "name": "gcs runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "gcs"
+      }
+    ],
+    "expected": [
+      "gcloud",
+      "ssh-keygen",
+      "tofu"
+    ]
+  },
+  {
+    "name": "gcs external-key runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "gcs",
+        "vultr-ssh-keys": [
+          "external"
+        ]
+      }
+    ],
+    "expected": [
+      "gcloud",
+      "tofu"
+    ]
+  },
+  {
+    "name": "oci runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "oci"
+      }
+    ],
+    "expected": [
+      "oci",
+      "ssh-keygen",
+      "tofu"
+    ]
+  },
+  {
+    "name": "oci external-key runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "oci",
+        "vultr-ssh-keys": [
+          "external"
+        ]
+      }
+    ],
+    "expected": [
+      "oci",
+      "tofu"
+    ]
+  },
+  {
+    "name": "local runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "local"
+      }
+    ],
+    "expected": [
+      "ssh-keygen",
+      "tofu"
+    ]
+  },
+  {
+    "name": "local external-key runtime tools",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "vultr",
+        "provider-backend": "local",
+        "vultr-ssh-keys": [
+          "external"
+        ]
+      }
+    ],
+    "expected": [
+      "tofu"
+    ]
+  },
+  {
+    "name": "OCI compute with local backend requires OCI CLI",
+    "op": "required_tools",
+    "args": [
+      {
+        "profile": "demo",
+        "provider-compute": "oci",
+        "provider-backend": "local"
+      }
+    ],
+    "expected": [
+      "oci",
+      "ssh-keygen",
+      "tofu"
+    ]
+  }
+]

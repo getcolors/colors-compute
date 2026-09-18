@@ -131,8 +131,8 @@
   (let [directory (Files/createTempDirectory "colors-compute-path-test-" (make-array java.nio.file.attribute.FileAttribute 0))
         executable (.resolve directory "tofu")]
     (try
-      (Files/createSymbolicLink executable (.toPath (io/file "/usr/bin/printf"))
-                                (make-array java.nio.file.attribute.FileAttribute 0))
+      (spit (.toFile executable) "#!/bin/sh\nprintf '%s' \"$1\"\n")
+      (.setExecutable (.toFile executable) true true)
       (is (= {:exit 0 :out "exact-path" :err ""}
              (runtime/run-command ["tofu" "exact-path"] "/tmp" {"PATH" (str directory)} 1000)))
       (is (= -1 (:exit (runtime/run-command ["env"] "/tmp" {"PATH" (str directory)} 1000))))
