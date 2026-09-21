@@ -21,7 +21,7 @@ jobs:
       - name: Validate provider examples without credentials or remote state
         env:
           COMPUTE_SCHEMA_PROVIDER: ${{ matrix.provider }}
-        run: python3 "providers/$COMPUTE_SCHEMA_PROVIDER/check.py" --tofu "$(command -v tofu)"
+        run: python3 scripts/node_schema.py --provider "$COMPUTE_SCHEMA_PROVIDER" --tofu "$(command -v tofu)"
   contracts:
     runs-on: ubuntu-latest
     steps:
@@ -44,34 +44,14 @@ jobs:
         working-directory: red
       - run: python3 scripts/red_package.py
       - run: python3 scripts/registry.py
-      - run: python3 scripts/network_reference.py --tofu "$(command -v tofu)"
-      - run: python3 scripts/network_none.py
       - run: python3 scripts/provider_resources.py
       - run: python3 scripts/provider_recipes.py
       - run: python3 scripts/endpoint_resources.py
       - run: python3 scripts/controller_resources.py
-      - run: python3 scripts/managed_resources.py
-      - run: python3 scripts/managed_probe.py
       - run: python3 scripts/compute_options_resources.py
       - run: python3 scripts/compute_options.py --tofu "$(command -v tofu)"
-      - run: python3 scripts/power_resources.py
-      - run: python3 scripts/power_http_probe.py
-      - run: uv run --with oci-cli==3.92.1 python scripts/power_probe.py
       - run: python3 scripts/yandex_static_ip.py
-      - run: python3 scripts/execution_resources.py
       - run: uv run --project blue python scripts/parity.py
-      - name: Check native backend readers against local synthetic state
-        run: |
-          python3 scripts/backend_probe.py --tofu "$(command -v tofu)" --blue-runner
-          python3 scripts/backend_http_probe.py
-      - name: Check native local state and cross-color journal writes
-        run: |
-          python3 scripts/local_backend_probe.py
-          python3 scripts/local_backend_probe.py --default
-      - name: Check conditional journal writes against local HTTPS storage
-        run: |
-          aws --version
-          python3 scripts/journal_http_probe.py
       - run: uv run --directory blue pytest -q
       - run: bb test
         working-directory: green

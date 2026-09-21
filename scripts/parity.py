@@ -16,30 +16,28 @@ def check_output(color, output, cases):
     for case, line in zip(cases, lines):
         actual = json.loads(line)
         if actual != case["expected"]:
-            raise AssertionError(f'{color}: {case["name"]}\nexpected: {case["expected"]}\nactual: {actual}')
+            def differences(a, b, path=""):
+                if type(a) is not type(b): return [f"{path}: expected {a!r}, got {b!r}"]
+                if isinstance(a, dict):
+                    result = [f"{path}: missing {sorted(set(a)-set(b))}, extra {sorted(set(b)-set(a))}"] if set(a) != set(b) else []
+                    for k in sorted(set(a) & set(b)): result.extend(differences(a[k], b[k], path + "/" + k))
+                    return result
+                if isinstance(a, list):
+                    if len(a) != len(b): return [f"{path}: length {len(a)} != {len(b)}"]
+                    return [d for i, (x, y) in enumerate(zip(a, b)) for d in differences(x, y, path + "/" + str(i))]
+                return [] if a == b else [f"{path}: expected {a!r}, got {b!r}"]
+            raise AssertionError(f'{color}: {case["name"]}\n' + "\n".join(differences(case["expected"], actual)[:10]))
 
 
 def main():
-    cases = json.loads((ROOT / "test/fixtures/contracts.json").read_text())
-    cases.extend(json.loads((ROOT / "test/fixtures/lifecycle-diagnostics.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/power.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/coordination.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/managed-journal.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/journal.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/provider-requests.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/lifecycle.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/deployment-requests.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/planning.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/provider-icmp.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/provider-endpoint.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/provider-network-created.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/provider-roles.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/controllers.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/compute-options.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/network-none.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/yandex-static-ip.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/network-reference.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/ssh-aliases.json").read_text()))
+    supported = {"validate", "credential_requirements", "render_template", "backend_plan", "provider_plan", "provider_request", "node_plan", "node_plan_valid"}
+    cases = []
+    for filename in ("contracts", "provider-requests", "provider-icmp", "provider-endpoint",
+                     "provider-network-created", "provider-roles", "compute-options", "network-none",
+                     "yandex-static-ip", "network-reference", "local-backend", "nodes", "node-validation"):
+        path = ROOT / "test/fixtures" / (filename + ".json")
+        if path.exists():
+            cases.extend(c for c in json.loads(path.read_text()) if c["op"] in supported)
     for example in json.loads((ROOT / "test/fixtures/provider-plans.json").read_text()):
         directory = ROOT / "providers" / example["provider"] / "examples"
         cases.append({"name": f'packaged {example["provider"]} {example["stage"]}',
@@ -47,8 +45,6 @@ def main():
                       "args": [example["provider"], example["stage"], json.loads((directory / "inputs.json").read_text())],
                       "expected": {name: json.loads((directory / source).read_text())
                                    for name, source in example["files"].items()}})
-    cases.extend(json.loads((ROOT / "test/fixtures/managed-plans.json").read_text()))
-    cases.extend(json.loads((ROOT / "test/fixtures/local-backend.json").read_text()))
     home = os.environ["HOME"].rstrip("/")
     cases.append({"name": "local directory defaults under home", "op": "backend_plan",
                   "args": [{"provider-backend": "local"}, "demo/compute/shared.tfstate"],

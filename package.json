@@ -1,12 +1,20 @@
 {
   "name": "colors-compute-red",
   "version": "0.1.0",
-  "description": "Shared compute contracts and Colors workflow composition",
+  "description": "Independent compute units with persistent SDK workdirs and remote SSH key resources",
   "type": "module",
   "license": "MIT",
-  "exports": {".": "./red/src/index.ts", "./workflow": "./red/src/workflow.ts"},
-  "files": ["red/src", "red/resources", "providers", "contracts"],
-  "peerDependencies": {"red": "*"},
-  "devDependencies": {"red": "github:getcolors/red#e24217c32ab00ffd29d4767a53c880795f86f977"},
-  "scripts": {"test": "cd red && bun test", "typecheck": "cd red && bun run typecheck"}
+  "exports": {
+    ".": "./red/src/index.ts"
+  },
+  "files": [
+    "red/src",
+    "red/resources",
+    "providers",
+    "contracts"
+  ],
+  "scripts": {
+    "test": "cd red && bun test",
+    "typecheck": "cd red && bun run typecheck"
+  }
 }

@@ -3,63 +3,15 @@
 (let [root (.getParentFile (.getParentFile (.getCanonicalFile (io/file *file*))))]
   (deps/add-deps {:deps {'io.github.getcolors/colors-compute {:local/root (str (io/file root "green"))}}})
   (cp/add-classpath (str (io/file root "green/src/clj") ":" (io/file root "green/src/resources"))))
-(require '[io.github.getcolors.compute-diagnostics :as diagnostics]
-         '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
-         '[io.github.getcolors.compute-power :as power]
-         '[io.github.getcolors.compute-runtime :as runtime]
+(require '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
          '[io.github.getcolors.compute-request :as request]
-         '[io.github.getcolors.compute-deployment-request :as deployment]
-         '[io.github.getcolors.compute-controller :as controller]
-         '[io.github.getcolors.compute-managed :as managed]
-         '[io.github.getcolors.compute-planning :as planning]
-         '[io.github.getcolors.compute-lifecycle :as lifecycle]
-         '[io.github.getcolors.compute-coordination :as coordination]
-         '[io.github.getcolors.compute-journal :as journal])
-(defn read-state-case [opts key environment responses]
-  (let [responses (atom responses)]
-    (runtime/read-state opts key (into {} (map (fn [[k v]] [(name k) v]) environment))
-      (fn [_ _ _ _]
-        (let [response (first @responses)]
-          (swap! responses next)
-          response)))))
-(defn journal-case
-  ([opts environment response body] (journal-case opts environment response body nil))
-  ([opts environment response body intent]
-   (let [env (into {} (map (fn [[k v]] [(name k) v]) environment))
-         runner (fn [argv _ _ _]
-                  (when (= "get-object" (nth argv 2))
-                    (if (map? body)
-                      (with-open [stream (io/output-stream (nth argv 7))]
-                        (.write stream (.decode (java.util.Base64/getDecoder) ^String (:bytes_base64 body))))
-                      (spit (nth argv 7) body)))
-                  response)]
-     (if (nil? intent) (journal/journal-get opts env runner)
-         (journal/journal-put opts intent env runner)))))
-(defn provider-power-case [opts action id env responses]
-  (let [pending (atom responses) take-result (fn [& _] (let [result (first @pending)] (swap! pending subvec 1) result))]
-    (power/provider-power opts action id (into {} (map (fn [[k v]] [(name k) v]) env)) {:http take-result :runner take-result :sleep (fn [_] nil)})))
+         '[io.github.getcolors.compute-node :as node])
 (def operations
-  {"required_tools" diagnostics/required-tools
-   "lifecycle_diagnostic" (fn [code tools] (diagnostics/result (diagnostics/failure code tools)))
-   "provider_power_case" provider-power-case
-   "managed_application_artifacts" managed/managed-application-artifacts
-   "managed_application_settings" managed/managed-application-settings
-   "plan_managed_kubernetes" managed/plan-managed-kubernetes
-   "controller_artifact" controller/controller-artifact
-   "deployment_requests" deployment/deployment-requests
-   "plan_deployment" planning/plan-deployment
-   "lifecycle" lifecycle/lifecycle
-   "lifecycle_repair" lifecycle/repair
+  {"node_plan_valid" (fn [opts request] (try (node/node-plan opts request) true (catch Exception _ false)))
+   "node_plan" node/node-plan
    "provider_request" request/provider-request
-   "journal_case" journal-case
-   "coordination" coordination/coordination
-   "read_state_case" read-state-case
    "validate" compute/validate
    "credential_requirements" compute/credential-requirements
-   "state_keys" compute/state-keys
-   "expand" compute/expand
-   "collect" compute/collect
-   "state_decision" compute/state-decision
    "render_template" compute/render-template
    "backend_plan" compute/backend-plan
    "provider_plan" compute/provider-plan})
@@ -67,7 +19,6 @@
   (println (json/generate-string
             (try
               (let [{:keys [op args]} (json/parse-string line true)]
-                (if-let [operation (get operations op)]
-                  (apply operation args)
-                  (throw (ex-info (str "unknown operation: " op) {}))))
+                (if-let [operation (get operations op)] (apply operation args)
+                    (throw (ex-info (str "unknown operation: " op) {}))))
               (catch Exception error {:error (.getMessage error)})))))

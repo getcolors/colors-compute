@@ -1,72 +1,45 @@
 #!/usr/bin/env python3
-"""Install both Red package layouts and verify they use the consumer's SDK."""
-
+"""Verify both distribution layouts expose the single-unit API without an SDK copy."""
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
-
-
 ROOT = Path(__file__).resolve().parents[1]
-BUN = os.environ.get("BUN", "bun")
+BUN = os.environ.get('BUN', 'bun')
 
 
 def run(*args, cwd):
-    result = subprocess.run(
-        [BUN, *map(str, args)], cwd=cwd, capture_output=True, text=True, timeout=60
-    )
+    result = subprocess.run([BUN, *map(str, args)], cwd=cwd, capture_output=True, text=True, timeout=120)
     if result.returncode:
         raise RuntimeError(result.stdout + result.stderr)
     return result.stdout
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix="colors-red-package-") as directory:
-        temp = Path(directory)
-        # Use the SDK installed by the frozen development lockfile. Keep the
-        # package resolver away from shared caches and registry metadata.
-        sdk = temp / "sdk.tgz"
-        run("pm", "pack", "--ignore-scripts", "--filename", sdk,
-            cwd=ROOT / "red/node_modules/red")
-        zod = temp / "zod.tgz"
-        run("pm", "pack", "--ignore-scripts", "--filename", zod,
-            cwd=ROOT / "red/node_modules/zod")
-        for name, package in [("root", ROOT), ("red", ROOT / "red")]:
-            manifest = json.loads((package / "package.json").read_text())
-            assert "red" not in manifest.get("dependencies", {}), name
-            assert manifest["peerDependencies"]["red"] == "*", name
-            archive = temp / f"{name}.tgz"
-            run("pm", "pack", "--ignore-scripts", "--filename", archive, cwd=package)
-            consumer = temp / name
+    with tempfile.TemporaryDirectory(prefix='compute-package-') as temporary:
+        base = Path(temporary)
+        for name, package in [('root', ROOT), ('red', ROOT / 'red')]:
+            manifest = json.loads((package / 'package.json').read_text())
+            assert 'red' not in manifest.get('dependencies', {})
+            assert 'red' not in manifest.get('peerDependencies', {})
+            archive = base / (name + '.tgz')
+            run('pm', 'pack', '--ignore-scripts', '--filename', archive, cwd=package)
+            consumer = base / name
             consumer.mkdir()
-            (consumer / "package.json").write_text(json.dumps({
-                "name": "sdk-consumer", "private": True, "type": "module",
-                "dependencies": {
-                    "colors-compute-red": str(archive),
-                    "red": str(sdk),
-                    "zod": str(zod),
-                },
-                "overrides": {"zod": str(zod)},
-            }))
-            run("install", "--ignore-scripts", "--cache-dir", temp / "cache", cwd=consumer)
-            (consumer / "check.ts").write_text("""
-import { strict as assert } from 'node:assert';
-import { dirname } from 'node:path';
-import { realpathSync } from 'node:fs';
-const consumer = Bun.resolveSync('red', process.cwd());
-const library = Bun.resolveSync('colors-compute-red', process.cwd());
-const librarySdk = Bun.resolveSync('red', dirname(library));
-assert.equal(realpathSync(librarySdk), realpathSync(consumer));
-assert.equal(await import(librarySdk), await import(consumer));
-const compute = await import('colors-compute-red');
-assert.equal(typeof compute.orchestrate, 'function');
-assert.equal(typeof compute.clusterWorkflow, 'function');
-""")
-            run("check.ts", cwd=consumer)
-            assert not (consumer / "node_modules/colors-compute-red/node_modules/red").exists(), name
-            print(f"{name} package uses the consumer's Red SDK without a nested copy")
+            (consumer / 'package.json').write_text(json.dumps({'name': 'compute-consumer', 'private': True,
+                'type': 'module', 'dependencies': {'colors-compute-red': str(archive)}}))
+            run('install', '--ignore-scripts', cwd=consumer)
+            (consumer / 'check.ts').write_text('''
+import {strict as assert} from 'node:assert';
+import * as compute from 'colors-compute-red';
+for (const name of ['node_plan','build_node','compute_node']) assert.equal(typeof compute[name], 'function');
+for (const name of ['orchestrate','clusterWorkflow','coordination','journalGet','journalPut','Coordinator']) assert.equal(name in compute, false);
+''')
+            run('check.ts', cwd=consumer)
+            assert not (consumer / 'node_modules/red').exists()
+            print(name + ': standalone single-unit API passed')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

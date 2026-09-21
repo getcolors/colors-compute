@@ -1,14 +1,10 @@
-"""Private, read-only OpenTofu backend sessions. Never infer state absence."""
+"""Private subprocess execution and strict OpenTofu state decoding."""
 import asyncio
 import json
 import os
 import signal
-from pathlib import Path
-import tempfile
 from typing import NamedTuple
 
-from .contract import _missing
-from .rendering import backend_plan
 
 
 class ProcessResult(NamedTuple):
@@ -20,7 +16,7 @@ class ProcessResult(NamedTuple):
 async def _run(command, cwd, environment, timeout_ms):
     process = await asyncio.create_subprocess_exec(
         *command, cwd=cwd, env=environment, start_new_session=True, stdin=asyncio.subprocess.DEVNULL,
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, umask=0o077,
     )
     try:
         out, err = await asyncio.wait_for(process.communicate(), timeout_ms / 1000)
@@ -69,60 +65,3 @@ def _outputs(output):
             raise ValueError('invalid outputs')
         result[name] = entry['value']
     return result
-
-
-async def _read_state(opts, state_key, environment=None, runner=None, include_outputs=False, decoder=None):
-    """Return present params or a generic error; callers must not log params.
-
-    Runner receives (argv, cwd, exact_environment, timeout_ms). No mutations are
-    available. A failed read cannot authorize creation or deletion.
-    """
-    try:
-        source = dict(os.environ if environment is None else environment)
-        plan = backend_plan(opts, state_key)
-        if opts.get('provider-backend') == 'local':
-            from .local import presence
-            if presence(plan['config']['terraform']['backend']['local']['path']) != {'status': 'present'}:
-                return {'status': 'error'}
-        credentials = {}
-        for variable, setting in plan["credential_bindings"].items():
-            value = source.get(variable)
-            if not isinstance(value, str) or _missing(value):
-                return {"status": "error"}
-            credentials[setting] = value
-        child_env = {key: value for key, value in source.items()
-                     if not key.startswith(("TF_", "TOFU_", "COLORS_PAR_"))}
-        if opts.get("provider-backend") in ("r2", "oci"):
-            child_env.pop("AWS_PROFILE", None)
-            child_env.pop("AWS_DEFAULT_PROFILE", None)
-        execute = runner or _run
-        with tempfile.TemporaryDirectory(prefix="colors-compute-") as directory:
-            os.chmod(directory, 0o700)
-            path = Path(directory)
-            _write_private(path / "backend.tf.json", plan["config"])
-            credential_file = path / "credentials.tfbackend.json"
-            _write_private(credential_file, credentials)
-            child_env.update(TF_IN_AUTOMATION="1", TF_INPUT="0", TF_WORKSPACE="default",
-                             TF_DATA_DIR=str(path / ".terraform"))
-            init = await execute(["tofu", "init", "-input=false", "-no-color", "-reconfigure",
-                                  f"-backend-config={credential_file}"], directory, child_env, 120000)
-            if init.exit != 0:
-                return {"status": "error"}
-            pull = await execute(["tofu", "state", "pull"], directory, child_env, 120000)
-            if pull.exit != 0:
-                return {"status": "error"}
-            params = _params(pull.out)
-            outputs = (decoder(pull.out) if decoder else _outputs(pull.out)) if include_outputs else None
-            encoded = json.dumps(outputs if include_outputs else params, ensure_ascii=False)
-            if any(secret in encoded or json.dumps(secret, ensure_ascii=False)[1:-1] in encoded
-                   for secret in credentials.values()):
-                return {"status": "error"}
-            empty = json.loads(pull.out)['resources'] == [] and outputs == {} if include_outputs else False
-            return {"status": "present", "params": params, **({"outputs": outputs, "state_empty": empty} if include_outputs else {})}
-    except Exception:
-        # Diagnostics can contain backend secrets and raw state. Never forward.
-        return {"status": "error"}
-
-
-async def read_state(opts, state_key, environment=None, runner=None, include_outputs=False):
-    return await _read_state(opts, state_key, environment, runner, include_outputs)

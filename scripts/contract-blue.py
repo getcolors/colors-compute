@@ -1,52 +1,22 @@
 #!/usr/bin/env python3
-"""JSONL driver for the language-independent contract suite."""
+"""JSONL driver for the supported single-unit and rendering contracts."""
 import json
-import asyncio
-import base64
 import sys
 from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "blue/src"))
-from colors_compute import deployment_requests, plan_deployment, provider_request, coordination, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate
-
-from colors_compute.managed import plan_managed_kubernetes, managed_application_settings, managed_application_artifacts
-from colors_compute.controller import controller_artifact
-from colors_compute.backend import read_state, ProcessResult
-from colors_compute.journal import journal_get, journal_put
-from colors_compute.lifecycle import lifecycle_repair
-from colors_compute.power import provider_power
-from colors_compute.diagnostics import LifecycleDiagnostic, required_tools
-
-def lifecycle_diagnostic(code, tools):
-    return LifecycleDiagnostic(code, tools).result()
-
-def read_state_case(opts, key, environment, responses):
-    pending = iter(responses)
-    async def runner(*_):
-        result = next(pending)
-        return ProcessResult(result["exit"], result.get("out", ""), result.get("err", ""))
-    return asyncio.run(read_state(opts, key, environment, runner))
-
-def journal_case(opts, environment, response, body, intent=None):
-    async def runner(command, *_):
-        if command[2] == "get-object":
-            Path(command[7]).write_bytes(base64.b64decode(body["bytes_base64"]) if isinstance(body, dict) else body.encode("utf-8"))
-        return ProcessResult(response["exit"], response.get("out", ""), response.get("err", ""))
-    return asyncio.run(journal_get(opts, environment, runner) if intent is None
-                       else journal_put(opts, intent, environment, runner))
-
-def provider_power_case(opts, action, identity, env, responses):
-    pending = iter(responses)
-    return asyncio.run(provider_power(opts, action, identity, env, {
-        'http': lambda *_: next(pending), 'runner': lambda *_: next(pending), 'sleep': lambda _: None}))
-
-operations = {f.__name__: f for f in (
-    required_tools, lifecycle_diagnostic, lifecycle_repair, provider_power_case, managed_application_artifacts, managed_application_settings, plan_managed_kubernetes, controller_artifact, deployment_requests, plan_deployment, provider_request, journal_case, coordination, read_state_case, backend_plan, collect, credential_requirements, expand, provider_plan, render_template, state_decision, state_keys, validate,
-)}
+from colors_compute import node_plan, provider_request, backend_plan, credential_requirements, provider_plan, render_template, validate
+operations = {f.__name__: f for f in (node_plan, provider_request, backend_plan, credential_requirements, provider_plan, render_template, validate)}
+def node_plan_valid(opts, request):
+    try:
+        node_plan(opts, request)
+        return True
+    except Exception:
+        return False
+operations["node_plan_valid"] = node_plan_valid
 for line in sys.stdin:
     try:
         case = json.loads(line)
         result = operations[case["op"]](*case["args"])
-    except Exception as exc:
-        result = {"error": str(exc)}
+    except Exception as error:
+        result = {"error": str(error)}
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))

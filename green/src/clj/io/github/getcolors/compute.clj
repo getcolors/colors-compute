@@ -68,52 +68,6 @@
                :when (or (not (string? (get environment variable))) (missing? (get environment variable)))]
            (str "required credential is not set: " variable)))))
 
-(defn state-keys [profile node-ids]
-  (when-not (safe? profile) (fail ":profile must be a safe identifier"))
-  {:shared (str profile "/compute/shared.tfstate")
-   :nodes (reduce (fn [nodes id]
-                    (when-not (safe? id) (fail (str "invalid node_id: " (label id))))
-                    (when (contains? nodes id) (fail (str "duplicate node_id: " id)))
-                    (assoc nodes id (str profile "/compute/nodes/" id ".tfstate"))) {} node-ids)})
-
-(defn expand [topology]
-  (when (empty? topology) (fail "topology must declare at least one role"))
-  (:nodes
-   (reduce (fn [{:keys [roles nodes]} declaration]
-             (let [role (:role declaration) count (get declaration :count 1)]
-               (when-not (or (nil? role) (and (string? role) (re-matches #"[a-z][a-z0-9]*(-[a-z0-9]+)*" role)))
-                 (fail "invalid role"))
-               (when (contains? roles role) (fail "duplicate role"))
-               (when (and (nil? role) (> (clojure.core/count topology) 1)) (fail "a null role must be the only role"))
-               (when-not (and (integer? count) (pos? count)) (fail "count must be a positive integer"))
-               (let [new-nodes (mapv (fn [index] {:node_id (str (when role (str role "-")) index) :role role :index index}) (range count))]
-                 (state-keys "validation" (map :node_id new-nodes))
-                 {:roles (conj roles role) :nodes (into nodes new-nodes)})))
-           {:roles #{} :nodes []} topology)))
-
-(defn collect [requests results entry-node-id]
-  (when (empty? requests) (fail "no nodes requested"))
-  (let [requested (reduce (fn [ids request]
-                            (let [id (:node_id request)]
-                              (when (contains? ids id) (fail (str "duplicate requested node: " (label id))))
-                              (conj ids id))) #{} requests)]
-    (when-not (contains? requested entry-node-id) (fail (str "unknown entry node: " (label entry-node-id))))
-    (let [by-id (reduce (fn [nodes result]
-                         (let [id (:node_id result)]
-                           (when-not (contains? requested id) (fail (str "undeclared node: " (label id))))
-                           (when (contains? nodes id) (fail (str "duplicate node: " (label id))))
-                           (assoc nodes id result))) {} results)
-          provider (:provider (get by-id (:node_id (first requests))))
-          nodes (mapv (fn [request]
-                        (let [id (:node_id request) result (get by-id id)]
-                          (when-not result (fail (str "missing node: " (label id))))
-                          (doseq [field (cond-> [:provider :name :ip :user :sudoer] (true? (:private request)) (conj :vpc_ip))]
-                            (when-not (and (string? (get result field)) (not (str/blank? (get result field))))
-                              (fail (str "incomplete node " (label id) ": " (name field)))))
-                          (when-not (and (= (:provider result) provider) (= (:provider result) (or (:provider request) provider))) (fail (str "provider mismatch: " (label id))))
-                          (assoc result :role (:role request) :index (:index request)))) requests)]
-      {:provider provider :entry_node_id entry-node-id :nodes nodes})))
-
 (defn state-decision [read selected]
   (case (:status read)
     "absent" {:action "create"}
@@ -194,9 +148,6 @@
                      (:backend-config backend)))
        :environment {}})))
 
-(defn check-deployment-drift [& args]
-  (apply (requiring-resolve 'io.github.getcolors.compute-drift/check-deployment-drift) args))
-
 (defn controller-artifact [& args]
   (apply (requiring-resolve 'io.github.getcolors.compute-controller/controller-artifact) args))
 
@@ -205,10 +156,3 @@
     (if (= "gcs" (:provider-backend opts))
       (assoc (get-in plan [:config :terraform :backend :gcs]) :region (:gcs-region opts))
       (get-in plan [:config :terraform :backend (if (= "local" (:provider-backend opts)) :local :s3)]))))
-
-(defn backend-identity [opts]
-  (let [settings (backend-settings opts (str (:profile opts) "/compute/coordination.json"))]
-    (if (= "local" (:provider-backend opts))
-      {:kind "local" :path (local-state-directory opts)}
-      (cond-> {:kind (:provider-backend opts) :bucket (:bucket settings) :region (:region settings)}
-        (contains? #{"r2" "oci"} (:provider-backend opts)) (assoc :endpoint (get-in settings [:endpoints :s3]))))))

@@ -16,25 +16,6 @@
   (is (= [":s3-bucket is required" ":vultr-plan is required"]
          (c/validate {:provider-compute "vultr" :provider-backend "s3" :profile "example"
                       :vultr-plan "replace_ME" :vultr-region "ams" :vultr-os-id 1 :s3-region "eu"}))))
-(deftest topology-and-state-identity
-  (is (= (c/expand [{:role "broker"}]) (take 1 (c/expand [{:role "broker" :count 3}]))))
-  (is (= {:shared "demo/compute/shared.tfstate" :nodes {"0" "demo/compute/nodes/0.tfstate"}}
-         (c/state-keys "demo" ["0"])))
-  (doseq [count [true 0 -1 1.5 nil]]
-    (is (thrown-with-msg? Exception #"count must be a positive integer" (c/expand [{:count count}]))))
-  (is (thrown-with-msg? Exception #"invalid role" (c/expand [{:role "../bad"}]))))
-(deftest collect-complete-ordered-inventory
-  (let [requests (c/expand [{:role "broker" :count 2}])
-        other (assoc node :node_id "broker-1" :ip "192.0.2.2")
-        joined (c/collect requests [other node] "broker-0")]
-    (is (= ["broker-0" "broker-1"] (mapv :node_id (:nodes joined))))
-    (is (= {:zone "a"} (-> joined :nodes first :metadata)))
-    (is (= "broker" (-> joined :nodes first :role)))
-    (is (thrown-with-msg? Exception #"missing node: broker-1" (c/collect requests [node] "broker-0")))
-    (is (thrown-with-msg? Exception #"duplicate node: broker-0" (c/collect requests [node node] "broker-0")))
-    (is (thrown-with-msg? Exception #"provider mismatch: broker-1" (c/collect requests [node (assoc other :provider "vultr")] "broker-0")))
-    (is (thrown-with-msg? Exception #"incomplete node broker-0: vpc_ip"
-                          (c/collect [(assoc (first requests) :private true)] [node] "broker-0")))))
 (deftest uncertain-state-never-authorizes-mutation
   (is (= {:action "create"} (c/state-decision {:status "absent"} "aws")))
   (is (= {:action "reuse"} (c/state-decision {:status "present" :params {:provider "aws"}} "aws")))
@@ -42,15 +23,6 @@
   (is (thrown-with-msg? Exception #"legacy state requires migration" (c/state-decision {:status "present"} "aws"))))
 (deftest packaged-registry-does-not-drift
   (is (= c/registry (json/parse-string (slurp (io/file "../contracts/providers.json")) true))))
-
-(deftest malformed-state-and-mixed-provider-refusal
-  (doseq [provider [17 true [] {} " " "REPLACE_ME"]]
-    (is (thrown-with-msg? Exception #"legacy state requires migration"
-                          (c/state-decision {:status "present" :params {:provider provider}} "aws"))))
-  (is (thrown-with-msg? Exception #"invalid node_id: null" (c/state-keys "demo" [nil])))
-  (let [requests [{:node_id "broker-0" :provider "aws"} {:node_id "broker-1" :provider "vultr"}]]
-    (is (thrown-with-msg? Exception #"provider mismatch: broker-1"
-                          (c/collect requests [node (assoc node :node_id "broker-1" :provider "vultr")] "broker-0")))))
 
 (deftest structured-template-preserves-json-types
   (let [template {:count "{{count}}" :enabled "{{enabled}}" :empty "{{empty}}"

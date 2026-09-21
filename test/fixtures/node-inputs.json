@@ -1,0 +1,1024 @@
+[
+  {
+    "name": "aws independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "azure independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "azure-boot-disk-size-gb": 32,
+        "azure-image-offer": "ubuntu-24_04-lts",
+        "azure-image-publisher": "Canonical",
+        "azure-image-sku": "server",
+        "azure-image-version": "latest",
+        "azure-location": "westeurope",
+        "azure-resource-group": "example-compute",
+        "azure-subscription-id": "00000000-0000-0000-0000-000000000001",
+        "azure-vm-size": "Standard_B2s",
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "azure",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "digitalocean independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "production",
+        "provider-compute": "digitalocean",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "google independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "e2-medium",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-compute": "google",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "hcloud independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "production",
+        "provider-compute": "hcloud",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": false
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "oci independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "oci-availability-domain": "example:EU-FRANKFURT-1-AD-1",
+        "oci-boot-volume-size-in-gbs": 50,
+        "oci-boot-volume-vpus-per-gb": 10,
+        "oci-compartment-id": "ocid1.compartment.oc1..example",
+        "oci-config-file-profile": "DEFAULT",
+        "oci-image-id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "oci-memory-in-gbs": 6,
+        "oci-ocpus": 1,
+        "oci-shape": "VM.Standard.A1.Flex",
+        "oci-subnet-id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "oci-uid": "1001",
+        "profile": "production",
+        "provider-compute": "oci",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": false
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "vultr independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "yandex independent node",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "digitalocean r2 state and remote keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "production",
+        "provider-compute": "digitalocean",
+        "provider-backend": "r2",
+        "s3-prefix": "infrastructure",
+        "r2-bucket": "compute-fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "digitalocean oci state and remote keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "production",
+        "provider-compute": "digitalocean",
+        "provider-backend": "oci",
+        "s3-prefix": "infrastructure",
+        "oci-bucket": "compute-fixture",
+        "oci-region": "eu-frankfurt-1",
+        "oci-namespace": "fixture"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "digitalocean local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "production",
+        "provider-compute": "digitalocean",
+        "provider-backend": "local",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "digitalocean gcs state and remote keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "production",
+        "provider-compute": "digitalocean",
+        "provider-backend": "gcs",
+        "s3-prefix": "infrastructure",
+        "ssh-s3-bucket": "key-fixture",
+        "ssh-s3-region": "eu-west-1",
+        "gcs-bucket": "state-fixture",
+        "gcs-region": "europe-west1",
+        "google-project": "fixture-project"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "aws local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "local"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "azure local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "azure-boot-disk-size-gb": 32,
+        "azure-image-offer": "ubuntu-24_04-lts",
+        "azure-image-publisher": "Canonical",
+        "azure-image-sku": "server",
+        "azure-image-version": "latest",
+        "azure-location": "westeurope",
+        "azure-resource-group": "example-compute",
+        "azure-subscription-id": "00000000-0000-0000-0000-000000000001",
+        "azure-vm-size": "Standard_B2s",
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "azure",
+        "provider-backend": "local"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "google local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "e2-medium",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-compute": "google",
+        "provider-backend": "local"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "hcloud local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "production",
+        "provider-compute": "hcloud",
+        "provider-backend": "local"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            }
+          ],
+          "private_filter": false
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "oci local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "oci-availability-domain": "example:EU-FRANKFURT-1-AD-1",
+        "oci-boot-volume-size-in-gbs": 50,
+        "oci-boot-volume-vpus-per-gb": 10,
+        "oci-compartment-id": "ocid1.compartment.oc1..example",
+        "oci-config-file-profile": "DEFAULT",
+        "oci-image-id": "ocid1.image.oc1.eu-frankfurt-1.example",
+        "oci-memory-in-gbs": 6,
+        "oci-ocpus": 1,
+        "oci-shape": "VM.Standard.A1.Flex",
+        "oci-subnet-id": "ocid1.subnet.oc1.eu-frankfurt-1.example",
+        "oci-uid": "1001",
+        "profile": "production",
+        "provider-compute": "oci",
+        "provider-backend": "local"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": false
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "discovered",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "vultr local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "vultr",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr",
+        "provider-backend": "local"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  },
+  {
+    "name": "yandex local state and local keys",
+    "op": "node_plan",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "yandex",
+        "yandex-allow-stopping-for-update": false,
+        "yandex-cloud-id": "b1g00000000000000000",
+        "yandex-core-fraction": 100,
+        "yandex-cores": 2,
+        "yandex-disk-size-gb": 20,
+        "yandex-folder-id": "b1g00000000000000001",
+        "yandex-image-id": "fd800000000000000000",
+        "yandex-memory-gb": 4,
+        "yandex-platform-id": "standard-v3",
+        "yandex-zone": "ru-central1-a",
+        "provider-backend": "local"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ]
+  }
+]

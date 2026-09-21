@@ -1,0 +1,1496 @@
+[
+  {
+    "name": "reject request node_id '../escape'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "../escape",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request node_id ''",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request state_filename '../x.tfstate'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "../x.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request state_filename 'x/y.tfstate'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "x/y.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request state_filename 'x.tfstate.lock'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "x.tfstate.lock",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request workdir 'relative'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "relative",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request workdir '/sdk/../else'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk/../else",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request workdir '/sdk//node'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk//node",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request workdir '/sdk/'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk/",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject request workdir '/sdk\\x00x'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk\u0000x",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option profile '../other'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "../other",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option s3-prefix '/prefix'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "/prefix"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option s3-prefix 'prefix/'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "prefix/"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option s3-prefix 'a//b'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "a//b"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option s3-prefix 'a/../b'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "a/../b"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option s3-prefix None",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": null
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option s3-prefix 42",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": 42
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option aws-name '${bad}'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure",
+        "aws-name": "${bad}"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option ssh-private-key-path '/tmp/key'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure",
+        "ssh-private-key-path": "/tmp/key"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option aws-ssh-authorized-keys '/tmp/key'",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure",
+        "aws-ssh-authorized-keys": "/tmp/key"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject option compute-role-settings {'db': {}}",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure",
+        "compute-role-settings": {
+          "db": {}
+        }
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject missing security",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject missing workdir",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject missing node_id",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject missing state_filename",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "reject topology request",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "roles": {
+          "db": 1
+        }
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "accept SDK root directory",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "production",
+        "provider-compute": "aws",
+        "provider-backend": "s3",
+        "s3-bucket": "compute-fixture",
+        "s3-region": "eu-west-1",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "node_id": "app-0",
+        "state_filename": "app-0.tfstate",
+        "workdir": "/",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        }
+      }
+    ],
+    "expected": true
+  }
+]

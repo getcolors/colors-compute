@@ -1,3 +1,38 @@
+# Migration to independent compute units
+
+The single-unit API is a breaking replacement for the former journal-owned
+shared/per-node deployment API. Updating a package pin does not migrate state.
+No automatic migration or resource adoption is performed.
+
+1. Stop all old and new writers for the deployment. Preserve the old package pin,
+   templates, keys, journals, and every state version until migration is verified.
+2. Inventory resources in old shared and node states and compare them with provider
+   resources. Assign each owned resource to exactly one destination unit. Shared
+   networks or keys must not be duplicated into multiple states: preserve them
+   under a separately managed owner and pass references, or create new isolated
+   infrastructure and migrate applications.
+3. Choose explicit profile/node identifiers, SDK workdir subdirectories, and
+   distinct destination state filenames. Build the new roots without apply.
+4. Review exact old-to-new resource addresses, provider configuration, and key
+   ownership. Existing workstation keys must not be silently adopted. Provisioning
+   a new unit with new remote keys and migrating applications is generally simpler
+   than transferring an old generated key into the new TLS/object resource model.
+5. Perform any state move/import as a separately reviewed operator action. Never
+   copy ownership of one cloud resource into two live states. Check the resulting
+   plans for unexpected creation, deletion, or replacement before applying.
+6. Validate the destination and complete caller-owned application cutover. Destroy
+   the source using its original owner/configuration. Retain old records until
+   destruction and transfer are complete.
+
+For AWS-to-OCI migration, use distinct units and state keys. Resource identities
+cannot be transferred between providers by changing `provider-compute`.
+
+The historical AutoMQ inventory utility below targets the former shared/node
+layout. It remains read-only and is retained for inventory of old deployments;
+its destination mapping is NOT the new single-unit migration plan.
+
+---
+
 # AutoMQ state migration review
 
 `automq_plan.py` is a read-only inventory and address-mapping tool for raw
@@ -34,7 +69,7 @@ The caller must compare this inventory with desired and historical topology.
 
 ## Proposed canonical resource addresses
 
-State keys follow [contract version 1](../contracts/README.md). These destination
+State keys follow the historical version-1 shared/node contract. These destination
 addresses define the initial migration proposal and must be checked against the
 actual library adapter templates before any transfer. Changing this table and
 the planner is a versioned migration change.

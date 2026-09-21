@@ -1,8 +1,3 @@
-import {localPresence} from './local.ts';
-import {chmodSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {backend_plan} from './rendering.ts';
 export interface BackendCommandResult {exit: number; out: string; err: string}
 export type BackendRunner = (args: string[], options: {cwd: string; env: Record<string, string>; timeoutMs: number}) => Promise<BackendCommandResult>;
 export type StateRead = {status: 'present'; params: Record<string, unknown>; outputs?:Record<string,unknown>; state_empty?:boolean} | {status: 'error'};
@@ -41,61 +36,3 @@ export function stateOutputs(output:string):Record<string,unknown> {
     return [name,entry.value];
   }));
 }
-
-/** Read an existing remote state using an isolated, protected backend context.
- * This operation never interprets failure as absence and never mutates compute.
- */
-export async function readStateDecoded(
-  opts: Record<string, any>,
-  stateKey: string,
-  environment: Record<string, string | undefined> = process.env,
-  runner: BackendRunner = executeBackendCommand,
-  includeOutputs = false,
-  decoder?: (output:string)=>Record<string,unknown>,
-): Promise<StateRead> {
-  let directory: string | undefined;
-  try {
-    const plan = backend_plan(opts, stateKey);
-    if(opts['provider-backend']==='local'&&localPresence(plan.config.terraform.backend.local.path).status!=='present')return {status:'error'};
-    const settings: Record<string,string> = {};
-    for (const [variable, option] of Object.entries(plan.credential_bindings)) {
-      const value = environment[variable];
-      if (missing(value)) return {status:'error'};
-      settings[option] = value!;
-    }
-    directory = mkdtempSync(join(tmpdir(),'colors-compute-state-'));
-    chmodSync(directory,0o700);
-    const configPath = join(directory,'credentials.tfbackend.json');
-    writeFileSync(join(directory,'backend.tf.json'), JSON.stringify(plan.config),{mode:0o600,flag:'wx'});
-    writeFileSync(configPath,JSON.stringify(settings),{mode:0o600,flag:'wx'});
-    const env: Record<string,string> = {};
-    for (const [key,value] of Object.entries(environment)) {
-      if (value !== undefined && !/^(TF_|TOFU_|COLORS_PAR_)/.test(key)) env[key] = value;
-    }
-    if (['r2','oci'].includes(opts['provider-backend'])) {
-      delete env.AWS_PROFILE;
-      delete env.AWS_DEFAULT_PROFILE;
-    }
-    Object.assign(env,{TF_IN_AUTOMATION:'1',TF_INPUT:'0',TF_WORKSPACE:'default',TF_DATA_DIR:join(directory,'.terraform')});
-    const options = {cwd:directory,env,timeoutMs:120_000};
-    const init = await runner(['tofu','init','-input=false','-no-color','-reconfigure',`-backend-config=${configPath}`],options);
-    if (init.exit !== 0) return {status:'error'};
-    const state = await runner(['tofu','state','pull'],options);
-    if (state.exit !== 0 || !state.out.trim()) return {status:'error'};
-    const {params}=parseStateEnvelope(state.out);
-    const outputs=includeOutputs?(decoder?decoder(state.out):stateOutputs(state.out)):undefined;
-    const serialized = JSON.stringify(includeOutputs?outputs:params);
-    if (Object.values(settings).some(value => serialized.includes(value) || serialized.includes(JSON.stringify(value).slice(1,-1)))) return {status:'error'};
-    return {status:'present',params,...(includeOutputs?{outputs,state_empty:parseStateEnvelope(state.out).document.resources.length===0&&Object.keys(outputs!).length===0}:{})};
-  } catch(error) {
-    if(error instanceof Error&&error.name==='AbortError')throw error;
-    return {status:'error'};
-  } finally {
-    if (directory) {
-      try {rmSync(directory,{recursive:true,force:true});}
-      catch {return {status:'error'};}
-    }
-  }
-}
-
-export async function readState(opts:Record<string,any>,stateKey:string,environment:Record<string,string|undefined>=process.env,runner:BackendRunner=executeBackendCommand,includeOutputs=false):Promise<StateRead>{return readStateDecoded(opts,stateKey,environment,runner,includeOutputs);}

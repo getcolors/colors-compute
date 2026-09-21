@@ -50,7 +50,7 @@
     (let [bytes (.readNBytes stream (inc limit))]
       (when (> (alength bytes) limit) (throw (ex-info "local document too large" {}))) bytes)))
 (defn write-atomic! [value text]
-  (let [p (path value) temporary (Files/createTempFile (.getParent p) ".coordination-" ".tmp" (attrs "rw-------"))]
+  (let [p (path value) temporary (Files/createTempFile (.getParent p) ".compute-" ".tmp" (attrs "rw-------"))]
     (try
       (with-open [stream (java.io.FileOutputStream. (.toFile temporary))]
         (.write stream (.getBytes text java.nio.charset.StandardCharsets/UTF_8))

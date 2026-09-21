@@ -3,10 +3,10 @@ name = "colors-compute-blue"
 version = "0.1.0"
 description = "Shared compute contract for Colors Blue"
 requires-python = ">=3.11"
-dependencies = ["blue>=0.1.0"]
+dependencies = []
 
 [dependency-groups]
-dev = ["blue @ git+https://github.com/getcolors/blue.git@ec33f05543dc7f1d380fd61d40af56362960fcb9", "pytest>=8.0", "pytest-asyncio>=0.24"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.24"]
 
 [build-system]
 requires = ["hatchling"]

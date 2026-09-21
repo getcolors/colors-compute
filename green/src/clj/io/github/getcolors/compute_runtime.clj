@@ -1,5 +1,5 @@
 (ns io.github.getcolors.compute-runtime
-  "Protected remote-state reads only. No apply, destroy, or state mutation."
+  "Exact-environment process execution and state validation for one compute unit."
   (:require [cheshire.core :as json]
             [io.github.getcolors.compute-local :as local]
             [clojure.java.io :as io]
@@ -8,22 +8,6 @@
   (:import [java.nio.file Files Path LinkOption]
            [java.nio.file.attribute PosixFilePermissions FileAttribute]
            [java.util.concurrent TimeUnit]))
-
-(defn- private-attributes [mode]
-  (into-array FileAttribute [(PosixFilePermissions/asFileAttribute
-                             (PosixFilePermissions/fromString mode))]))
-
-(defn- private-file! [directory name contents]
-  (let [path (.resolve ^Path directory name)]
-    (Files/createFile path (private-attributes "rw-------"))
-    (spit (.toFile path) contents)
-    (str path)))
-
-(defn- remove-tree! [directory]
-  (when directory
-    (with-open [paths (Files/walk ^Path directory (make-array java.nio.file.FileVisitOption 0))]
-      (doseq [path (reverse (sort-by #(.getNameCount ^Path %) (iterator-seq (.iterator paths))))]
-        (Files/deleteIfExists ^Path path)))))
 
 (defn- stop-process! [process descendants]
   (when process
@@ -93,74 +77,3 @@
        (== (:serial state) (Math/floor (double (:serial state))))
        (string? (:lineage state)) (not (str/blank? (:lineage state)))
        (map? (:outputs state)) (vector? (:resources state))))
-
-(defn- missing-credential? [value]
-  (or (not (string? value)) (str/blank? value)
-      (= "REPLACE_ME" (str/upper-case (str/trim value)))))
-
-(defn- bound-secret-in? [params credentials]
-  (let [encoded (json/generate-string params)]
-    (some (fn [secret]
-            (let [escaped (json/generate-string secret)]
-              (or (str/includes? encoded secret)
-                  (str/includes? encoded (subs escaped 1 (dec (count escaped)))))))
-          (vals credentials))))
-
-(defn flatten-outputs [state]
-  (when-not (valid-state? state) (throw (ex-info "invalid state" {})))
-  (into {} (map (fn [[key output]]
-                  (when-not (and (map? output) (contains? output :value)
-                                 (or (not (contains? output :sensitive)) (false? (:sensitive output))))
-                    (throw (ex-info "invalid state outputs" {})))
-                  [key (:value output)]) (:outputs state))))
-
-(defn read-state
-  "Read existing remote state through a private OpenTofu backend session.
-  Runner receives [argv directory exact-environment timeout-ms]. Params may
-  contain sensitive state outputs: callers must not log the returned value."
-  ([opts state-key] (read-state opts state-key (into {} (System/getenv)) run-command))
-  ([opts state-key environment] (read-state opts state-key environment run-command))
-  ([opts state-key environment runner] (read-state opts state-key environment runner false))
-  ([opts state-key environment runner include-outputs]
-   (read-state opts state-key environment runner include-outputs nil))
-  ([opts state-key environment runner include-outputs decoder]
-   (try
-     (let [plan (compute/backend-plan opts state-key)
-           local-path (get-in plan [:config :terraform :backend :local :path])
-           _ (when (and local-path (not= {:status "present"} (local/presence local-path)))
-               (throw (ex-info "local state unavailable" {})))
-           credentials (into {} (map (fn [[variable option]]
-                                      (let [value (get environment variable)]
-                                        (when (missing-credential? value)
-                                          (throw (ex-info "invalid backend credential" {})))
-                                        [option value])) (:credential_bindings plan)))
-           directory (Files/createTempDirectory "colors-compute-" (private-attributes "rwx------"))]
-       (try
-         (let [_ (private-file! directory "backend.tf.json" (json/generate-string (:config plan)))
-               credential-path (private-file! directory "credentials.tfbackend.json" (json/generate-string credentials))
-               backend-environment (if (contains? #{"r2" "oci"} (:provider-backend opts))
-                                     (dissoc environment "AWS_PROFILE" "AWS_DEFAULT_PROFILE") environment)
-               env (merge (into {} (remove (fn [[key _]]
-                                             (some #(str/starts-with? key %) ["TF_" "TOFU_" "COLORS_PAR_"])) backend-environment))
-                          {"TF_IN_AUTOMATION" "1" "TF_INPUT" "0" "TF_WORKSPACE" "default"
-                           "TF_DATA_DIR" (str (.resolve directory ".terraform"))})
-               initialized (runner ["tofu" "init" "-input=false" "-no-color" "-reconfigure"
-                                    (str "-backend-config=" credential-path)] (str directory) env 120000)]
-           (if (not= 0 (:exit initialized))
-             {:status "error"}
-             (let [pulled (runner ["tofu" "state" "pull"] (str directory) env 120000)]
-               (if (not= 0 (:exit pulled))
-                 {:status "error"}
-                 (let [documents (vec (json/parsed-seq (java.io.StringReader. (:out pulled)) true))
-                       state (when (= 1 (count documents)) (first documents))
-                       output (get-in state [:outputs :params])
-                       outputs (when include-outputs (if (and decoder (not (and (empty? (:resources state)) (empty? (:outputs state))))) (decoder (:out pulled)) (flatten-outputs state)))
-                       params (if (contains? (:outputs state) :params)
-                                (when (map? output) (:value output)) {})]
-                   (if (and (valid-state? state) (map? params)
-                            (not (bound-secret-in? (if include-outputs outputs params) credentials)))
-                     (cond-> {:status "present" :params params} include-outputs (assoc :outputs outputs :state_empty (and (empty? (:resources state)) (empty? (:outputs state)))))
-                     {:status "error"}))))))
-         (finally (remove-tree! directory))))
-     (catch InterruptedException error (throw error))
-     (catch Exception _ {:status "error"}))))
