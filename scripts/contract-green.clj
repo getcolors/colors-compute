@@ -5,9 +5,12 @@
   (cp/add-classpath (str (io/file root "green/src/clj") ":" (io/file root "green/src/resources"))))
 (require '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
          '[io.github.getcolors.compute-request :as request]
-         '[io.github.getcolors.compute-node :as node])
+         '[io.github.getcolors.compute-node :as node]
+         '[io.github.getcolors.compute-diagnostics :as diagnostic])
 (def operations
-  {"node_plan_valid" (fn [opts request] (try (node/node-plan opts request) true (catch Exception _ false)))
+  {"sanitize_error" diagnostic/redact
+   "node_runtime_error" (fn [opts request operation] (node/compute-node! opts request operation {} {}))
+   "node_plan_valid" (fn [opts request] (try (node/node-plan opts request) true (catch Exception _ false)))
    "node_plan" node/node-plan
    "provider_request" request/provider-request
    "validate" compute/validate

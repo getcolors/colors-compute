@@ -7,6 +7,7 @@
             [io.github.getcolors.compute :as compute]
             [io.github.getcolors.compute-local :as local]
             [io.github.getcolors.compute-gcs :as gcs]
+            [io.github.getcolors.compute-diagnostics :as diagnostics]
             [io.github.getcolors.compute-request :as request]
             [io.github.getcolors.compute-runtime :as runtime])
   (:import [java.nio.file Files Path LinkOption]
@@ -58,6 +59,7 @@
 (defn node-plan
   "Render a single root module. request includes node_id, state_filename and SDK workdir."
   [opts node-request]
+  (diagnostics/stage! "validate")
   (walk/postwalk (fn [value]
                    (when (string? value)
                      (require! (not-any? #(str/includes? value %) ["${" "%{" (str (char 0))]) "invalid compute literal"))
@@ -160,6 +162,7 @@
   "Persist templates in the SDK workdir. Never removes templates or init files."
   [opts node-request]
   (let [plan (node-plan opts node-request) directory (local/path (:directory plan))]
+    (diagnostics/stage! "build")
     (local/private-owned-directory! (:workdir node-request) directory)
     (doseq [filename [".terraform" ".terraform.lock.hcl" "approved.tfplan" (:state_filename node-request)]]
       (let [path (.resolve directory filename)]
@@ -182,7 +185,7 @@
   (into {} (remove (fn [[key _]] (some #(str/starts-with? key %) ["TF_" "TOFU_" "COLORS_PAR_"])) environment)))
 (defn- execute! [runner directory environment arguments timeout]
   (let [result (runner arguments directory environment timeout)]
-    (require! (= 0 (:exit result)) "compute command failed")
+    (when-not (= 0 (:exit result)) (diagnostics/command-error!))
     (:out result)))
 (defn- storage-environment [store environment]
   (let [base (merge (safe-environment environment) {"AWS_PAGER" "" "AWS_CLI_AUTO_PROMPT" "off"})
@@ -205,8 +208,8 @@
         (cond (= 0 (:exit result)) "present"
               (and (string? (:err result))
                    (re-find #"^\s*(?:aws: \[ERROR\]: )?An error occurred \(NoSuchKey\) when calling the GetObject operation(?: \(reached max retries: [0-9]+\))?:" (:err result))) "absent"
-              :else (throw (ex-info "could not read remote object; refusing mutation" {}))))
-      (finally (Files/deleteIfExists (local/path file))))))
+              :else (diagnostics/command-error! "state_unreadable")))
+      (finally (diagnostics/cleanup! #(Files/deleteIfExists (local/path file)))))))
 (defn- valid-state! [text identity]
   (let [state (parse-one text)]
     (require! (runtime/valid-state? state) "invalid compute state")
@@ -243,6 +246,7 @@
     result))
 
 (defn- prepare-access! [plan state environment runner]
+  (diagnostics/stage! "access")
   (let [directory (local/path (:directory plan)) store (:storage plan)
         files {:private "ssh-key" :public "ssh-key.pub"}
         cli-env (storage-environment store environment)]
@@ -275,9 +279,9 @@
           (write-private! directory filename (slurp (.toFile (.resolve directory (str filename ".download"))))))
         {:private (str (.resolve directory "ssh-key")) :public (str (.resolve directory "ssh-key.pub"))})
       (catch Exception error
-        (doseq [filename (vals files)] (Files/deleteIfExists (.resolve directory filename)))
+        (diagnostics/cleanup! #(doseq [filename (vals files)] (Files/deleteIfExists (.resolve directory filename))))
         (throw error))
-      (finally (doseq [filename (vals files)] (Files/deleteIfExists (.resolve directory (str filename ".download"))))))))
+      (finally (diagnostics/cleanup! #(doseq [filename (vals files)] (Files/deleteIfExists (.resolve directory (str filename ".download")))))))))
 
 (defn- compute-node*
   "Run one unit using native OpenTofu locking. deps accepts :runner for testing."
@@ -290,7 +294,8 @@
    (require! (or (not= "delete" operation) (false? (:compute-prevent-destroy opts))) "compute deletion requires compute-prevent-destroy=false")
    (let [plan (assoc (build-node! opts node-request) :storage (storage opts)) directory (local/path (:directory plan))
          identity {:profile (:profile opts) :node_id (:node_id node-request) :state_filename (:state_filename node-request) :provider (:provider-compute opts)}
-         runner (get deps :runner runtime/run-command)
+         runner (diagnostics/wrap-runner (get deps :runner runtime/run-command))
+         _ (diagnostics/stage! "credentials")
          backend (assoc (compute/backend-plan opts (:state_key plan)) :config (get-in plan [:documents "backend.tf.json"]))
          credentials (into {} (for [[variable option] (:credential_bindings backend)]
                                 (let [value (get environment variable)]
@@ -308,9 +313,13 @@
                                (and (nonblank? access) (nonblank? secret))) "required SSH storage credentials are not set")
                  (if access (assoc env "TF_VAR_keys_access_key" access "TF_VAR_keys_secret_key" secret) env)) env)
          credential-file (write-private! directory "credentials.tfbackend.json" (json/generate-string credentials))
-         command #(execute! runner (:directory plan) env (into ["tofu"] %) 1800000)]
+         command (fn [arguments]
+                   (diagnostics/stage! (case (first arguments) "init" "init" "state" "state" "plan" "plan" "show" "plan-validation" "apply" "apply" "validate"))
+                   (when (= "apply" (first arguments)) (diagnostics/mutation!))
+                   (execute! runner (:directory plan) env (into ["tofu"] arguments) 1800000))]
      (try
        (command ["init" "-input=false" "-no-color" "-reconfigure" (str "-backend-config=" credential-file)])
+       (diagnostics/stage! "state")
        (let [pulled (runner ["tofu" "state" "pull"] (:directory plan) env 120000)
              needs-presence? (or (not= 0 (:exit pulled)) (not (nonblank? (:out pulled))))
              observed (when needs-presence?
@@ -322,7 +331,7 @@
                           "gcs" (let [request ((get deps :gcs-client gcs/client) environment runner)]
                                   (if (request "GET" (gcs/object-path (:gcs-bucket opts) (str (:state_key plan) "/default.tfstate")) nil {}) "present" "absent"))
                           "error"))
-             _ (require! (or (not needs-presence?) (= "absent" observed)) "could not read compute state; refusing mutation")
+             _ (when-not (or (not needs-presence?) (= "absent" observed)) (diagnostics/command-error! "state_unreadable"))
              before (when-not needs-presence? (valid-state! (:out pulled) identity))
              _ (require! (or before (and (= operation "create") (not (:compute-require-existing-state opts)))) "compute state is required")
              _ (when (and (= operation "create") (= "local" (:provider-backend opts)) (nil? before))
@@ -352,12 +361,12 @@
              (let [after (valid-state! (command ["state" "pull"]) identity)]
                (if (= operation "delete")
                  (do (require! (empty? (:resources after)) "compute deletion is incomplete")
-                     (doseq [filename ["ssh-key" "ssh-key.pub"]] (Files/deleteIfExists (.resolve directory filename)))
+                     (diagnostics/cleanup! #(doseq [filename ["ssh-key" "ssh-key.pub"]] (Files/deleteIfExists (.resolve directory filename))))
                      {:status "destroyed" :directory (:directory plan)})
                  (let [params (normalized (get-in after [:outputs :params :value]) environment)]
                    {:status "ready" :directory (:directory plan)
                     :params (assoc params :ssh_identity_file (:private (prepare-access! plan after environment runner)))}))))))
-       (finally (Files/deleteIfExists (local/path credential-file)))))))
+       (finally (diagnostics/cleanup! #(Files/deleteIfExists (local/path credential-file))))))))
 
 (defn compute-node!
   "Execute one node; errors are redacted, cancellation propagates."
@@ -365,8 +374,9 @@
   ([opts node-request operation] (compute-node! opts node-request operation (into {} (System/getenv)) {}))
   ([opts node-request operation environment] (compute-node! opts node-request operation environment {}))
   ([opts node-request operation environment deps]
-   (try
-     (if (= "build" operation) (build-node! opts node-request)
-         (compute-node* opts node-request operation environment deps))
-     (catch InterruptedException error (throw error))
-     (catch Exception _ {:status "error"}))))
+   (binding [diagnostics/*context* (atom {:stage "validate" :infrastructure_changes "none" :opts opts :source environment})]
+     (try
+       (if (= "build" operation) (build-node! opts node-request)
+           (compute-node* opts node-request operation environment deps))
+       (catch InterruptedException error (throw error))
+       (catch Exception error (diagnostics/failure error))))))

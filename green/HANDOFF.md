@@ -23,3 +23,9 @@ Run `bb test` from this directory. Tests cover all eight providers, native
 process handling, remote object absence checks, state identity/refusal guards,
 replacement and destruction protection, local key overwrite/failure, and
 persistent templates through create/delete. No cloud operations are exercised.
+
+Runtime failures return bounded structured diagnostics with an authored code,
+stage, message, and infrastructure-change risk. Safe command prefixes, resolved
+executables, exit codes, and redacted stderr explain launcher failures without
+returning stdout, state, plans, or private keys. The risk becomes `possible`
+immediately before apply and remains so through all subsequent failures.

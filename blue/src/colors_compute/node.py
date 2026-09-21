@@ -13,6 +13,7 @@ import base64
 import hashlib
 from .provider_request import provider_request
 from .rendering import backend_plan
+from .diagnostics import NodeError, command_metadata, credential_values, failure
 
 
 def _valid_plan(output, operation):
@@ -249,31 +250,38 @@ def build_node(opts, request):
 
 
 async def compute_node(opts, request, operation='create', environment=None, dependencies=None):
-    """Run one node lifecycle. Errors never expose provider output or private keys."""
+    """Run one node lifecycle with bounded, sanitized failure diagnostics."""
+    stage, changes = 'validate', 'none'
+    diagnostic_secrets = set()
     try:
+        source = dict(os.environ if environment is None else environment)
+        diagnostic_secrets = credential_values(source, opts)
         if operation not in ('create', 'delete', 'inspect', 'prepare-access', 'build'):
             raise ValueError('invalid node operation')
         if operation == 'build':
+            node_plan(opts, request)
+            stage = 'build'
             return build_node(opts, request)
         if operation == 'delete' and opts.get('compute-prevent-destroy', True):
             raise ValueError('compute destruction is protected')
         plan = node_plan(opts, request)
         directory = plan['directory']
+        stage = 'build'
         _directory(directory)
-        source = dict(os.environ if environment is None else environment)
+        stage = 'credentials'
         child = {key: value for key, value in source.items() if not key.startswith(('TF_', 'TOFU_', 'COLORS_PAR_'))}
         child.update(TF_IN_AUTOMATION='1', TF_INPUT='0', TF_WORKSPACE='default')
         for key, variable in registry()['compute'][opts['provider-compute']]['tofu-env'].items():
             value = source.get('COLORS_PAR_' + key.upper().replace('-', '_'))
             if not value:
-                raise ValueError('missing compute credential')
+                raise NodeError('missing_credentials', credential='COLORS_PAR_' + key.upper().replace('-', '_'))
             child[variable] = value
         backend = ({'credential_bindings': {}, 'config': plan['documents']['backend.tf.json']}
                    if opts['provider-backend'] == 'local' else backend_plan(opts, plan['state_key']))
         credentials = {}
         for variable, field in backend['credential_bindings'].items():
             if not source.get(variable):
-                raise ValueError('missing backend credential')
+                raise NodeError('missing_credentials', credential=variable)
             credentials[field] = source[variable]
         key_credentials = dict(credentials)
         if opts['provider-backend'] == 'gcs':
@@ -287,7 +295,22 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             child['TF_VAR_keys_access_key'] = key_credentials['access_key']
             child['TF_VAR_keys_secret_key'] = key_credentials['secret_key']
         execute = (dependencies or {}).get('runner', _run)
+        async def invoke(args, env, timeout):
+            nonlocal changes
+            if args[:2] == ['tofu', 'apply']:
+                changes = 'possible'
+            try:
+                return await execute(args, directory, env, timeout)
+            except OSError:
+                raise NodeError('command_failed', **command_metadata(args, env, directory)) from None
+
         async def run(args, env=None, timeout=120000):
+            nonlocal stage
+            if args[0] == 'tofu':
+                stage = {'init': 'init', 'state': 'state', 'plan': 'plan', 'show': 'plan-validation', 'apply': 'apply'}.get(args[1], stage)
+            elif args[0] == 'ssh-keygen':
+                stage = 'access'
+
             for filename in ('approved.tfplan', '.terraform.lock.hcl', request['state_filename'], request['state_filename'] + '.backup', '.terraform/terraform.tfstate'):
                 candidate = Path(directory) / filename
                 if candidate.is_symlink() or candidate.exists() and not stat.S_ISREG(candidate.lstat().st_mode):
@@ -295,9 +318,11 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             data_directory = Path(directory) / '.terraform'
             if data_directory.is_symlink() or data_directory.exists() and not stat.S_ISDIR(data_directory.lstat().st_mode):
                 raise ValueError('unsafe OpenTofu data directory')
-            result = await execute(args, directory, child if env is None else env, timeout)
+            command_env = child if env is None else env
+            result = await invoke(args, command_env, timeout)
             if result.exit != 0:
-                raise ValueError('node command failed')
+                code = 'state_unreadable' if stage == 'state' else 'key_access_failed' if stage == 'access' else 'command_failed'
+                raise NodeError(code, **command_metadata(args, command_env, directory, result))
             for filename in ('approved.tfplan', '.terraform.lock.hcl', request['state_filename'], request['state_filename'] + '.backup'):
                 candidate = Path(directory) / filename
                 if candidate.exists():
@@ -309,6 +334,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                     raise ValueError('unsafe OpenTofu data directory')
                 (Path(directory) / '.terraform').chmod(0o700)
             return result.out
+        stage = 'build'
         # Validate the old configuration before replacing templates. A provider
         # switch may not hide resources that remain owned by the existing state.
         backend_path = Path(directory) / 'backend.tf.json'
@@ -323,6 +349,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             await run(['tofu', 'init', '-input=false', '-no-color', '-reconfigure', '-backend-config=' + str(credential_path)])
         finally:
             credential_path.unlink(missing_ok=True)
+        stage = 'state'
         settings = None if opts['provider-backend'] == 'local' else _key_settings(opts, plan['state_key'])
         key_env = {key: value for key, value in child.items() if not key.startswith(('TF_', 'TOFU_'))}
         if key_credentials:
@@ -335,12 +362,12 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                     str(destination), '--region', settings['region'], '--no-cli-pager']
             if 'endpoints' in settings:
                 args += ['--endpoint-url', settings['endpoints']['s3']]
-            result = await execute(args, directory, key_env, 120000)
+            result = await invoke(args, key_env, 120000)
             if result.exit == 0:
                 return True
             if re.match(r'\s*(?:aws: \[ERROR\]: )?An error occurred \(NoSuchKey\) when calling the GetObject operation(?: \(reached max retries: [0-9]+\))?:', result.err):
                 return False
-            raise ValueError('remote object read failed')
+            raise NodeError('state_unreadable', **command_metadata(args, key_env, directory, result))
         observed_path = Path(directory) / '.observed.tfstate'
         try:
             if opts['provider-backend'] in ('s3', 'r2', 'oci'):
@@ -353,11 +380,12 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             else:
                 _write(observed_path, b'')
                 url = 'gs://' + opts['gcs-bucket'] + '/' + plan['state_key'] + '/default.tfstate'
-                result = await execute(['gcloud', 'storage', 'cp', url, str(observed_path)], directory, child, 120000)
+                gcs_args = ['gcloud', 'storage', 'cp', url, str(observed_path)]
+                result = await invoke(gcs_args, child, 120000)
                 present = result.exit == 0
                 if not present:
                     if 'No URLs matched' not in result.err:
-                        raise ValueError('GCS state read failed')
+                        raise NodeError('state_unreadable', **command_metadata(gcs_args, child, directory, result))
                     bucket = json.loads(await run(['gcloud', 'storage', 'buckets', 'describe', 'gs://' + opts['gcs-bucket'], '--format=json']))
                     if bucket.get('name') != opts['gcs-bucket']:
                         raise ValueError('GCS bucket identity mismatch')
@@ -395,6 +423,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         if operation in ('inspect', 'prepare-access') and not existing:
             raise ValueError('node state is absent')
         if operation == 'delete' and not existing and not state['outputs']:
+            stage = 'cleanup'
             for name in ('ssh-key', 'ssh-key.pub'):
                 (Path(directory) / name).unlink(missing_ok=True)
             return {'status': 'destroyed', 'directory': directory}
@@ -412,6 +441,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             after = json.loads(after_text)
             if after['resources'] or after['outputs']:
                 raise ValueError('node resources remain')
+            stage = 'cleanup'
             for name in ('ssh-key', 'ssh-key.pub'):
                 (Path(directory) / name).unlink(missing_ok=True)
             return {'status': 'destroyed', 'directory': directory}
@@ -423,6 +453,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         if params.get('provider') != opts['provider-compute'] or params.get('node_id') != request['node_id']:
             raise ValueError('node state identity mismatch')
         if operation != 'inspect':
+            stage = 'access'
             settings = None if opts['provider-backend'] == 'local' else _key_settings(opts, plan['state_key'])
             key_env = {key: value for key, value in child.items() if not key.startswith(('TF_', 'TOFU_'))}
             if key_credentials:
@@ -442,6 +473,8 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                         value = output.get('value')
                         if not isinstance(value, str) or not value.strip() or kind == 'private' and output.get('sensitive') is not True:
                             raise ValueError('local key outputs are missing or invalid')
+                        if kind == 'private':
+                            diagnostic_secrets.add(value)
                         _write(path, value.encode())
                     else:
                         args = ['aws', 's3api', 'get-object', '--bucket', settings['bucket'], '--key', plan['key_objects'][kind], str(path), '--region', settings['region'], '--no-cli-pager']
@@ -449,6 +482,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                             args += ['--endpoint-url', settings['endpoints']['s3']]
                         await run(args, key_env)
                     path.chmod(0o600)
+                diagnostic_secrets.add(_read_file(paths[0]))
                 public = await run(['ssh-keygen', '-y', '-f', str(paths[0])], key_env)
                 if public.split()[:2] != paths[1].read_text().split()[:2]:
                     raise ValueError('remote keypair mismatch')
@@ -462,6 +496,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                     (Path(directory) / name).unlink(missing_ok=True)
                 raise
             params['ssh_identity_file'] = str(Path(directory) / 'ssh-key')
+        stage = 'state'
         templates = json.loads(files('colors_compute').joinpath('templates.json').read_text())[opts['provider-compute']]
         allowed = {'ssh_identity_file'}
         for stage_name, documents in templates.items():
@@ -478,5 +513,5 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         if '-----BEGIN ' in encoded or any(field in encoded.lower() for field in ('\"private_key\"', '\"private_key_openssh\"', '\"secret_key\"', '\"access_key\"')) or any(secret in encoded for secret in secrets):
             raise ValueError('sensitive node output')
         return {'status': 'ready', 'directory': directory, 'params': params}
-    except Exception:
-        return {'status': 'error'}
+    except Exception as error:
+        return failure(error, stage, changes, diagnostic_secrets)

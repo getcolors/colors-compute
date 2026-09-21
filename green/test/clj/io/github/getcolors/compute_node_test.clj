@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [cheshire.core :as json]
             [clojure.string :as str]
+            [io.github.getcolors.compute-diagnostics :as diagnostics]
             [io.github.getcolors.compute-node :as node]
             [io.github.getcolors.compute-local :as local])
   (:import [java.nio.file Files Path]))
@@ -26,6 +27,7 @@
                       {:mode "managed" :type "aws_s3_object" :name (str "ssh_" kind)
                        :instances [{:attributes {:bucket (:s3-bucket opts)
                                                  :key (str (:s3-prefix opts) "/" (:profile opts) "/" (:node_id request) "/" suffix)}}]}))})
+(defn error-result? [result] (and (= "error" (:status result)) (map? (:error result)) (string? (get-in result [:error :code]))))
 (def no-key {:exit 254 :out "" :err "An error occurred (NoSuchKey) when calling the GetObject operation: absent"})
 
 (deftest independent-provider-roots
@@ -81,7 +83,7 @@
         (let [fail-runner (fn [argv cwd env timeout]
                             (if (and (= "aws" (first argv)) (str/ends-with? (last argv) "pub.download"))
                               {:exit 1 :out "" :err "denied"} (runner argv cwd env timeout)))]
-          (is (= {:status "error"} (node/compute-node! opts request "prepare-access" {} {:runner fail-runner})))
+          (is (error-result? (node/compute-node! opts request "prepare-access" {} {:runner fail-runner})))
           (is (not (.exists (java.io.File. (str (:directory plan) "/ssh-key")))))))
       (finally (remove-tree directory)))))
 
@@ -94,13 +96,13 @@
                        (= ["tofu" "show"] (subvec argv 0 2)) {:exit 0 :out (json/generate-string {:format_version "1.2" :planned_values {} :resource_changes [{:change {:actions ["delete" "create"]}}]})}
                        :else {:exit 0 :out ""}))]
     (try
-      (is (= {:status "error"} (node/compute-node! opts request "delete" {} {:runner runner})))
+      (is (error-result? (node/compute-node! opts request "delete" {} {:runner runner})))
       (is (empty? @calls))
-      (is (= {:status "error"} (node/compute-node! opts request "create" {} {:runner runner})))
+      (is (error-result? (node/compute-node! opts request "create" {} {:runner runner})))
       (is (not-any? #(= ["tofu" "apply"] (subvec % 0 2)) @calls))
       (reset! calls [])
       (let [mismatch (assoc-in state [:outputs :compute_identity :value :provider] "oci")]
-        (is (= {:status "error"} (node/compute-node! opts request "create" {}
+        (is (error-result? (node/compute-node! opts request "create" {}
                                {:runner (fn [argv & _] (swap! calls conj argv)
                                           {:exit 0 :out (if (= ["tofu" "state" "pull"] argv) (json/generate-string mismatch) "")})})))
         (is (not-any? #(= ["tofu" "plan"] (subvec % 0 2)) @calls)))
@@ -109,7 +111,7 @@
 (deftest orphan-remote-keys-are-not-overwritten
   (let [[opts request] (inputs) directory (temp-dir) request (assoc request :workdir directory) calls (atom [])]
     (try
-      (is (= {:status "error"}
+      (is (error-result?
             (node/compute-node! opts request "create" {}
               {:runner (fn [argv & _]
                          (swap! calls conj argv)
@@ -149,7 +151,7 @@
       (is (thrown? InterruptedException (node/compute-node! opts request "create" {}
                                          {:runner (fn [& _] (throw (InterruptedException. "cancelled")))})))
       (let [state (assoc-in (document opts request) [:outputs :params :value :name] "hidden-token")]
-        (is (= {:status "error"}
+        (is (error-result?
                (node/compute-node! opts request "inspect" {"COLORS_PAR_DO_TOKEN" "hidden-token"}
                  {:runner (fn [argv & _] {:exit 0 :out (if (= ["tofu" "state" "pull"] argv) (json/generate-string state) "")})}))))
       (finally (remove-tree directory)))))
@@ -216,7 +218,7 @@
         (is (not (str/includes? (json/generate-string result) "STATE PRIVATE"))))
       (is (not-any? #(= "aws" (first %)) @calls))
       (reset! calls [])
-      (is (= {:status "error"}
+      (is (error-result?
              (node/compute-node! opts request "create" {}
                 {:runner (fn [argv & _] (swap! calls conj argv)
                            (if (= ["tofu" "state" "pull"] argv) {:exit 1 :out ""} {:exit 0 :out ""}))})))
@@ -245,10 +247,10 @@
       (is (= "NEW PRIVATE" (slurp (str (:directory plan) "/ssh-key"))))
       (reset! state (assoc complete :resources []))
       (reset! calls [])
-      (is (= {:status "error"} (node/compute-node! opts request "create" {} {:runner runner})))
+      (is (error-result? (node/compute-node! opts request "create" {} {:runner runner})))
       (is (not-any? #(= ["tofu" "plan"] (subvec % 0 2)) @calls))
       (reset! state (assoc-in complete [:outputs :ssh_private_key :sensitive] false))
-      (is (= {:status "error"} (node/compute-node! opts request "prepare-access" {} {:runner runner})))
+      (is (error-result? (node/compute-node! opts request "prepare-access" {} {:runner runner})))
       (is (not (.exists (java.io.File. (str (:directory plan) "/ssh-key")))))
       (finally (remove-tree directory)))))
 
@@ -264,7 +266,94 @@
       (is (= {:status "destroyed" :directory (:directory plan)} (node/compute-node! opts request "inspect" {} {:runner runner})))
       (is (= [["tofu" "init"] ["tofu" "state"]] (mapv #(subvec % 0 2) @calls)))
       (is (= "copy retained for explicit cleanup" (slurp (str (:directory plan) "/ssh-key"))))
-      (is (= {:status "error"} (node/compute-node! opts request "prepare-access" {} {:runner runner})))
-      (is (= {:status "error"} (node/compute-node! opts request "inspect" {}
+      (is (error-result? (node/compute-node! opts request "prepare-access" {} {:runner runner})))
+      (is (error-result? (node/compute-node! opts request "inspect" {}
                                 {:runner (fn [argv & _] {:exit (if (= ["tofu" "state" "pull"] argv) 1 0) :out ""})})))
       (finally (remove-tree directory)))))
+
+(deftest native-shim-diagnostic-identifies-preapply-failure
+  (let [[opts request] (inputs) opts (assoc opts :provider-backend "local") directory (temp-dir)
+        request (assoc request :workdir directory) binary (str directory "/tofu")]
+    (try
+      (spit binary "#!/bin/sh\nprintf '%s\\n' 'No version is set for command tofu' 'Please consider adding a version to .tool-versions' >&2\nexit 126\n")
+      (.setExecutable (java.io.File. binary) true true)
+      (let [result (node/compute-node! opts request "create" {"PATH" directory}) error (:error result)]
+        (is (= "error" (:status result)))
+        (is (= "command_failed" (:code error)))
+        (is (= "init" (:stage error)))
+        (is (= "Required command failed." (:message error)))
+        (is (= "none" (:infrastructure_changes error)))
+        (is (= ["tofu" "init"] (:command error)))
+        (is (= binary (:executable error)))
+        (is (= 126 (:exit_code error)))
+        (is (str/includes? (:stderr error) "No version is set for command tofu"))
+        (is (not (contains? error :stdout))))
+      (finally (remove-tree directory)))))
+
+(deftest diagnostics-track-apply-risk-and-redact-command-data
+  (let [[opts request] (inputs) directory (temp-dir) request (assoc request :workdir directory)
+        state (document opts request)
+        failure-stage (atom "apply")
+        runner (fn [argv & _]
+                 (cond
+                   (= ["tofu" "state" "pull"] argv) {:exit 0 :out (json/generate-string state)}
+                   (= ["tofu" "show"] (subvec argv 0 2)) {:exit 0 :out (if (= "plan-validation" @failure-stage) "{malformed-plan" (json/generate-string {:format_version "1.2" :planned_values {} :resource_changes [{:change {:actions ["update"]}}]}))}
+                   (or (and (= "apply" @failure-stage) (= ["tofu" "apply"] (subvec argv 0 2)))
+                       (and (= "access" @failure-stage) (= "aws" (first argv))))
+                   {:exit 7 :out "NEVER INCLUDE THIS STATE OR PRIVATE KEY"
+                    :err "provider refused: known-secret-token\npassword=unknown-password\n-----BEGIN OPENSSH PRIVATE KEY-----\nNEVER PEM BODY\n-----END OPENSSH PRIVATE KEY-----\n"}
+                   :else {:exit 0 :out ""}))]
+    (try
+      (doseq [[stage code risk] [["apply" "command_failed" "possible"] ["access" "key_access_failed" "possible"] ["plan-validation" "unsafe_plan" "none"]]]
+        (reset! failure-stage stage)
+        (let [result (node/compute-node! opts request "create" {"COLORS_PAR_DO_TOKEN" "known-secret-token"} {:runner runner})
+              error (:error result) serialized (json/generate-string result)]
+          (is (= "error" (:status result)))
+          (is (= code (:code error)))
+          (is (= stage (:stage error)))
+          (is (= risk (:infrastructure_changes error)))
+          (doseq [secret ["known-secret-token" "unknown-password" "NEVER PEM BODY" "NEVER INCLUDE" "malformed-plan"]]
+            (is (not (str/includes? serialized secret))))))
+      (finally (remove-tree directory)))))
+
+(deftest malformed-state-and-missing-credentials-are-actionable
+  (let [[opts request] (inputs) directory (temp-dir) request (assoc request :workdir directory)]
+    (try
+      (let [result (node/compute-node! opts request "inspect" {}
+                     {:runner (fn [argv & _] {:exit 0 :out (if (= ["tofu" "state" "pull"] argv) "{malformed-secret-state" "")})})]
+        (is (= "state_unreadable" (get-in result [:error :code])))
+        (is (= "state" (get-in result [:error :stage])))
+        (is (= "none" (get-in result [:error :infrastructure_changes])))
+        (is (not (str/includes? (json/generate-string result) "malformed-secret-state"))))
+      (let [[do-opts _ do-request] (:args (first (filter #(= "digitalocean-shared" (:name %)) fixtures)))
+            result (node/compute-node! (assoc do-opts :provider-backend "local")
+                     (assoc (select-keys do-request [:node_id :security :network]) :workdir directory :state_filename "do.tfstate" :node_id "do-0")
+                     "create" {} {:runner (fn [& _] (throw (AssertionError. "must not execute")))})]
+        (is (= "missing_credentials" (get-in result [:error :code])))
+        (is (= "credentials" (get-in result [:error :stage])))
+        (is (= "COLORS_PAR_DO_TOKEN" (get-in result [:error :credential]))))
+      (finally (remove-tree directory)))))
+
+(deftest stderr-redaction-covers-encoded-and-nested-secrets
+  (let [secret "a private+secret" nested "nested-token"
+        encoded (.encodeToString (java.util.Base64/getEncoder) (.getBytes secret "UTF-8"))
+        source (str "\u001b]0;hidden title\u0007\u001b[31mNo version is set for command tofu\u001b[0m\n"
+                    secret " " (java.net.URLEncoder/encode secret "UTF-8") " " encoded " " nested "\n"
+                    "Authorization: Bearer unknown-bearer\napi_key=unknown-assignment\n"
+                    "-----BEGIN OPENSSH PRIVATE KEY-----\nPEM BODY NEVER\n-----END OPENSSH PRIVATE KEY-----\n")
+        redacted (diagnostics/redact source {:credentials {:value nested}} {"SECRET_TOKEN" secret})]
+    (is (str/includes? redacted "No version is set for command tofu"))
+    (doseq [hidden [secret encoded nested "unknown-bearer" "unknown-assignment" "PEM BODY NEVER" "hidden title" "\u001b"]]
+      (is (not (str/includes? redacted hidden))))
+    (is (= "[structured output suppressed]" (diagnostics/redact "error: {\"resources\": [{\"private_key\": \"unknown\"}]}" {} {})))
+    (is (= 2000 (count (diagnostics/redact (apply str (repeat 4000 "x")) {} {}))))))
+
+(deftest unknown-multiword-secret-assignments-are-fully-suppressed
+  (doseq [assignment ["password: correct horse battery staple"
+                      "api_token = several words of secret data"
+                      "secret_key\": \"quoted secret with spaces\" trailing private detail"]]
+    (let [result (diagnostics/redact (str assignment "\nNo version is set for command tofu") {} {})]
+      (is (str/includes? result "[REDACTED]"))
+      (is (str/ends-with? result "\nNo version is set for command tofu"))
+      (doseq [secret ["correct" "horse" "battery" "staple" "several" "words" "quoted" "trailing" "detail"]]
+        (is (not (str/includes? result secret)))))))

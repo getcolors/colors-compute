@@ -21,7 +21,8 @@ with status `built`; the pure plan has status `planned`. Successful runtime
 results have `status: ready`, `directory`, and `params`; destruction returns
 `status: destroyed` and `directory`. Create and prepare-access add
 `params.ssh_identity_file` only after authoritative-key verification. Inspect performs
-no key download. Runtime failures return `status: error`; cancellation propagates.
+no key download. Runtime failures return `status: error` with the [structured error contract](errors.md);
+cancellation propagates.
 Pure validation/build errors contain no credentials or raw provider data.
 
 Request fields are `node_id`, `state_filename`, `workdir`, `security`, and optional

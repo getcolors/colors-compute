@@ -146,7 +146,7 @@ async def test_remote_failure_removes_stale_access(tmp_path):
     root = Path(build_node(opts, req)['directory'])
     (root / 'ssh-key').write_text('stale')
     runner = Runner(opts, req, existing=True, fail_get=True)
-    assert await execute(opts, req, runner, 'prepare-access') == {'status': 'error'}
+    assert (await execute(opts, req, runner, 'prepare-access'))['status'] == 'error'
     assert not (root / 'ssh-key').exists()
     assert not list(root.glob('*.download'))
 
@@ -155,7 +155,7 @@ async def test_remote_failure_removes_stale_access(tmp_path):
 async def test_provider_mismatch_and_replacement_refused(tmp_path):
     opts, req = inputs(tmp_path)
     for runner in (Runner(opts, req, existing=True, wrong_provider=True), Runner(opts, req, actions=['delete', 'create'])):
-        assert await execute(opts, req, runner) == {'status': 'error'}
+        assert (await execute(opts, req, runner))['status'] == 'error'
         assert not any(args[:2] == ['tofu', 'apply'] for args in runner.calls)
 
 
@@ -181,7 +181,7 @@ async def test_unreadable_state_and_foreign_keys_never_apply(tmp_path):
                 return ProcessResult(1, '', 'An error occurred (404) when calling the GetObject operation: ambiguous')
             return await super().__call__(args, cwd, env, timeout)
     runner = Denied(opts, req)
-    assert await execute(opts, req, runner) == {'status': 'error'}
+    assert (await execute(opts, req, runner))['status'] == 'error'
     assert not any(args[:2] == ['tofu', 'apply'] for args in runner.calls)
 
 
@@ -190,7 +190,7 @@ async def test_required_state_refuses_first_create(tmp_path):
     opts, req = inputs(tmp_path)
     opts['compute-require-existing-state'] = True
     runner = Runner(opts, req)
-    assert await execute(opts, req, runner) == {'status': 'error'}
+    assert (await execute(opts, req, runner))['status'] == 'error'
     assert not any(args[:2] == ['tofu', 'apply'] for args in runner.calls)
 
 
@@ -202,7 +202,7 @@ async def test_secret_outputs_do_not_escape(tmp_path):
             value = super().outputs()
             value['params']['value']['metadata'] = {'private_key': 'opaque-secret'}
             return value
-    assert await execute(opts, req, SecretOutput(opts, req, existing=True), 'inspect') == {'status': 'error'}
+    assert (await execute(opts, req, SecretOutput(opts, req, existing=True), 'inspect'))['status'] == 'error'
 
 
 def test_symlink_substitution_and_normalized_paths(tmp_path):
@@ -244,7 +244,7 @@ async def test_partial_state_cannot_overwrite_unowned_remote_key(tmp_path):
                 target.write_text(json.dumps(state))
             return result
     runner = PartialState(opts, req, existing=True)
-    assert await execute(opts, req, runner) == {'status': 'error'}
+    assert (await execute(opts, req, runner))['status'] == 'error'
     assert not any(args[:2] == ['tofu', 'apply'] for args in runner.calls)
 
 
@@ -253,7 +253,7 @@ async def test_missing_state_cannot_authorize_delete(tmp_path):
     opts, req = inputs(tmp_path)
     opts['compute-prevent-destroy'] = False
     runner = Runner(opts, req)
-    assert await execute(opts, req, runner, 'delete') == {'status': 'error'}
+    assert (await execute(opts, req, runner, 'delete'))['status'] == 'error'
     assert not any(args[:2] == ['tofu', 'apply'] for args in runner.calls)
 
 
@@ -351,7 +351,7 @@ async def test_local_lost_state_never_adopts_existing_copies(tmp_path):
     root = Path(build_node(opts, req)['directory'])
     (root / 'ssh-key').write_text('sole-recovery-copy')
     runner = LocalRunner(opts, req)
-    assert await execute(opts, req, runner) == {'status': 'error'}
+    assert (await execute(opts, req, runner))['status'] == 'error'
     assert not any(args[:2] == ['tofu', 'apply'] for args in runner.calls)
     assert (root / 'ssh-key').read_text() == 'sole-recovery-copy'
 
@@ -369,7 +369,7 @@ async def test_local_bad_fingerprint_removes_stale_access(tmp_path):
     runner.save_state()
     root = Path(node_plan(opts, req)['directory'])
     (root / 'ssh-key').write_text('stale')
-    assert await execute(opts, req, runner, 'prepare-access') == {'status': 'error'}
+    assert (await execute(opts, req, runner, 'prepare-access'))['status'] == 'error'
     assert not (root / 'ssh-key').exists()
     assert not list(root.glob('*.download'))
 
@@ -391,14 +391,14 @@ async def test_inspect_strictly_empty_state_is_read_only_destroyed(tmp_path):
     result = await execute(opts, req, runner, 'inspect')
     assert result == {'status': 'destroyed', 'directory': node_plan(opts, req)['directory']}
     assert not any(args[:2] in (['tofu', 'plan'], ['tofu', 'apply']) for args in runner.calls)
-    assert await execute(opts, req, runner, 'prepare-access') == {'status': 'error'}
+    assert (await execute(opts, req, runner, 'prepare-access'))['status'] == 'error'
     path = Path(result['directory']) / req['state_filename']
     state = json.loads(path.read_text())
     state['outputs'] = {'leftover': {'value': 'not empty'}}
     path.write_text(json.dumps(state))
-    assert await execute(opts, req, runner, 'inspect') == {'status': 'error'}
+    assert (await execute(opts, req, runner, 'inspect'))['status'] == 'error'
     path.unlink()
-    assert await execute(opts, req, runner, 'inspect') == {'status': 'error'}
+    assert (await execute(opts, req, runner, 'inspect'))['status'] == 'error'
 
 
 @pytest.mark.asyncio
@@ -415,6 +415,6 @@ async def test_output_only_state_requires_recovery_before_any_operation(tmp_path
     state['outputs'] = {'leftover': {'value': 'incomplete state'}}
     path.write_text(json.dumps(state))
     (root / 'ssh-key').write_text('retain-for-recovery')
-    assert await execute(opts, req, runner, operation) == {'status': 'error'}
+    assert (await execute(opts, req, runner, operation))['status'] == 'error'
     assert not any(args[:2] in (['tofu', 'plan'], ['tofu', 'apply']) for args in runner.calls)
     assert (root / 'ssh-key').read_text() == 'retain-for-recovery'

@@ -7,8 +7,8 @@ caller-selected temporary backend context.
 
 The native runner uses argument vectors and an exact environment. Logging and
 injected CLI arguments are removed; backend object credentials remain separate
-from compute provider credentials. Failures expose fixed diagnostics rather than
-raw state, plans, key material, or provider output. Nonzero exits fail. Cancellation
+from compute provider credentials. Failures expose [structured diagnostics](errors.md) with sanitized, bounded
+stderr rather than raw state, plans, key material, or command stdout. Nonzero exits fail. Cancellation
 terminates and waits for owned local processes, and does not authorize later steps.
 
 Build is credential-free. Runtime state validation checks provider and unit
