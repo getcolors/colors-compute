@@ -61,4 +61,6 @@ export {provider_plan} from './providers.ts';
 export {provider_request} from './provider-request.ts';
 export {endpoint_agent} from './endpoint.ts';
 export {controller_artifact} from './controller.ts';
-export {node_layout,node_plan,build_node,compute_node} from './node.ts';
+export {node_layout,node_plan,build_node,compute_node,registration_plan,build_registration,compute_registration} from './node.ts';
+
+export {ssh_plan,ssh_resource,start_agent} from "./ssh.ts";

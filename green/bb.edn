@@ -7,6 +7,7 @@
                          [io.github.getcolors.compute-oci-test]
                          [io.github.getcolors.compute-local-test]
                          [io.github.getcolors.compute-node-test]
+                         [io.github.getcolors.compute-ssh-cleanup-test]
 )
-               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-request-test 'io.github.getcolors.compute-runtime-test 'io.github.getcolors.compute-gcs-test 'io.github.getcolors.compute-oci-test 'io.github.getcolors.compute-local-test 'io.github.getcolors.compute-node-test)]
+               :task (let [{:keys [fail error]} (t/run-tests 'io.github.getcolors.compute-test 'io.github.getcolors.compute-request-test 'io.github.getcolors.compute-runtime-test 'io.github.getcolors.compute-gcs-test 'io.github.getcolors.compute-oci-test 'io.github.getcolors.compute-local-test 'io.github.getcolors.compute-node-test 'io.github.getcolors.compute-ssh-cleanup-test)]
                        (System/exit (if (pos? (+ fail error)) 1 0)))}}}

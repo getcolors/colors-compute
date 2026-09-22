@@ -1,21 +1,19 @@
-# Local state backend
+# Local compute backend
 
-OpenTofu runs in the persistent `<SDK workdir>/<profile>/<node_id>` directory,
-with state at the caller-provided filename and native state locking. No journal,
-remote key store, AWS key provider, or S3 credentials are required.
+Compute OpenTofu state lives at
+`<SDK workdir>/<profile>/<node_id>/<state_filename>` with native state locking.
+Provider registrations use their own `registration-<name>` directory and state.
+No object-storage credentials or key objects are required by local compute.
 
-`tls_private_key.machine` owns the node's ED25519 pair in local state. OpenTofu
-outputs supply the pair for access preparation; the private output is sensitive.
-The runtime verifies the pair and state fingerprint and overwrites private local
-access files; those files are never adopted as state or used to generate keys.
-Private key outputs are never returned by the library's public API or diagnostics.
-`ssh-s3-*` options are rejected for this backend.
+SSH authority is an independent encrypted resource, described in
+[SSH resources](ssh-resource.md). Compute and registration state contain only
+public SSH identity and its reference. They contain no TLS key generation,
+private-key output, passphrase, or disposable decrypted access copy.
 
-A first create can start without state. Existing key files without readable state
-require recovery; they must not be replaced with a new identity. Inspect, access
-preparation, and delete require readable state. Successful destroy removes the
-TLS resource and local access copies, while retaining templates and `.terraform`.
+Inspect and delete require readable state. A first create may start without state
+unless `compute-require-existing-state` is enabled. Existing state identity and
+backend cannot be rebound. Changing a state root never moves resources.
 
-Changing a state root does not move resources or transfer ownership. State files,
-backup files, and saved plans contain secrets and require private permissions
-and reviewed recovery after interruption. Retained backups can contain old keys.
+Deletion retains templates and initialization files and does not delete the SSH
+resource. Keep state and saved plans private: provider state can contain other
+sensitive infrastructure values even though SSH private material is absent.

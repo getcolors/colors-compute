@@ -47,6 +47,19 @@
           ],
           "private_filter": true
         },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "aws",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -73,6 +86,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "aws",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -84,28 +99,17 @@
                 "node_id": "app-0",
                 "provider": "aws",
                 "provider_id": "${aws_instance.node.id}",
-                "ssh_key_id": "${aws_key_pair.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "ubuntu",
                 "user": "ubuntu",
                 "vpc_ip": "${aws_instance.node.private_ip}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "region": "eu-west-1"
-              },
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ]
+            "aws": {
+              "region": "eu-west-1"
+            }
           },
           "resource": {
             "aws_instance": {
@@ -113,12 +117,8 @@
                 "ami": "ami-0123456789abcdef0",
                 "associate_public_ip_address": true,
                 "availability_zone": "eu-west-1a",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "instance_type": "t3.small",
-                "key_name": "${aws_key_pair.machine.key_name}",
+                "key_name": "12345",
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -138,32 +138,14 @@
             },
             "aws_internet_gateway": {
               "gateway": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "tags": {
                   "Name": "production-app-0"
                 },
                 "vpc_id": "${aws_vpc.network.id}"
               }
             },
-            "aws_key_pair": {
-              "machine": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
-                "key_name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "aws_route": {
               "internet": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "destination_cidr_block": "0.0.0.0/0",
                 "gateway_id": "${aws_internet_gateway.gateway.id}",
                 "route_table_id": "${aws_route_table.public.id}"
@@ -171,10 +153,6 @@
             },
             "aws_route_table": {
               "public": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "tags": {
                   "Name": "production-app-0"
                 },
@@ -183,38 +161,12 @@
             },
             "aws_route_table_association": {
               "public": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "route_table_id": "${aws_route_table.public.id}",
                 "subnet_id": "${aws_subnet.public.id}"
               }
             },
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
             "aws_security_group": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "description": "Deployment node access",
                 "name": "production-app-0-firewall",
                 "tags": {
@@ -227,10 +179,6 @@
               "public": {
                 "availability_zone": "eu-west-1a",
                 "cidr_block": "10.42.1.0/24",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "map_public_ip_on_launch": true,
                 "tags": {
                   "Name": "production-app-0"
@@ -241,10 +189,6 @@
             "aws_vpc": {
               "network": {
                 "cidr_block": "10.42.0.0/16",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "enable_dns_hostnames": true,
                 "enable_dns_support": true,
                 "tags": {
@@ -255,10 +199,6 @@
             "aws_vpc_security_group_egress_rule": {
               "egress": {
                 "cidr_ipv4": "${each.value.cidr}",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "for_each": {
                   "all-ipv4": {
                     "cidr": "0.0.0.0/0",
@@ -276,10 +216,6 @@
             "aws_vpc_security_group_ingress_rule": {
               "ingress": {
                 "cidr_ipv4": "${each.value.cidr}",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "for_each": {
                   "peer:private": {
                     "cidr": "10.42.0.0/16",
@@ -299,11 +235,6 @@
                 "security_group_id": "${aws_security_group.network.id}",
                 "to_port": "${each.value.to_port}"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
@@ -311,32 +242,13 @@
               "aws": {
                 "source": "hashicorp/aws",
                 "version": "6.31.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -395,6 +307,11 @@
           ],
           "private_filter": true
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -441,6 +358,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "azure",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -459,55 +378,22 @@
                 "vm_id": "${azurerm_linux_virtual_machine.node.id}",
                 "vpc_ip": "${azurerm_network_interface.node.private_ip_address}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "azurerm": {
               "features": {},
               "subscription_id": "00000000-0000-0000-0000-000000000001"
             }
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
             "azurerm_linux_virtual_machine": {
               "node": {
                 "admin_ssh_key": {
-                  "public_key": "${tls_private_key.machine.public_key_openssh}",
+                  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
                   "username": "ubuntu"
                 },
                 "admin_username": "ubuntu",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "disable_password_authentication": true,
                 "lifecycle": {
                   "prevent_destroy": true
@@ -534,10 +420,6 @@
             },
             "azurerm_network_interface": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "ip_configuration": {
                   "name": "primary",
                   "private_ip_address_allocation": "Dynamic",
@@ -554,10 +436,6 @@
             },
             "azurerm_network_security_group": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -569,10 +447,6 @@
             "azurerm_network_security_rule": {
               "deny_inbound": {
                 "access": "Deny",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "destination_address_prefix": "*",
                 "destination_port_range": "*",
                 "direction": "Inbound",
@@ -586,10 +460,6 @@
               },
               "ingress": {
                 "access": "Allow",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "destination_address_prefix": "*",
                 "destination_port_range": "${each.value.port}",
                 "direction": "Inbound",
@@ -606,10 +476,6 @@
             "azurerm_public_ip": {
               "node": {
                 "allocation_method": "Static",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -621,10 +487,6 @@
             },
             "azurerm_resource_group": {
               "deployment": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -637,10 +499,6 @@
                 "address_prefixes": [
                   "10.42.1.0/24"
                 ],
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -651,10 +509,6 @@
             },
             "azurerm_subnet_network_security_group_association": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -667,10 +521,6 @@
                 "address_space": [
                   "10.42.0.0/16"
                 ],
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -678,47 +528,19 @@
                 "name": "production-app-0-network",
                 "resource_group_name": "${azurerm_resource_group.deployment.name}"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "azurerm": {
                 "source": "hashicorp/azurerm",
                 "version": "4.30.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
-            }
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
             }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -770,6 +592,19 @@
             }
           ],
           "private_filter": true
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
@@ -829,6 +664,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "digitalocean",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -840,53 +677,20 @@
                 "node_id": "app-0",
                 "provider": "digitalocean",
                 "provider_id": "${digitalocean_droplet.node.id}",
-                "ssh_key_id": "${digitalocean_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
                 "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "digitalocean": {}
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
             "digitalocean_droplet": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "image": "ubuntu-24-04-x64",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -895,7 +699,7 @@
                 "region": "nyc3",
                 "size": "s-2vcpu-4gb",
                 "ssh_keys": [
-                  "${digitalocean_ssh_key.machine.id}"
+                  "12345"
                 ],
                 "tags": [
                   "${digitalocean_tag.deployment.name}"
@@ -905,10 +709,6 @@
             },
             "digitalocean_firewall": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "dynamic": {
                   "inbound_rule": [
                     {
@@ -968,10 +768,6 @@
             "digitalocean_reserved_ip": {
               "endpoint": {
                 "count": 0,
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "ignore_changes": [
                     "droplet_id"
@@ -981,72 +777,27 @@
                 "region": "nyc3"
               }
             },
-            "digitalocean_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "digitalocean_tag": {
               "deployment": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "name": "colors-compute-production-app-0"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "digitalocean": {
                 "source": "digitalocean/digitalocean",
                 "version": "2.51.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -1102,6 +853,11 @@
           ],
           "private_filter": true
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -1145,7 +901,7 @@
                 ]
               }
             },
-            "public_key": "${tls_private_key.machine.public_key_openssh}"
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
           },
           "output": {
             "compute_identity": {
@@ -1153,6 +909,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "google",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -1174,20 +932,9 @@
                 "user": "ubuntu",
                 "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "google": {
               "project": "colors-example-project",
               "region": "europe-west1",
@@ -1195,30 +942,8 @@
             }
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
             "google_compute_address": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -1233,10 +958,6 @@
                     "ports": "${each.value.ports}",
                     "protocol": "${each.value.protocol}"
                   }
-                ],
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
                 ],
                 "direction": "INGRESS",
                 "for_each": "${local.ingress}",
@@ -1260,10 +981,6 @@
                       }
                     ]
                   }
-                ],
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
                 ],
                 "lifecycle": {
                   "prevent_destroy": true
@@ -1294,10 +1011,6 @@
             "google_compute_network": {
               "network": {
                 "auto_create_subnetworks": false,
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -1306,10 +1019,6 @@
             },
             "google_compute_subnetwork": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "ip_cidr_range": "10.42.0.0/16",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -1318,47 +1027,19 @@
                 "network": "${google_compute_network.network.id}",
                 "region": "europe-west1"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "google": {
                 "source": "hashicorp/google",
                 "version": "6.0.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
-            }
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
             }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -1402,6 +1083,19 @@
           ],
           "private_filter": false
         },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "hcloud",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -1428,6 +1122,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "hcloud",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -1440,53 +1136,20 @@
                 "provider": "hcloud",
                 "provider_id": "${hcloud_server.node.id}",
                 "server_id": "${hcloud_server.node.id}",
-                "ssh_key_id": "${hcloud_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_id": "${hcloud_server_network.node.network_id}",
                 "vpc_ip": "${hcloud_server_network.node.ip}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "hcloud": {}
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
             "hcloud_firewall": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -1505,10 +1168,6 @@
             },
             "hcloud_network": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "ip_range": "10.42.0.0/16",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -1518,10 +1177,6 @@
             },
             "hcloud_network_subnet": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "ip_range": "10.42.1.0/24",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -1533,10 +1188,6 @@
             },
             "hcloud_server": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "firewall_ids": [
                   "${hcloud_firewall.network.id}"
                 ],
@@ -1555,16 +1206,12 @@
                 },
                 "server_type": "cx22",
                 "ssh_keys": [
-                  "${hcloud_ssh_key.machine.id}"
+                  "12345"
                 ]
               }
             },
             "hcloud_server_network": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "ip": null,
                 "lifecycle": {
                   "prevent_destroy": true
@@ -1572,60 +1219,19 @@
                 "network_id": "${hcloud_network.network.id}",
                 "server_id": "${hcloud_server.node.id}"
               }
-            },
-            "hcloud_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "hcloud": {
                 "source": "hetznercloud/hcloud",
                 "version": "1.54.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
-            }
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
             }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -1686,6 +1292,11 @@
           ],
           "private_filter": false
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -1722,6 +1333,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "oci",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -1742,43 +1355,14 @@
                 "user": "ubuntu",
                 "vpc_ip": "${oci_core_instance.node.private_ip}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "oci": {
               "config_file_profile": "DEFAULT"
             }
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
             "oci_core_instance": {
               "node": {
                 "availability_domain": "example:EU-FRANKFURT-1-AD-1",
@@ -1790,16 +1374,12 @@
                   ],
                   "subnet_id": "${data.oci_core_subnet.existing.id}"
                 },
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "display_name": "production-app-0",
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "metadata": {
-                  "ssh_authorized_keys": "${tls_private_key.machine.public_key_openssh}"
+                  "ssh_authorized_keys": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
                 },
                 "shape": "VM.Standard.A1.Flex",
                 "shape_config": {
@@ -1818,20 +1398,12 @@
             "oci_core_network_security_group": {
               "network": {
                 "compartment_id": "ocid1.compartment.oc1..example",
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "display_name": "production-app-0-firewall",
                 "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
               }
             },
             "oci_core_network_security_group_security_rule": {
               "rules": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "destination": "${each.value.direction == \"EGRESS\" ? each.value.cidr : null}",
                 "destination_type": "${each.value.direction == \"EGRESS\" ? \"CIDR_BLOCK\" : null}",
                 "direction": "${each.value.direction}",
@@ -1884,48 +1456,20 @@
                 "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
                 "stateless": false
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "oci": {
                 "source": "oracle/oci",
                 "version": "8.4.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -1978,6 +1522,19 @@
           ],
           "private_filter": true
         },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "vultr",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -2022,6 +1579,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "vultr",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -2032,57 +1591,19 @@
                 "node_id": "app-0",
                 "provider": "vultr",
                 "provider_id": "${vultr_instance.node.id}",
-                "ssh_key_id": "${vultr_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_ip": "${vultr_instance.node.internal_ip}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "vultr": {}
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
-            },
             "vultr_firewall_group": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "description": "production-app-0-firewall",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -2091,10 +1612,6 @@
             },
             "vultr_firewall_rule": {
               "ingress": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "firewall_group_id": "${vultr_firewall_group.network.id}",
                 "for_each": "${local.ingress}",
                 "ip_type": "${each.value.ip_type}",
@@ -2106,10 +1623,6 @@
             },
             "vultr_instance": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "firewall_group_id": "${vultr_firewall_group.network.id}",
                 "label": "production-app-0",
                 "lifecycle": {
@@ -2119,32 +1632,15 @@
                 "plan": "vc2-2c-4gb",
                 "region": "ewr",
                 "ssh_key_ids": [
-                  "${vultr_ssh_key.machine.id}"
+                  "12345"
                 ],
                 "vpc_ids": [
                   "${vultr_vpc.network.id}"
                 ]
               }
             },
-            "vultr_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "ssh_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "vultr_vpc": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "description": "production-app-0",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -2157,38 +1653,15 @@
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
-              },
               "vultr": {
                 "source": "vultr/vultr",
                 "version": "2.32.0"
               }
             }
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -2248,6 +1721,11 @@
           ],
           "private_filter": true
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -2297,7 +1775,7 @@
                 "to_port": 22
               }
             },
-            "public_key": "${tls_private_key.machine.public_key_openssh}"
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
           },
           "output": {
             "compute_identity": {
@@ -2305,6 +1783,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "yandex",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -2329,20 +1809,9 @@
                 "user": "ubuntu",
                 "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "yandex": {
               "cloud_id": "b1g00000000000000000",
               "folder_id": "b1g00000000000000001",
@@ -2350,29 +1819,6 @@
             }
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
-            },
             "yandex_compute_instance": {
               "node": {
                 "allow_stopping_for_update": false,
@@ -2385,10 +1831,6 @@
                       }
                     ]
                   }
-                ],
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
                 ],
                 "lifecycle": {
                   "prevent_destroy": true
@@ -2420,10 +1862,6 @@
             },
             "yandex_vpc_address": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "external_ipv4_address": [
                   {
                     "zone_id": "ru-central1-a"
@@ -2437,10 +1875,6 @@
             },
             "yandex_vpc_network": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -2449,10 +1883,6 @@
             },
             "yandex_vpc_security_group": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "dynamic": {
                   "egress": {
                     "content": {
@@ -2484,10 +1914,6 @@
             },
             "yandex_vpc_subnet": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -2502,38 +1928,15 @@
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
-              },
               "yandex": {
                 "source": "yandex-cloud/yandex",
                 "version": "0.120.0"
               }
             }
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -2585,6 +1988,19 @@
             }
           ],
           "private_filter": true
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
@@ -2653,6 +2069,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "digitalocean",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -2664,59 +2082,20 @@
                 "node_id": "app-0",
                 "provider": "digitalocean",
                 "provider_id": "${digitalocean_droplet.node.id}",
-                "ssh_key_id": "${digitalocean_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
                 "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "endpoints": {
-                  "s3": "https://example.r2.cloudflarestorage.com"
-                },
-                "region": "auto",
-                "s3_use_path_style": false,
-                "secret_key": "${var.keys_secret_key}",
-                "skip_credentials_validation": true,
-                "skip_metadata_api_check": true,
-                "skip_region_validation": true,
-                "skip_requesting_account_id": true
-              }
-            ],
             "digitalocean": {}
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys"
-              }
-            },
             "digitalocean_droplet": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "image": "ubuntu-24-04-x64",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -2725,7 +2104,7 @@
                 "region": "nyc3",
                 "size": "s-2vcpu-4gb",
                 "ssh_keys": [
-                  "${digitalocean_ssh_key.machine.id}"
+                  "12345"
                 ],
                 "tags": [
                   "${digitalocean_tag.deployment.name}"
@@ -2735,10 +2114,6 @@
             },
             "digitalocean_firewall": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "dynamic": {
                   "inbound_rule": [
                     {
@@ -2798,10 +2173,6 @@
             "digitalocean_reserved_ip": {
               "endpoint": {
                 "count": 0,
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "ignore_changes": [
                     "droplet_id"
@@ -2811,72 +2182,27 @@
                 "region": "nyc3"
               }
             },
-            "digitalocean_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "digitalocean_tag": {
               "deployment": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "name": "colors-compute-production-app-0"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "digitalocean": {
                 "source": "digitalocean/digitalocean",
                 "version": "2.51.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -2929,6 +2255,19 @@
             }
           ],
           "private_filter": true
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
@@ -2997,6 +2336,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "digitalocean",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -3008,59 +2349,20 @@
                 "node_id": "app-0",
                 "provider": "digitalocean",
                 "provider_id": "${digitalocean_droplet.node.id}",
-                "ssh_key_id": "${digitalocean_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
                 "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "endpoints": {
-                  "s3": "https://fixture.compat.objectstorage.eu-frankfurt-1.oraclecloud.com"
-                },
-                "region": "eu-frankfurt-1",
-                "s3_use_path_style": true,
-                "secret_key": "${var.keys_secret_key}",
-                "skip_credentials_validation": true,
-                "skip_metadata_api_check": true,
-                "skip_region_validation": true,
-                "skip_requesting_account_id": true
-              }
-            ],
             "digitalocean": {}
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys"
-              },
-              "ssh_public": {
-                "bucket": "compute-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys"
-              }
-            },
             "digitalocean_droplet": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "image": "ubuntu-24-04-x64",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -3069,7 +2371,7 @@
                 "region": "nyc3",
                 "size": "s-2vcpu-4gb",
                 "ssh_keys": [
-                  "${digitalocean_ssh_key.machine.id}"
+                  "12345"
                 ],
                 "tags": [
                   "${digitalocean_tag.deployment.name}"
@@ -3079,10 +2381,6 @@
             },
             "digitalocean_firewall": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "dynamic": {
                   "inbound_rule": [
                     {
@@ -3142,10 +2440,6 @@
             "digitalocean_reserved_ip": {
               "endpoint": {
                 "count": 0,
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "ignore_changes": [
                     "droplet_id"
@@ -3155,72 +2449,27 @@
                 "region": "nyc3"
               }
             },
-            "digitalocean_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "digitalocean_tag": {
               "deployment": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "name": "colors-compute-production-app-0"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "digitalocean": {
                 "source": "digitalocean/digitalocean",
                 "version": "2.51.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -3270,6 +2519,19 @@
             }
           ],
           "private_filter": true
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
@@ -3326,6 +2588,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "digitalocean",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -3337,22 +2601,12 @@
                 "node_id": "app-0",
                 "provider": "digitalocean",
                 "provider_id": "${digitalocean_droplet.node.id}",
-                "ssh_key_id": "${digitalocean_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
                 "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
@@ -3361,9 +2615,6 @@
           "resource": {
             "digitalocean_droplet": {
               "node": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "image": "ubuntu-24-04-x64",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -3372,7 +2623,7 @@
                 "region": "nyc3",
                 "size": "s-2vcpu-4gb",
                 "ssh_keys": [
-                  "${digitalocean_ssh_key.machine.id}"
+                  "12345"
                 ],
                 "tags": [
                   "${digitalocean_tag.deployment.name}"
@@ -3382,9 +2633,6 @@
             },
             "digitalocean_firewall": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "dynamic": {
                   "inbound_rule": [
                     {
@@ -3444,9 +2692,6 @@
             "digitalocean_reserved_ip": {
               "endpoint": {
                 "count": 0,
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "ignore_changes": [
                     "droplet_id"
@@ -3456,32 +2701,12 @@
                 "region": "nyc3"
               }
             },
-            "digitalocean_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "digitalocean_tag": {
               "deployment": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "name": "colors-compute-production-app-0"
-              }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
               }
             }
           },
@@ -3490,10 +2715,6 @@
               "digitalocean": {
                 "source": "digitalocean/digitalocean",
                 "version": "2.51.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
@@ -3556,6 +2777,19 @@
           ],
           "private_filter": true
         },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -3612,6 +2846,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "digitalocean",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -3623,53 +2859,20 @@
                 "node_id": "app-0",
                 "provider": "digitalocean",
                 "provider_id": "${digitalocean_droplet.node.id}",
-                "ssh_key_id": "${digitalocean_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_id": "${digitalocean_droplet.node.vpc_uuid}",
                 "vpc_ip": "${digitalocean_droplet.node.ipv4_address_private}"
               }
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
-            "aws": [
-              {
-                "access_key": "${var.keys_access_key}",
-                "alias": "keys",
-                "region": "eu-west-1",
-                "secret_key": "${var.keys_secret_key}"
-              }
-            ],
             "digitalocean": {}
           },
           "resource": {
-            "aws_s3_object": {
-              "ssh_private": {
-                "bucket": "key-fixture",
-                "content": "${tls_private_key.machine.private_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              },
-              "ssh_public": {
-                "bucket": "key-fixture",
-                "content": "${tls_private_key.machine.public_key_openssh}",
-                "force_destroy": false,
-                "key": "infrastructure/production/app-0/ssh-key.pub",
-                "provider": "aws.keys",
-                "server_side_encryption": "AES256"
-              }
-            },
             "digitalocean_droplet": {
               "node": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "image": "ubuntu-24-04-x64",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -3678,7 +2881,7 @@
                 "region": "nyc3",
                 "size": "s-2vcpu-4gb",
                 "ssh_keys": [
-                  "${digitalocean_ssh_key.machine.id}"
+                  "12345"
                 ],
                 "tags": [
                   "${digitalocean_tag.deployment.name}"
@@ -3688,10 +2891,6 @@
             },
             "digitalocean_firewall": {
               "network": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "dynamic": {
                   "inbound_rule": [
                     {
@@ -3751,10 +2950,6 @@
             "digitalocean_reserved_ip": {
               "endpoint": {
                 "count": 0,
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "ignore_changes": [
                     "droplet_id"
@@ -3764,72 +2959,27 @@
                 "region": "nyc3"
               }
             },
-            "digitalocean_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "digitalocean_tag": {
               "deployment": {
-                "depends_on": [
-                  "aws_s3_object.ssh_private",
-                  "aws_s3_object.ssh_public"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "name": "colors-compute-production-app-0"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
             "required_providers": {
-              "aws": {
-                "source": "hashicorp/aws",
-                "version": "6.31.0"
-              },
               "digitalocean": {
                 "source": "digitalocean/digitalocean",
                 "version": "2.51.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
-          },
-          "variable": {
-            "keys_access_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            },
-            "keys_secret_key": {
-              "default": null,
-              "sensitive": true,
-              "type": "string"
-            }
           }
         }
       },
-      "key_objects": {
-        "private": "infrastructure/production/app-0/ssh-key",
-        "public": "infrastructure/production/app-0/ssh-key.pub"
-      },
+      "key_objects": {},
       "state_key": "infrastructure/production/app-0.tfstate",
       "status": "planned"
     },
@@ -3881,6 +3031,19 @@
           ],
           "private_filter": true
         },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "aws",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -3904,6 +3067,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "aws",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -3915,21 +3080,11 @@
                 "node_id": "app-0",
                 "provider": "aws",
                 "provider_id": "${aws_instance.node.id}",
-                "ssh_key_id": "${aws_key_pair.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "ubuntu",
                 "user": "ubuntu",
                 "vpc_ip": "${aws_instance.node.private_ip}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
@@ -3943,11 +3098,8 @@
                 "ami": "ami-0123456789abcdef0",
                 "associate_public_ip_address": true,
                 "availability_zone": "eu-west-1a",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "instance_type": "t3.small",
-                "key_name": "${aws_key_pair.machine.key_name}",
+                "key_name": "12345",
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -3967,29 +3119,14 @@
             },
             "aws_internet_gateway": {
               "gateway": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "tags": {
                   "Name": "production-app-0"
                 },
                 "vpc_id": "${aws_vpc.network.id}"
               }
             },
-            "aws_key_pair": {
-              "machine": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
-                "key_name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "aws_route": {
               "internet": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "destination_cidr_block": "0.0.0.0/0",
                 "gateway_id": "${aws_internet_gateway.gateway.id}",
                 "route_table_id": "${aws_route_table.public.id}"
@@ -3997,9 +3134,6 @@
             },
             "aws_route_table": {
               "public": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "tags": {
                   "Name": "production-app-0"
                 },
@@ -4008,18 +3142,12 @@
             },
             "aws_route_table_association": {
               "public": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "route_table_id": "${aws_route_table.public.id}",
                 "subnet_id": "${aws_subnet.public.id}"
               }
             },
             "aws_security_group": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "description": "Deployment node access",
                 "name": "production-app-0-firewall",
                 "tags": {
@@ -4032,9 +3160,6 @@
               "public": {
                 "availability_zone": "eu-west-1a",
                 "cidr_block": "10.42.1.0/24",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "map_public_ip_on_launch": true,
                 "tags": {
                   "Name": "production-app-0"
@@ -4045,9 +3170,6 @@
             "aws_vpc": {
               "network": {
                 "cidr_block": "10.42.0.0/16",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "enable_dns_hostnames": true,
                 "enable_dns_support": true,
                 "tags": {
@@ -4058,9 +3180,6 @@
             "aws_vpc_security_group_egress_rule": {
               "egress": {
                 "cidr_ipv4": "${each.value.cidr}",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "for_each": {
                   "all-ipv4": {
                     "cidr": "0.0.0.0/0",
@@ -4078,9 +3197,6 @@
             "aws_vpc_security_group_ingress_rule": {
               "ingress": {
                 "cidr_ipv4": "${each.value.cidr}",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "for_each": {
                   "peer:private": {
                     "cidr": "10.42.0.0/16",
@@ -4100,11 +3216,6 @@
                 "security_group_id": "${aws_security_group.network.id}",
                 "to_port": "${each.value.to_port}"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
@@ -4112,10 +3223,6 @@
               "aws": {
                 "source": "hashicorp/aws",
                 "version": "6.31.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
@@ -4178,6 +3285,11 @@
           ],
           "private_filter": true
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -4221,6 +3333,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "azure",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -4239,16 +3353,6 @@
                 "vm_id": "${azurerm_linux_virtual_machine.node.id}",
                 "vpc_ip": "${azurerm_network_interface.node.private_ip_address}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
@@ -4261,13 +3365,10 @@
             "azurerm_linux_virtual_machine": {
               "node": {
                 "admin_ssh_key": {
-                  "public_key": "${tls_private_key.machine.public_key_openssh}",
+                  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
                   "username": "ubuntu"
                 },
                 "admin_username": "ubuntu",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "disable_password_authentication": true,
                 "lifecycle": {
                   "prevent_destroy": true
@@ -4294,9 +3395,6 @@
             },
             "azurerm_network_interface": {
               "node": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "ip_configuration": {
                   "name": "primary",
                   "private_ip_address_allocation": "Dynamic",
@@ -4313,9 +3411,6 @@
             },
             "azurerm_network_security_group": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4327,9 +3422,6 @@
             "azurerm_network_security_rule": {
               "deny_inbound": {
                 "access": "Deny",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "destination_address_prefix": "*",
                 "destination_port_range": "*",
                 "direction": "Inbound",
@@ -4343,9 +3435,6 @@
               },
               "ingress": {
                 "access": "Allow",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "destination_address_prefix": "*",
                 "destination_port_range": "${each.value.port}",
                 "direction": "Inbound",
@@ -4362,9 +3451,6 @@
             "azurerm_public_ip": {
               "node": {
                 "allocation_method": "Static",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4376,9 +3462,6 @@
             },
             "azurerm_resource_group": {
               "deployment": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4391,9 +3474,6 @@
                 "address_prefixes": [
                   "10.42.1.0/24"
                 ],
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4404,9 +3484,6 @@
             },
             "azurerm_subnet_network_security_group_association": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4419,20 +3496,12 @@
                 "address_space": [
                   "10.42.0.0/16"
                 ],
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "location": "${azurerm_resource_group.deployment.location}",
                 "name": "production-app-0-network",
                 "resource_group_name": "${azurerm_resource_group.deployment.name}"
-              }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
               }
             }
           },
@@ -4441,10 +3510,6 @@
               "azurerm": {
                 "source": "hashicorp/azurerm",
                 "version": "4.30.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             }
           }
@@ -4503,6 +3568,11 @@
           ],
           "private_filter": true
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -4543,7 +3613,7 @@
                 ]
               }
             },
-            "public_key": "${tls_private_key.machine.public_key_openssh}"
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
           },
           "output": {
             "compute_identity": {
@@ -4551,6 +3621,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "google",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -4572,16 +3644,6 @@
                 "user": "ubuntu",
                 "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
@@ -4594,9 +3656,6 @@
           "resource": {
             "google_compute_address": {
               "node": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4611,9 +3670,6 @@
                     "ports": "${each.value.ports}",
                     "protocol": "${each.value.protocol}"
                   }
-                ],
-                "depends_on": [
-                  "tls_private_key.machine"
                 ],
                 "direction": "INGRESS",
                 "for_each": "${local.ingress}",
@@ -4637,9 +3693,6 @@
                       }
                     ]
                   }
-                ],
-                "depends_on": [
-                  "tls_private_key.machine"
                 ],
                 "lifecycle": {
                   "prevent_destroy": true
@@ -4670,9 +3723,6 @@
             "google_compute_network": {
               "network": {
                 "auto_create_subnetworks": false,
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4681,9 +3731,6 @@
             },
             "google_compute_subnetwork": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "ip_cidr_range": "10.42.0.0/16",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -4692,11 +3739,6 @@
                 "network": "${google_compute_network.network.id}",
                 "region": "europe-west1"
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
@@ -4704,10 +3746,6 @@
               "google": {
                 "source": "hashicorp/google",
                 "version": "6.0.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             }
           }
@@ -4754,6 +3792,19 @@
           ],
           "private_filter": false
         },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "hcloud",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -4777,6 +3828,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "hcloud",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -4789,22 +3842,12 @@
                 "provider": "hcloud",
                 "provider_id": "${hcloud_server.node.id}",
                 "server_id": "${hcloud_server.node.id}",
-                "ssh_key_id": "${hcloud_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_id": "${hcloud_server_network.node.network_id}",
                 "vpc_ip": "${hcloud_server_network.node.ip}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
@@ -4813,9 +3856,6 @@
           "resource": {
             "hcloud_firewall": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -4834,9 +3874,6 @@
             },
             "hcloud_network": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "ip_range": "10.42.0.0/16",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -4846,9 +3883,6 @@
             },
             "hcloud_network_subnet": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "ip_range": "10.42.1.0/24",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -4860,9 +3894,6 @@
             },
             "hcloud_server": {
               "node": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "firewall_ids": [
                   "${hcloud_firewall.network.id}"
                 ],
@@ -4881,38 +3912,18 @@
                 },
                 "server_type": "cx22",
                 "ssh_keys": [
-                  "${hcloud_ssh_key.machine.id}"
+                  "12345"
                 ]
               }
             },
             "hcloud_server_network": {
               "node": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "ip": null,
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "network_id": "${hcloud_network.network.id}",
                 "server_id": "${hcloud_server.node.id}"
-              }
-            },
-            "hcloud_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "public_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
               }
             }
           },
@@ -4921,10 +3932,6 @@
               "hcloud": {
                 "source": "hetznercloud/hcloud",
                 "version": "1.54.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             }
           }
@@ -4988,6 +3995,11 @@
           ],
           "private_filter": false
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -5021,6 +4033,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "oci",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -5041,16 +4055,6 @@
                 "user": "ubuntu",
                 "vpc_ip": "${oci_core_instance.node.private_ip}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
@@ -5070,15 +4074,12 @@
                   ],
                   "subnet_id": "${data.oci_core_subnet.existing.id}"
                 },
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "display_name": "production-app-0",
                 "lifecycle": {
                   "prevent_destroy": true
                 },
                 "metadata": {
-                  "ssh_authorized_keys": "${tls_private_key.machine.public_key_openssh}"
+                  "ssh_authorized_keys": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
                 },
                 "shape": "VM.Standard.A1.Flex",
                 "shape_config": {
@@ -5097,18 +4098,12 @@
             "oci_core_network_security_group": {
               "network": {
                 "compartment_id": "ocid1.compartment.oc1..example",
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "display_name": "production-app-0-firewall",
                 "vcn_id": "${data.oci_core_subnet.existing.vcn_id}"
               }
             },
             "oci_core_network_security_group_security_rule": {
               "rules": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "destination": "${each.value.direction == \"EGRESS\" ? each.value.cidr : null}",
                 "destination_type": "${each.value.direction == \"EGRESS\" ? \"CIDR_BLOCK\" : null}",
                 "direction": "${each.value.direction}",
@@ -5161,11 +4156,6 @@
                 "source_type": "${each.value.direction == \"INGRESS\" ? \"CIDR_BLOCK\" : null}",
                 "stateless": false
               }
-            },
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
             }
           },
           "terraform": {
@@ -5173,10 +4163,6 @@
               "oci": {
                 "source": "oracle/oci",
                 "version": "8.4.0"
-              },
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
               }
             },
             "required_version": ">= 1.8.0"
@@ -5233,6 +4219,19 @@
           ],
           "private_filter": true
         },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "vultr",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -5274,6 +4273,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "vultr",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -5284,37 +4285,19 @@
                 "node_id": "app-0",
                 "provider": "vultr",
                 "provider_id": "${vultr_instance.node.id}",
-                "ssh_key_id": "${vultr_ssh_key.machine.id}",
+                "ssh_key_id": "12345",
                 "sudoer": "root",
                 "user": "root",
                 "vpc_ip": "${vultr_instance.node.internal_ip}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
             "vultr": {}
           },
           "resource": {
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
-            },
             "vultr_firewall_group": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "description": "production-app-0-firewall",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -5323,9 +4306,6 @@
             },
             "vultr_firewall_rule": {
               "ingress": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "firewall_group_id": "${vultr_firewall_group.network.id}",
                 "for_each": "${local.ingress}",
                 "ip_type": "${each.value.ip_type}",
@@ -5337,9 +4317,6 @@
             },
             "vultr_instance": {
               "node": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "firewall_group_id": "${vultr_firewall_group.network.id}",
                 "label": "production-app-0",
                 "lifecycle": {
@@ -5349,30 +4326,15 @@
                 "plan": "vc2-2c-4gb",
                 "region": "ewr",
                 "ssh_key_ids": [
-                  "${vultr_ssh_key.machine.id}"
+                  "12345"
                 ],
                 "vpc_ids": [
                   "${vultr_vpc.network.id}"
                 ]
               }
             },
-            "vultr_ssh_key": {
-              "machine": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
-                "lifecycle": {
-                  "prevent_destroy": true
-                },
-                "name": "production-app-0",
-                "ssh_key": "${tls_private_key.machine.public_key_openssh}"
-              }
-            },
             "vultr_vpc": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "description": "production-app-0",
                 "lifecycle": {
                   "prevent_destroy": true
@@ -5385,10 +4347,6 @@
           },
           "terraform": {
             "required_providers": {
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
-              },
               "vultr": {
                 "source": "vultr/vultr",
                 "version": "2.32.0"
@@ -5454,6 +4412,11 @@
           ],
           "private_filter": true
         },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
         "state_filename": "app-0.tfstate",
         "workdir": "/sdk"
       }
@@ -5500,7 +4463,7 @@
                 "to_port": 22
               }
             },
-            "public_key": "${tls_private_key.machine.public_key_openssh}"
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
           },
           "output": {
             "compute_identity": {
@@ -5508,6 +4471,8 @@
                 "node_id": "app-0",
                 "profile": "production",
                 "provider": "yandex",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
                 "state_filename": "app-0.tfstate"
               }
             },
@@ -5532,16 +4497,6 @@
                 "user": "ubuntu",
                 "vpc_ip": "${yandex_compute_instance.node.network_interface[0].ip_address}"
               }
-            },
-            "ssh_private_key": {
-              "sensitive": true,
-              "value": "${tls_private_key.machine.private_key_openssh}"
-            },
-            "ssh_public_key": {
-              "value": "${tls_private_key.machine.public_key_openssh}"
-            },
-            "ssh_public_key_fingerprint": {
-              "value": "${tls_private_key.machine.public_key_fingerprint_sha256}"
             }
           },
           "provider": {
@@ -5552,11 +4507,6 @@
             }
           },
           "resource": {
-            "tls_private_key": {
-              "machine": {
-                "algorithm": "ED25519"
-              }
-            },
             "yandex_compute_instance": {
               "node": {
                 "allow_stopping_for_update": false,
@@ -5569,9 +4519,6 @@
                       }
                     ]
                   }
-                ],
-                "depends_on": [
-                  "tls_private_key.machine"
                 ],
                 "lifecycle": {
                   "prevent_destroy": true
@@ -5603,9 +4550,6 @@
             },
             "yandex_vpc_address": {
               "node": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "external_ipv4_address": [
                   {
                     "zone_id": "ru-central1-a"
@@ -5619,9 +4563,6 @@
             },
             "yandex_vpc_network": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -5630,9 +4571,6 @@
             },
             "yandex_vpc_security_group": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "dynamic": {
                   "egress": {
                     "content": {
@@ -5664,9 +4602,6 @@
             },
             "yandex_vpc_subnet": {
               "network": {
-                "depends_on": [
-                  "tls_private_key.machine"
-                ],
                 "lifecycle": {
                   "prevent_destroy": true
                 },
@@ -5681,10 +4616,6 @@
           },
           "terraform": {
             "required_providers": {
-              "tls": {
-                "source": "hashicorp/tls",
-                "version": "4.1.0"
-              },
               "yandex": {
                 "source": "yandex-cloud/yandex",
                 "version": "0.120.0"

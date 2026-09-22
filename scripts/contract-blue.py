@@ -5,8 +5,8 @@ import json
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "blue/src"))
-from colors_compute import compute_node, node_plan, provider_request, backend_plan, credential_requirements, provider_plan, render_template, validate
-operations = {f.__name__: f for f in (node_plan, provider_request, backend_plan, credential_requirements, provider_plan, render_template, validate)}
+from colors_compute import registration_plan, compute_node, node_plan, provider_request, backend_plan, credential_requirements, provider_plan, render_template, validate
+operations = {f.__name__: f for f in (registration_plan, node_plan, provider_request, backend_plan, credential_requirements, provider_plan, render_template, validate)}
 def node_plan_valid(opts, request):
     try:
         node_plan(opts, request)

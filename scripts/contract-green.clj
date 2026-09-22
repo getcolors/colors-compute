@@ -11,6 +11,7 @@
   {"sanitize_error" diagnostic/redact
    "node_runtime_error" (fn [opts request operation] (node/compute-node! opts request operation {} {}))
    "node_plan_valid" (fn [opts request] (try (node/node-plan opts request) true (catch Exception _ false)))
+   "registration_plan" node/registration-plan
    "node_plan" node/node-plan
    "provider_request" request/provider-request
    "validate" compute/validate

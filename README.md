@@ -1,65 +1,33 @@
 # Colors compute
 
-One independently identified compute unit for Green, Red, and Blue. A unit owns
-its machine, supporting provider resources, and SSH keys. Local backends keep
-authoritative keys in local OpenTofu state; remote backends use S3-compatible
-key objects. The caller and Colors SDK own topology, fan-out, joins,
-ordering, scaling, and application migration.
+Independent infrastructure capabilities for Green, Red, and Blue:
 
-## Public lifecycle
+- Durable encrypted SSH resources with explicit stable names.
+- Provider public-key registrations, each owned once and shared explicitly.
+- Compute nodes consuming public identity only.
+- Temporary SSH agents owned by the caller's workflow scope.
 
-The new API is `node_plan(opts, request)`, `build_node(opts, request)`, and
-`compute_node(opts, request, operation, environment, dependencies)`; Green uses
-`node-plan`, `build-node!`, and `compute-node!` in `compute-node`.
-See [the single-node contract](contracts/node.md) for exact inputs and lifecycle.
+The Colors SDK owns topology, fan-out, joins, and cleanup ordering. Create a
+stable SSH resource, create any required registration, then feed its public
+identity to one or more nodes. Application convergence also waits for the scoped
+agent. Neither compute nor registration state contains an SSH private key.
 
-The SDK supplies `request.workdir`, `request.node_id`, and
-`request.state_filename`. Each invocation operates in
-`<workdir>/<profile>/<node_id>`. Build writes persistent Terraform templates.
-OpenTofu executes in that directory with its default `.terraform/` folder.
-The library never deletes templates or redirects `TF_DATA_DIR`.
+See [compute and registration API](contracts/node.md),
+[SSH resources](contracts/ssh-resource.md), and
+[local compute state](contracts/local-backend.md).
+This is a [greenfield breaking replacement](migration/README.md).
 
-For `s3-prefix: infrastructure`, `profile: production`, and filename
-`app-0.tfstate`, remote state is `infrastructure/production/app-0.tfstate`.
-The corresponding remote key objects are
-`infrastructure/production/app-0/ssh-key` and `ssh-key.pub`.
-Native OpenTofu state locking protects each unit. There is no deployment journal
-or cluster coordinator.
+## Providers and storage
 
-Remote SSH keys are OpenTofu resources in the node state. The local keypair is a
-disposable Ansible copy, always overwritten from remote storage before access.
-It is never uploaded or adopted. Failed retrieval refuses access. Destruction
-removes the machine before its remote key objects and removes local copies only
-after successful infrastructure destruction. Templates and initialization files
-remain. Remote state and saved plans contain secret key material and must be
-protected as credentials. With the local backend, local state is the key
-authority and access files are refreshed from its sensitive outputs. No S3
-credentials or key objects are required.
+Compute templates cover AWS, Azure, DigitalOcean, Google, Hetzner Cloud, OCI,
+Vultr, and Yandex. AWS, DigitalOcean, Hetzner Cloud and Vultr require separate
+public-key registrations. Other providers receive the public key directly.
+Compute owns the machine and exclusively owned supporting infrastructure.
 
-## Migration
-
-This is a breaking API and state-layout change. Existing package pins keep the
-old implementation until explicitly updated. Do not point the new API at an
-old shared/per-node deployment and apply: follow the [migration procedure](migration/README.md).
-No live state, credentials, deployment configuration, or consumer pins are
-changed by this repository update.
-
-An AWS-to-OCI migration uses distinct unit identities and state filenames. The
-caller creates OCI, transfers data and switches traffic, then explicitly deletes
-AWS. Changing providers inside state that owns resources is refused.
-
-## Provider support
-
-Provider templates cover AWS, Azure, DigitalOcean, Google, Hetzner Cloud, OCI,
-Vultr, and Yandex. Provider-neutral security and network requests are resolved
-inside the library; callers do not supply arbitrary Terraform resource bodies.
-Owned supporting resources belong exclusively to one unit. Existing network
-references can be passed where a provider supports them.
-
-State backend rendering supports S3, R2, OCI, GCS, and local storage. Authoritative
-SSH key storage uses local state for the local backend and S3-compatible
-object storage for remote backends. The single-node contract
-specifies supported combinations and explicit key-store settings.
+Compute state supports S3, Cloudflare R2, OCI, GCS, and local storage.
+Each node runs in `<workdir>/<profile>/<node_id>` with persistent OpenTofu
+configuration. Remote state uses `<s3-prefix>/<profile>/<state_filename>`.
+SSH resource storage and locking are described in their own contract.
 
 ## Checks
 
@@ -67,12 +35,25 @@ specifies supported combinations and explicit key-store settings.
 python3 scripts/registry.py
 python3 scripts/provider_resources.py
 python3 scripts/provider_recipes.py
+python3 scripts/ssh_resources.py
 uv run --project blue python scripts/parity.py
+uv run --project blue python scripts/ssh_parity.py
+uv run --project blue python scripts/ssh_lifecycle.py
 uv run --directory blue pytest -q
 (cd green && bb test)
 (cd red && bun install --frozen-lockfile && bun test && bun run typecheck)
 ```
 
-Tests use synthetic runners and fixtures. Provider schema checks initialize
-OpenTofu without backend access. They do not establish live cloud permissions,
-endpoint locking behavior, or application readiness.
+Shared fixtures compare complete three-color node and registration plans.
+Lifecycle tests exercise public identity binding, independent registration
+ownership, persistent workdirs, replacement/deletion guards, and diagnostics.
+Provider schema validation and synthetic runners do not establish cloud
+permissions or application readiness; live verification is separately recorded.
+
+## Explicit live protocol probe
+
+`scripts/ssh_remote_probe.py --bucket alice-state --endpoint <EU-R2-endpoint>
+--profile alice-digitalocean` uses runtime R2 credentials to test concurrent
+creation, rotation, fresh-workstation access, and deletion. It writes one
+profile-namespaced resource and retains its deletion tombstone; it creates no
+machine. This is an explicitly invoked live check, not part of the offline suite.

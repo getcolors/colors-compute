@@ -56,6 +56,22 @@
                        (contains? #{nil "" "/"} (.getPath uri))) "invalid SSH storage endpoint")))
     {:bucket bucket :region region :endpoint endpoint :kind credential-kind :explicit explicit?})))
 
+(def ^:private registrations {"aws" "aws_key_pair" "digitalocean" "digitalocean_ssh_key" "hcloud" "hcloud_ssh_key" "vultr" "vultr_ssh_key"})
+(defn- public-identity [value]
+  (require! (and (map? value) (every? #{:reference :public_key :fingerprint :status} (keys value)) (nonblank? (:reference value))) "SSH resource reference required")
+  (let [parts (str/split (or (:public_key value) "") #"\s+")
+        _ (require! (and (= 2 (count parts)) (= "ssh-ed25519" (first parts))) "ED25519 public identity required")
+        blob (.decode (Base64/getDecoder) ^String (second parts))
+        header (.decode (Base64/getDecoder) "AAAAC3NzaC1lZDI1NTE5AAAAIA==")
+        _ (require! (and (= 51 (count blob)) (= (seq header) (take 19 blob))) "invalid ED25519 identity")
+        fingerprint (str "SHA256:" (.encodeToString (.withoutPadding (Base64/getEncoder)) (.digest (MessageDigest/getInstance "SHA-256") blob)))]
+    (require! (= fingerprint (:fingerprint value)) "SSH fingerprint mismatch") value))
+(defn- registration-identity [provider request identity]
+  (let [value (:ssh_registration request)]
+    (if (contains? registrations provider)
+      (do (require! (and (map? value) (= "ready" (:status value)) (= provider (:provider value)) (= (:reference identity) (:ssh_resource_reference value)) (= (:fingerprint identity) (:fingerprint value)) (nonblank? (:id value)) (nonblank? (:reference value))) "matching SSH registration required") value)
+      (do (require! (nil? value) "provider consumes public identity directly") nil))))
+
 (defn node-plan
   "Render a single root module. request includes node_id, state_filename and SDK workdir."
   [opts node-request]
@@ -70,8 +86,8 @@
         _ (require! (and (string? state_filename) (re-matches #"[A-Za-z0-9][A-Za-z0-9_.-]*\.tfstate" state_filename)) "invalid node state filename")
         _ (require! (compute/local-state-dir? workdir) "workdir must be an absolute normalized path")
         _ (require! (and (string? prefix) (or (empty? prefix) (every? #(boolean (re-matches #"[A-Za-z0-9][A-Za-z0-9_.-]*" %)) (str/split prefix #"/" -1)))) "invalid S3 prefix")
-        _ (require! (and (every? #{:node_id :state_filename :workdir :security :network} (keys node-request))
-                         (every? #(contains? node-request %) [:node_id :state_filename :workdir :security])) "node request contains unsupported fields")
+        _ (require! (and (every? #{:node_id :state_filename :workdir :security :network :ssh_resource :ssh_registration} (keys node-request))
+                         (every? #(contains? node-request %) [:node_id :state_filename :workdir :security :ssh_resource])) "node request contains unsupported fields")
         _ (require! (not-any? #(contains? opts %) [:ssh-key-path :ssh-private-key-path :ssh-public-key-path]) "external SSH keys are outside the single-node contract")
         provider (:provider-compute opts) recipe (get recipes (keyword provider))
         _ (require! recipe "unsupported compute provider")
@@ -79,15 +95,17 @@
                                                                 (keyword (str provider "-ssh-private-key"))]))
                     "external SSH keys are outside the single-node contract")
         _ (require! (not (contains? opts :compute-role-settings)) "topology options are outside the compute node API")
+        identity (public-identity (:ssh_resource node-request))
+        registration (registration-identity provider node-request identity)
         name (unit-name profile node_id)
         scoped (assoc opts :profile name)
         public-marker "colors-compute-public-key-sentinel"
-        raw (-> node-request (dissoc :state_filename :workdir)
+        raw (-> node-request (dissoc :state_filename :workdir :ssh_resource :ssh_registration)
                 (assoc :name name :key {:mode "managed" :public_key public-marker})
                 (update :network #(or % {:mode (:network_mode recipe)})))
         shared (json/parse-string (json/generate-string (:documents (request/provider-request scoped "shared" raw))) true)
         shared-root (apply deep-merge (vals shared))
-        replacements (atom {public-marker "${tls_private_key.machine.public_key_openssh}"})
+        replacements (atom (merge {public-marker (:public_key identity)} (when registration (into {} (for [field ["id" "key_name"]] [(str "${" (get registrations provider) ".machine." field "}") (:id registration)])))))
         counter (atom 0)
         mark (fn mark [value]
                (cond (map? value) (into {} (map (fn [[k v]] [k (if (= k :provider) v (mark v))]) value))
@@ -97,59 +115,14 @@
         shared-values (into {} (map (fn [[k v]] [k (mark (:value v))]) (:output shared-root)))
         node (json/parse-string (json/generate-string (:documents (request/provider-request scoped "node" raw shared-values))) true)
         root (deep-merge (dissoc shared-root :output) (apply deep-merge (vals node)))
-        root (walk/postwalk #(if (string? %) (get @replacements % %) %) root)
-        store (storage opts)
+        root (walk/postwalk #(loop [v %] (if (and (string? v) (contains? @replacements v)) (recur (get @replacements v)) v)) root)
         state-key (joined prefix profile state_filename)
-        key-prefix (joined prefix profile node_id)
-        remote {:private (str key-prefix "/ssh-key") :public (str key-prefix "/ssh-key.pub")}
-        key-provider (cond-> {:alias "keys" :region (:region store)}
-                       (:endpoint store) (assoc :endpoints {:s3 (:endpoint store)} :s3_use_path_style (not= "r2" (:kind store))
-                                               :skip_credentials_validation true :skip_metadata_api_check true
-                                               :skip_region_validation true :skip_requesting_account_id true)
-                       true
-                       (assoc :access_key "${var.keys_access_key}" :secret_key "${var.keys_secret_key}"))
-        old-aws (get-in root [:provider :aws])
-        root (-> root
-                 (assoc-in [:terraform :required_providers :tls] {:source "hashicorp/tls" :version "4.1.0"})
-                 (assoc-in [:terraform :required_providers :aws] {:source "hashicorp/aws" :version "6.31.0"})
-                 (assoc-in [:provider :aws] (if old-aws [old-aws key-provider] [key-provider]))
-                 (assoc-in [:resource :tls_private_key :machine] {:algorithm "ED25519"}))
-        root (assoc root :variable {:keys_access_key {:type "string" :sensitive true :default nil}
-                                      :keys_secret_key {:type "string" :sensitive true :default nil}})
-        root (reduce (fn [root [resource-name object-key content]]
-                       (assoc-in root [:resource :aws_s3_object resource-name]
-                                 (cond-> {:provider "aws.keys" :bucket (:bucket store) :key object-key
-                                          :content content :force_destroy false}
-                                   (and (= "s3" (:kind store)) (nil? (:endpoint store))) (assoc :server_side_encryption "AES256")))) root
-                     [[:ssh_private (:private remote) "${tls_private_key.machine.private_key_openssh}"]
-                      [:ssh_public (:public remote) "${tls_private_key.machine.public_key_openssh}"]])
-        ;; Every provider-owned resource waits for durable keys. This also orders
-        ;; destruction so credentials survive all infrastructure that uses them.
-        root (update root :resource
-                     (fn [resources] (into {} (for [[kind instances] resources]
-                       [kind (if (contains? #{:tls_private_key :aws_s3_object} kind) instances
-                                 (into {} (for [[id config] instances]
-                                    [id (update config :depends_on #(vec (distinct (concat % ["aws_s3_object.ssh_private" "aws_s3_object.ssh_public"]))))])))]))))
-        root (-> root
-                 (assoc-in [:output :compute_identity] {:value {:profile profile :node_id node_id :state_filename state_filename :provider provider}})
-                 (assoc-in [:output :ssh_public_key_fingerprint] {:value "${tls_private_key.machine.public_key_fingerprint_sha256}"}))
-        root (if (= "local" (:kind store))
-               (let [root (-> root
-                              (dissoc :variable)
-                              (update :resource dissoc :aws_s3_object)
-                              (assoc-in [:output :ssh_private_key] {:value "${tls_private_key.machine.private_key_openssh}" :sensitive true})
-                              (assoc-in [:output :ssh_public_key] {:value "${tls_private_key.machine.public_key_openssh}"}))
-                     root (if old-aws (assoc-in root [:provider :aws] old-aws)
-                              (-> root (update :provider dissoc :aws) (update-in [:terraform :required_providers] dissoc :aws)))]
-                 (update root :resource
-                         (fn [resources] (into {} (for [[kind instances] resources]
-                           [kind (if (= :tls_private_key kind) instances
-                                     (into {} (for [[id config] instances]
-                                       [id (update config :depends_on #(vec (distinct (conj (vec (remove #{"aws_s3_object.ssh_private" "aws_s3_object.ssh_public"} %)) "tls_private_key.machine"))))])))]))))) root)
+        root (cond-> root registration (update :resource dissoc (keyword (get registrations provider))))
+        root (assoc-in root [:output :compute_identity] {:value {:profile profile :node_id node_id :state_filename state_filename :provider provider :ssh_resource_reference (:reference identity) :ssh_fingerprint (:fingerprint identity)}})
         backend (if (= "local" (:provider-backend opts))
                   {:config {:terraform {:backend {:local {:path (joined workdir profile node_id state_filename)}}}}}
                   (compute/backend-plan opts state-key))]
-    {:status "planned" :directory (joined workdir profile node_id) :state_key state-key :key_objects (if (= "local" (:kind store)) {} remote)
+    {:status "planned" :directory (joined workdir profile node_id) :state_key state-key :key_objects {}
      :documents {"compute.tf.json" root "backend.tf.json" (:config backend)}}))
 
 (defn- write-private! [directory filename text]
@@ -158,10 +131,13 @@
     (local/write-atomic! target text)
     target))
 
+(def ^:dynamic *planner* node-plan)
+(def ^:dynamic *normalizer* nil)
+
 (defn build-node!
   "Persist templates in the SDK workdir. Never removes templates or init files."
   [opts node-request]
-  (let [plan (node-plan opts node-request) directory (local/path (:directory plan))]
+  (let [plan (*planner* opts node-request) directory (local/path (:directory plan))]
     (diagnostics/stage! "build")
     (local/private-owned-directory! (:workdir node-request) directory)
     (doseq [filename [".terraform" ".terraform.lock.hcl" "approved.tfplan" (:state_filename node-request)]]
@@ -210,6 +186,18 @@
                    (re-find #"^\s*(?:aws: \[ERROR\]: )?An error occurred \(NoSuchKey\) when calling the GetObject operation(?: \(reached max retries: [0-9]+\))?:" (:err result))) "absent"
               :else (diagnostics/command-error! "state_unreadable")))
       (finally (diagnostics/cleanup! #(Files/deleteIfExists (local/path file)))))))
+(defn- uninitialized-envelope? [text]
+  ;; OpenTofu may report success with a synthetic snapshot before any backend
+  ;; state exists. This is only a reason to probe; it never proves absence.
+  (try
+    (let [state (parse-one text)]
+      (and (map? state)
+           (= #{:version :terraform_version :serial :lineage :outputs :resources :check_results} (set (keys state)))
+           (= 4 (:version state)) (= 0 (:serial state)) (= "" (:lineage state))
+           (nonblank? (:terraform_version state)) (= {} (:outputs state)) (= [] (:resources state))
+           (nil? (:check_results state))))
+    (catch Exception _ false)))
+
 (defn- valid-state! [text identity]
   (let [state (parse-one text)]
     (require! (runtime/valid-state? state) "invalid compute state")
@@ -229,7 +217,7 @@
 (defn- normalized [params environment]
   (require! (map? params) "invalid compute outputs")
   (let [templates (get (json/parse-string (slurp (io/resource "colors_compute/templates.json")) true) (keyword (:provider params)))
-        allowed (into #{:ssh_identity_file} (mapcat (fn [[stage documents]]
+        allowed (into #{} (mapcat (fn [[stage documents]]
                                                     (when (str/starts-with? (name stage) "node")
                                                       (mapcat #(keys (get-in % [:output :params :value])) (vals documents)))) templates))
         _ (require! (every? allowed (keys params)) "unexpected node outputs")
@@ -245,55 +233,17 @@
         (require! (not (or (str/includes? text secret) (str/includes? text (subs encoded 1 (dec (count encoded)))))) "credential compute output")))
     result))
 
-(defn- prepare-access! [plan state environment runner]
-  (diagnostics/stage! "access")
-  (let [directory (local/path (:directory plan)) store (:storage plan)
-        files {:private "ssh-key" :public "ssh-key.pub"}
-        cli-env (storage-environment store environment)]
-    (try
-      ;; Never fall back to a local key, even when only one download fails.
-      (doseq [[kind filename] files]
-        (if (= "local" (:kind store))
-          (let [value (get-in state [:outputs (if (= kind :private) :ssh_private_key :ssh_public_key) :value])]
-            (require! (nonblank? value) "local state SSH key is unavailable")
-            (when (= kind :private)
-              (require! (true? (get-in state [:outputs :ssh_private_key :sensitive])) "local private key output must be sensitive"))
-            (write-private! directory (str filename ".download") value))
-          (let [path (write-private! directory (str filename ".download") "")]
-            (execute! runner (:directory plan) cli-env
-                    (into ["aws" "s3api" "get-object" "--bucket" (:bucket store) "--key" (get-in plan [:key_objects kind])
-                           "--region" (:region store) "--no-cli-pager"]
-                          (concat (when (:endpoint store) ["--endpoint-url" (:endpoint store)]) [path])) 120000))))
-      (let [public (str/trim (slurp (.toFile (.resolve directory "ssh-key.pub.download"))))
-            derived (str/trim (execute! runner (:directory plan) (safe-environment environment)
-                                       ["ssh-keygen" "-y" "-f" (str (.resolve directory "ssh-key.download"))] 120000))
-            expected (some #(when (= "tls_private_key" (:type %)) (get-in % [:instances 0 :attributes :public_key_openssh])) (:resources state))
-            normalize #(str/join " " (take 2 (str/split (str/trim %) #"\s+")))
-            parts (str/split public #"\s+")
-            _ (require! (and (<= 2 (count parts)) (= "ssh-ed25519" (first parts))) "invalid remote SSH public key")
-            fingerprint (str "SHA256:" (.encodeToString (.withoutPadding (Base64/getEncoder))
-                                                        (.digest (MessageDigest/getInstance "SHA-256") (.decode (Base64/getDecoder) ^String (second parts)))))]
-        (require! (and (nonblank? expected) (= (normalize public) (normalize derived) (normalize expected))
-                       (= fingerprint (get-in state [:outputs :ssh_public_key_fingerprint :value]))) "remote SSH keypair does not match node state")
-        (doseq [filename (vals files)]
-          (write-private! directory filename (slurp (.toFile (.resolve directory (str filename ".download"))))))
-        {:private (str (.resolve directory "ssh-key")) :public (str (.resolve directory "ssh-key.pub"))})
-      (catch Exception error
-        (diagnostics/cleanup! #(doseq [filename (vals files)] (Files/deleteIfExists (.resolve directory filename))))
-        (throw error))
-      (finally (diagnostics/cleanup! #(doseq [filename (vals files)] (Files/deleteIfExists (.resolve directory (str filename ".download")))))))))
-
 (defn- compute-node*
   "Run one unit using native OpenTofu locking. deps accepts :runner for testing."
   ([opts node-request] (compute-node* opts node-request "create" (into {} (System/getenv)) {}))
   ([opts node-request operation] (compute-node* opts node-request operation (into {} (System/getenv)) {}))
   ([opts node-request operation environment] (compute-node* opts node-request operation environment {}))
   ([opts node-request operation environment deps]
-   (require! (contains? #{"create" "delete" "inspect" "prepare-access"} operation) "invalid compute operation")
+   (require! (contains? #{"create" "delete" "inspect"} operation) "invalid compute operation")
    (require! (or (not (contains? opts :compute-require-existing-state)) (boolean? (:compute-require-existing-state opts))) "invalid existing-state requirement")
    (require! (or (not= "delete" operation) (false? (:compute-prevent-destroy opts))) "compute deletion requires compute-prevent-destroy=false")
-   (let [plan (assoc (build-node! opts node-request) :storage (storage opts)) directory (local/path (:directory plan))
-         identity {:profile (:profile opts) :node_id (:node_id node-request) :state_filename (:state_filename node-request) :provider (:provider-compute opts)}
+   (let [plan (build-node! opts node-request) directory (local/path (:directory plan))
+         identity (get-in plan [:documents "compute.tf.json" :output :compute_identity :value])
          runner (diagnostics/wrap-runner (get deps :runner runtime/run-command))
          _ (diagnostics/stage! "credentials")
          backend (assoc (compute/backend-plan opts (:state_key plan)) :config (get-in plan [:documents "backend.tf.json"]))
@@ -304,14 +254,6 @@
                                  (let [variable (str "COLORS_PAR_" (str/upper-case (str/replace (name key) "-" "_"))) value (get environment variable)]
                                    (require! (nonblank? value) (str "required credential is not set: " variable)) [target value])))
          env (merge (safe-environment environment) provider-env {"TF_IN_AUTOMATION" "1" "TF_INPUT" "0" "TF_WORKSPACE" "default"})
-         kind (get-in plan [:storage :kind])
-         env (if (or (contains? #{"r2" "oci"} kind) (:explicit (:storage plan)))
-               (let [prefix (if (:explicit (:storage plan)) "SSH_S3" (if (= kind "r2") "R2" "OCI"))
-                     access (get environment (str "COLORS_PAR_" prefix "_ACCESS_KEY_ID"))
-                     secret (get environment (str "COLORS_PAR_" prefix "_SECRET_ACCESS_KEY"))]
-                 (require! (or (and (:explicit (:storage plan)) (nil? access) (nil? secret))
-                               (and (nonblank? access) (nonblank? secret))) "required SSH storage credentials are not set")
-                 (if access (assoc env "TF_VAR_keys_access_key" access "TF_VAR_keys_secret_key" secret) env)) env)
          credential-file (write-private! directory "credentials.tfbackend.json" (json/generate-string credentials))
          command (fn [arguments]
                    (diagnostics/stage! (case (first arguments) "init" "init" "state" "state" "plan" "plan" "show" "plan-validation" "apply" "apply" "validate"))
@@ -321,7 +263,8 @@
        (command ["init" "-input=false" "-no-color" "-reconfigure" (str "-backend-config=" credential-file)])
        (diagnostics/stage! "state")
        (let [pulled (runner ["tofu" "state" "pull"] (:directory plan) env 120000)
-             needs-presence? (or (not= 0 (:exit pulled)) (not (nonblank? (:out pulled))))
+             needs-presence? (or (not= 0 (:exit pulled)) (not (nonblank? (:out pulled)))
+                                 (uninitialized-envelope? (:out pulled)))
              observed (when needs-presence?
                         (case (:provider-backend opts)
                           "local" (:status (local/presence (get-in backend [:config :terraform :backend :local :path])))
@@ -334,26 +277,14 @@
              _ (when-not (or (not needs-presence?) (= "absent" observed)) (diagnostics/command-error! "state_unreadable"))
              before (when-not needs-presence? (valid-state! (:out pulled) identity))
              _ (require! (or before (and (= operation "create") (not (:compute-require-existing-state opts)))) "compute state is required")
-             _ (when (and (= operation "create") (= "local" (:provider-backend opts)) (nil? before))
-                 (doseq [filename ["ssh-key" "ssh-key.pub"]]
-                   (require! (= "absent" (:status (local/presence (str (.resolve directory filename)))))
-                             "local SSH copies exist without owned state; recover state before creation")))
-             _ (when (= operation "create")
-                 (doseq [[kind object-key] (:key_objects plan)
-                         :let [resource-name (str "ssh_" (name kind))
-                               owned (some #(and (= "managed" (:mode %)) (= "aws_s3_object" (:type %)) (= resource-name (:name %))
-                                                 (some (fn [instance] (and (= object-key (get-in instance [:attributes :key]))
-                                                                          (= (:bucket (:storage plan)) (get-in instance [:attributes :bucket])))) (:instances %))) (:resources before))]
-                         :when (not owned)]
-                   (require! (= "absent" (object-presence! (:storage plan) object-key (:directory plan) environment runner))
-                             "remote SSH keys exist without owned state; recover state before creation")))]
-         (if (contains? #{"inspect" "prepare-access"} operation)
+]
+         (if (contains? #{"inspect"} operation)
            (if (and (= "inspect" operation) (empty? (:resources before)) (empty? (:outputs before)))
              {:status "destroyed" :directory (:directory plan)}
            (do (require! (seq (:resources before)) "compute node does not exist")
-               (let [params (normalized (get-in before [:outputs :params :value]) environment)]
+               (let [params ((or *normalizer* normalized) (get-in before [:outputs :params :value]) environment)]
                  {:status "ready" :directory (:directory plan)
-                  :params (cond-> params (= operation "prepare-access") (assoc :ssh_identity_file (:private (prepare-access! plan before environment runner))))})))
+                  :params params})))
            (let [plan-path (str (.resolve directory "approved.tfplan"))]
              (command (cond-> ["plan" "-input=false" "-no-color" (str "-out=" plan-path)] (= operation "delete") (conj "-destroy")))
              (guarded-plan! (command ["show" "-json" plan-path]) operation)
@@ -361,11 +292,10 @@
              (let [after (valid-state! (command ["state" "pull"]) identity)]
                (if (= operation "delete")
                  (do (require! (empty? (:resources after)) "compute deletion is incomplete")
-                     (diagnostics/cleanup! #(doseq [filename ["ssh-key" "ssh-key.pub"]] (Files/deleteIfExists (.resolve directory filename))))
                      {:status "destroyed" :directory (:directory plan)})
-                 (let [params (normalized (get-in after [:outputs :params :value]) environment)]
+                 (let [params ((or *normalizer* normalized) (get-in after [:outputs :params :value]) environment)]
                    {:status "ready" :directory (:directory plan)
-                    :params (assoc params :ssh_identity_file (:private (prepare-access! plan after environment runner)))}))))))
+                    :params params}))))))
        (finally (diagnostics/cleanup! #(Files/deleteIfExists (local/path credential-file))))))))
 
 (defn compute-node!
@@ -380,3 +310,45 @@
            (compute-node* opts node-request operation environment deps))
        (catch InterruptedException error (throw error))
        (catch Exception error (diagnostics/failure error))))))
+
+
+(defn- registration-request [request]
+  (require! (and (= #{:name :workdir :state_filename :ssh_resource} (set (keys request))) (safe? (:name request))) "invalid SSH registration request")
+  {:node_id (str "registration-" (:name request)) :workdir (:workdir request) :state_filename (:state_filename request) :ssh_resource (:ssh_resource request)})
+(defn- registration-plan* [opts internal]
+  (let [provider (:provider-compute opts) kind (get registrations provider)
+        _ (require! kind "provider needs no SSH registration")
+        identity (public-identity (:ssh_resource internal)) name (:node_id internal)
+        _ (require! (and (safe? (:profile opts)) (safe? name) (safe? (str (:profile opts) "-" name)) (compute/local-state-dir? (:workdir internal)) (string? (:state_filename internal)) (re-matches #"[A-Za-z0-9][A-Za-z0-9_.-]*\.tfstate" (:state_filename internal))) "invalid registration identity")
+        _ (walk/postwalk (fn [v] (when (string? v) (require! (not-any? #(str/includes? v %) ["${" "%{" (str (char 0))]) "invalid registration literal")) v) [opts internal])
+        prefix (get opts :s3-prefix "")
+        _ (require! (and (string? prefix) (or (empty? prefix) (every? #(re-matches #"[A-Za-z0-9][A-Za-z0-9_.-]*" %) (str/split prefix #"/" -1)))) "invalid S3 prefix")
+        state-key (joined prefix (:profile opts) (:state_filename internal))
+        directory (joined (:workdir internal) (:profile opts) name)
+        documents (get-in (json/parse-string (slurp (io/resource "colors_compute/templates.json")) true) [(keyword provider) :shared-keygen])
+        root (apply deep-merge (map #(select-keys % [:terraform :provider]) (vals documents)))
+        root (if (= provider "aws") (do (require! (nonblank? (:aws-region opts)) "AWS region required") (assoc-in root [:provider :aws :region] (:aws-region opts))) root)
+        root (assoc-in root [:output :compute_identity :value] {:profile (:profile opts) :node_id name :state_filename (:state_filename internal) :provider provider :ssh_resource_reference (:reference identity) :ssh_fingerprint (:fingerprint identity)})
+        backend (if (= "local" (:provider-backend opts)) {:terraform {:backend {:local {:path (joined directory (:state_filename internal))}}}} (:config (compute/backend-plan opts state-key)))
+        plan {:status "planned" :directory directory :state_key state-key :key_objects {} :documents {"backend.tf.json" backend}}
+        resource {(if (= provider "aws") :key_name :name) (str (:profile opts) "-" name)
+                  (if (= provider "vultr") :ssh_key :public_key) (:public_key identity)
+                  :lifecycle {:prevent_destroy (get opts :compute-prevent-destroy true)}}
+        root (-> root (dissoc :data :locals)
+                 (assoc :resource {(keyword kind) {:machine resource}})
+                 (assoc :output {:compute_identity {:value (assoc (get-in root [:output :compute_identity :value]) :kind "ssh-registration" :provider_scope (if (= provider "aws") (:aws-region opts) provider))}
+                                 :params {:value {:provider provider :node_id name :id (str "${tostring(" kind ".machine." (if (= provider "aws") "key_name" "id") ")}")}}}))]
+    (assoc-in plan [:documents "compute.tf.json"] root)))
+(defn registration-plan [opts request] (registration-plan* opts (registration-request request)))
+(defn build-registration! [opts request]
+  (binding [*planner* registration-plan*] (build-node! opts (registration-request request))))
+(defn compute-registration!
+  ([opts request] (compute-registration! opts request "create" (into {} (System/getenv)) {}))
+  ([opts request operation] (compute-registration! opts request operation (into {} (System/getenv)) {}))
+  ([opts request operation environment] (compute-registration! opts request operation environment {}))
+  ([opts request operation environment deps]
+   (binding [*planner* registration-plan*
+             *normalizer* (fn [params _] (require! (and (map? params) (every? #{:provider :node_id :id} (keys params)) (nonblank? (:id params))) "invalid registration outputs") params)]
+     (let [result (compute-node! opts (registration-request request) operation environment deps)]
+       (if (= "ready" (:status result))
+         (merge (dissoc result :params) {:reference (:state_key (registration-plan opts request)) :provider (:provider-compute opts) :ssh_resource_reference (get-in request [:ssh_resource :reference]) :fingerprint (get-in request [:ssh_resource :fingerprint]) :id (get-in result [:params :id])}) result)))))

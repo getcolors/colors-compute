@@ -38,7 +38,7 @@ def _valid_plan(output, operation):
 
 def _replace(value, replacements):
     if isinstance(value, str):
-        return deepcopy(replacements.get(value, value))
+        return _replace(replacements[value], replacements) if value in replacements else value
     if isinstance(value, list):
         return [_replace(item, replacements) for item in value]
     if isinstance(value, dict):
@@ -54,6 +54,40 @@ def _merge(target, source):
             _merge(target[key], value)
         elif target[key] != value:
             raise ValueError('conflicting node template declaration')
+
+
+_REGISTRATIONS = {'aws': 'aws_key_pair', 'digitalocean': 'digitalocean_ssh_key', 'hcloud': 'hcloud_ssh_key', 'vultr': 'vultr_ssh_key'}
+
+
+def _public_identity(value):
+    if not isinstance(value, dict) or set(value) - {'reference', 'public_key', 'fingerprint', 'status'}:
+        raise ValueError('invalid public SSH resource')
+    if not isinstance(value.get('reference'), str) or not value['reference'].strip():
+        raise ValueError('SSH resource reference required')
+    public = value.get('public_key', '').split()
+    if len(public) != 2 or public[0] != 'ssh-ed25519':
+        raise ValueError('ED25519 public identity required')
+    try:
+        blob = base64.b64decode(public[1], validate=True)
+        if len(blob) != 51 or blob[:19] != bytes.fromhex('0000000b7373682d6564323535313900000020'):
+            raise ValueError()
+    except Exception:
+        raise ValueError('invalid ED25519 public identity') from None
+    fingerprint = 'SHA256:' + base64.b64encode(hashlib.sha256(blob).digest()).decode().rstrip('=')
+    if value.get('fingerprint') != fingerprint:
+        raise ValueError('SSH fingerprint mismatch')
+    return value
+
+
+def _registration_identity(provider, request, identity):
+    value = request.get('ssh_registration')
+    if provider not in _REGISTRATIONS:
+        if value is not None:
+            raise ValueError('provider consumes public SSH identity directly')
+        return None
+    if not isinstance(value, dict) or value.get('status') != 'ready' or value.get('provider') != provider or value.get('ssh_resource_reference') != identity['reference'] or value.get('fingerprint') != identity['fingerprint'] or not isinstance(value.get('id'), str) or not value['id'].strip() or not isinstance(value.get('reference'), str) or not value['reference'].strip():
+        raise ValueError('matching SSH registration required')
+    return value
 
 
 def node_plan(opts, request):
@@ -73,8 +107,8 @@ def node_plan(opts, request):
     literals(request)
     if 'compute-role-settings' in opts:
         raise ValueError('topology options are outside the compute node API')
-    required = {'node_id', 'state_filename', 'workdir', 'security'}
-    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'network'}:
+    required = {'node_id', 'state_filename', 'workdir', 'security', 'ssh_resource'}
+    if not isinstance(request, dict) or not required <= set(request) or set(request) - required - {'network', 'ssh_registration'}:
         raise ValueError('invalid single-node request')
     profile, node = opts.get('profile'), request['node_id']
     if not _safe(profile) or not _safe(node):
@@ -92,7 +126,7 @@ def node_plan(opts, request):
         raise ValueError('invalid S3 prefix')
     stem = '/'.join(part for part in (prefix, profile) if part)
     state_key = stem + '/' + filename
-    key_objects = {'private': stem + '/' + node + '/ssh-key', 'public': stem + '/' + node + '/ssh-key.pub'}
+    key_objects = {}
     directory = str(Path(request['workdir']) / profile / node)
     if 'compute-require-existing-state' in opts and type(opts['compute-require-existing-state']) is not bool:
         raise ValueError('compute-require-existing-state must be a boolean')
@@ -106,6 +140,8 @@ def node_plan(opts, request):
         raise ValueError('external SSH keys are outside the single-node contract')
     if not _safe(profile + '-' + node):
         raise ValueError('combined profile and node identifier exceeds 63 characters')
+    identity = _public_identity(request['ssh_resource'])
+    registration = _registration_identity(provider, request, identity)
     scoped = {**deepcopy(opts), 'profile': profile + '-' + node}
     recipe = recipes[provider]
     req = {'node_id': node, 'name': scoped['profile'], 'key': {'mode': 'managed', 'public_key': 'colors-public-key-placeholder'},
@@ -115,7 +151,10 @@ def node_plan(opts, request):
     for document in shared_docs.values():
         for name, output in document.get('output', {}).items():
             shared[name] = deepcopy(output['value'])
-    replacements = {'colors-public-key-placeholder': '${tls_private_key.machine.public_key_openssh}'}
+    replacements = {'colors-public-key-placeholder': identity['public_key']}
+    if registration:
+        kind = _REGISTRATIONS[provider]
+        replacements.update({'${' + kind + '.machine.' + field + '}': registration['id'] for field in ('id', 'key_name')})
     def placeholders(value):
         if isinstance(value, str) and ('${' in value or '%{' in value):
             token = 'colors-shared-reference-' + str(len(replacements))
@@ -133,72 +172,13 @@ def node_plan(opts, request):
     for document in node_docs.values():
         _merge(merged, document)
     merged = _replace(merged, replacements)
-    local_keys = backend == 'local'
-    if local_keys and any(str(name).startswith('ssh-s3-') for name in opts):
-        raise ValueError('local backend owns local keys; SSH S3 settings are unsupported')
-    required_providers = merged.setdefault('terraform', {}).setdefault('required_providers', {})
-    required_providers['tls'] = {'source': 'hashicorp/tls', 'version': '4.1.0'}
-    merged.setdefault('output', {})['compute_identity'] = {'value': {'profile': profile, 'node_id': node, 'state_filename': filename, 'provider': provider}}
-    merged['output']['ssh_public_key_fingerprint'] = {'value': '${tls_private_key.machine.public_key_fingerprint_sha256}'}
-    resources = merged.setdefault('resource', {})
-    dependencies = ['tls_private_key.machine'] if local_keys else ['aws_s3_object.ssh_private', 'aws_s3_object.ssh_public']
-    for instances in resources.values():
-        for resource in instances.values():
-            resource.setdefault('depends_on', []).extend(dependencies)
-    resources['tls_private_key'] = {'machine': {'algorithm': 'ED25519'}}
-    if local_keys:
-        key_objects = {}
-        merged['output']['ssh_private_key'] = {'value': '${tls_private_key.machine.private_key_openssh}', 'sensitive': True}
-        merged['output']['ssh_public_key'] = {'value': '${tls_private_key.machine.public_key_openssh}'}
-    else:
-        settings = _key_settings(opts, state_key)
-        keys_provider = {'alias': 'keys', 'region': settings['region'],
-                         'access_key': '${var.keys_access_key}', 'secret_key': '${var.keys_secret_key}'}
-        for field in ('endpoints', 'skip_credentials_validation', 'skip_metadata_api_check', 'skip_region_validation', 'skip_requesting_account_id'):
-            if field in settings:
-                keys_provider[field] = deepcopy(settings[field])
-        if 'use_path_style' in settings:
-            keys_provider['s3_use_path_style'] = settings['use_path_style']
-        providers = merged.setdefault('provider', {})
-        providers['aws'] = ([providers['aws']] if 'aws' in providers else []) + [keys_provider]
-        required_providers.setdefault('aws', {'source': 'hashicorp/aws', 'version': '6.31.0'})
-        merged['variable'] = {name: {'type': 'string', 'sensitive': True, 'default': None} for name in ('keys_access_key', 'keys_secret_key')}
-        resources['aws_s3_object'] = {
-            'ssh_' + kind: {'provider': 'aws.keys', 'bucket': settings['bucket'], 'key': key_objects[kind],
-                           'force_destroy': False, 'content': '${tls_private_key.machine.' + ('private_key_openssh' if kind == 'private' else 'public_key_openssh') + '}',
-                           **({'server_side_encryption': 'AES256'} if backend == 's3' or backend == 'gcs' and not opts.get('ssh-s3-endpoint') else {})}
-            for kind in ('private', 'public')}
+    if registration:
+        merged.get('resource', {}).pop(_REGISTRATIONS[provider], None)
+    merged.setdefault('output', {})['compute_identity'] = {'value': {'profile': profile, 'node_id': node, 'state_filename': filename, 'provider': provider, 'ssh_resource_reference': identity['reference'], 'ssh_fingerprint': identity['fingerprint']}}
     backend_document = ({'terraform': {'backend': {'local': {'path': str(Path(directory) / filename)}}}}
                         if backend == 'local' else backend_plan(opts, state_key)['config'])
     return {'status': 'planned', 'directory': directory, 'state_key': state_key, 'key_objects': key_objects,
             'documents': {'compute.tf.json': merged, 'backend.tf.json': backend_document}}
-
-
-def _key_settings(opts, state_key):
-    from urllib.parse import urlparse
-    if opts.get('provider-backend') in ('s3', 'r2', 'oci'):
-        if any(name in opts for name in ('ssh-s3-bucket', 'ssh-s3-region', 'ssh-s3-endpoint')):
-            raise ValueError('remote key storage is bound to the state backend')
-        settings = backend_plan(opts, state_key)['config']['terraform']['backend']['s3']
-    else:
-        settings = {'bucket': opts.get('ssh-s3-bucket'), 'region': opts.get('ssh-s3-region')}
-        if opts.get('ssh-s3-endpoint') is not None:
-            settings.update(endpoints={'s3': opts['ssh-s3-endpoint']}, use_path_style=True,
-                            skip_credentials_validation=True, skip_metadata_api_check=True,
-                            skip_region_validation=True, skip_requesting_account_id=True)
-    if any(not isinstance(settings.get(name), str) or not settings[name].strip()
-           or settings[name].strip().upper() == 'REPLACE_ME' for name in ('bucket', 'region')):
-        raise ValueError('remote SSH storage bucket and region are required')
-    endpoint = settings.get('endpoints', {}).get('s3')
-    if endpoint is not None:
-        if not isinstance(endpoint, str):
-            raise ValueError('invalid SSH storage endpoint')
-        parsed = urlparse(endpoint)
-        if (parsed.scheme != 'https' or not parsed.hostname or parsed.username is not None
-                or parsed.password is not None or parsed.query or parsed.fragment
-                or parsed.path not in ('', '/')):
-            raise ValueError('invalid SSH storage endpoint')
-    return settings
 
 
 def _directory(path):
@@ -232,15 +212,15 @@ def _read_file(path):
         return stream.read()
 
 
-def build_node(opts, request):
-    plan = node_plan(opts, request)
+def build_node(opts, request, _planner=node_plan):
+    plan = _planner(opts, request)
     _directory(plan['directory'])
     existing = Path(plan['directory']) / 'compute.tf.json'
     if existing.exists():
         previous = json.loads(_read_file(existing))
-        provider = previous.get('output', {}).get('params', {}).get('value', {}).get('provider')
-        if provider != opts['provider-compute']:
-            raise ValueError('provider change requires a distinct node identity')
+        provider = previous.get('output', {}).get('compute_identity', {}).get('value', {}).get('provider')
+        if previous.get('output', {}).get('compute_identity') != plan['documents']['compute.tf.json']['output']['compute_identity']:
+            raise ValueError('compute identity change requires a distinct directory')
     backend_path = Path(plan['directory']) / 'backend.tf.json'
     if backend_path.exists() and json.loads(_read_file(backend_path)) != plan['documents']['backend.tf.json']:
         raise ValueError('node backend identity changed; explicit migration required')
@@ -256,15 +236,16 @@ async def compute_node(opts, request, operation='create', environment=None, depe
     try:
         source = dict(os.environ if environment is None else environment)
         diagnostic_secrets = credential_values(source, opts)
-        if operation not in ('create', 'delete', 'inspect', 'prepare-access', 'build'):
+        planner = (dependencies or {}).get('_planner', node_plan)
+        if operation not in ('create', 'delete', 'inspect', 'build'):
             raise ValueError('invalid node operation')
         if operation == 'build':
-            node_plan(opts, request)
+            planner(opts, request)
             stage = 'build'
-            return build_node(opts, request)
+            return build_node(opts, request, planner)
         if operation == 'delete' and opts.get('compute-prevent-destroy', True):
             raise ValueError('compute destruction is protected')
-        plan = node_plan(opts, request)
+        plan = planner(opts, request)
         directory = plan['directory']
         stage = 'build'
         _directory(directory)
@@ -284,16 +265,6 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                 raise NodeError('missing_credentials', credential=variable)
             credentials[field] = source[variable]
         key_credentials = dict(credentials)
-        if opts['provider-backend'] == 'gcs':
-            key_credentials = {}
-            for name, field in (('COLORS_PAR_SSH_S3_ACCESS_KEY_ID', 'access_key'), ('COLORS_PAR_SSH_S3_SECRET_ACCESS_KEY', 'secret_key')):
-                if source.get(name):
-                    key_credentials[field] = source[name]
-            if key_credentials and set(key_credentials) != {'access_key', 'secret_key'}:
-                raise ValueError('incomplete SSH storage credentials')
-        if key_credentials:
-            child['TF_VAR_keys_access_key'] = key_credentials['access_key']
-            child['TF_VAR_keys_secret_key'] = key_credentials['secret_key']
         execute = (dependencies or {}).get('runner', _run)
         async def invoke(args, env, timeout):
             nonlocal changes
@@ -342,7 +313,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             old_backend = json.loads(_read_file(backend_path))
             if old_backend != plan['documents']['backend.tf.json']:
                 raise ValueError('node backend identity changed; explicit migration required')
-        build_node(opts, request)
+        build_node(opts, request, planner)
         credential_path = Path(directory) / 'credentials.tfbackend.json'
         try:
             _write(credential_path, json.dumps(credentials).encode())
@@ -350,7 +321,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         finally:
             credential_path.unlink(missing_ok=True)
         stage = 'state'
-        settings = None if opts['provider-backend'] == 'local' else _key_settings(opts, plan['state_key'])
+        settings = backend_plan(opts, plan['state_key'])['config']['terraform']['backend']['s3'] if opts['provider-backend'] in ('s3', 'r2', 'oci') else None
         key_env = {key: value for key, value in child.items() if not key.startswith(('TF_', 'TOFU_'))}
         if key_credentials:
             for name in ('AWS_PROFILE', 'AWS_DEFAULT_PROFILE', 'AWS_SESSION_TOKEN'):
@@ -399,23 +370,10 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             expected_identity = plan['documents']['compute.tf.json']['output']['compute_identity']['value']
             if existing and (identity != expected_identity or prior.get('provider') != opts['provider-compute']):
                 raise ValueError('provider or unit change requires explicit state recovery')
-            if not present and opts['provider-backend'] == 'local' and any((Path(directory) / name).exists() or (Path(directory) / name).is_symlink() for name in ('ssh-key', 'ssh-key.pub')):
-                raise ValueError('local state is missing beside existing key copies; recover state')
             if not present and operation != 'create':
                 raise ValueError('state missing; explicit recovery required')
             if not present and opts.get('compute-require-existing-state', False):
                 raise ValueError('existing state required')
-            if operation == 'create':
-                for kind, key in plan['key_objects'].items():
-                    owned = [resource for resource in existing if resource.get('mode') == 'managed' and resource.get('type') == 'aws_s3_object' and resource.get('name') == 'ssh_' + kind]
-                    if owned:
-                        if len(owned) != 1 or len(owned[0].get('instances', [])) != 1:
-                            raise ValueError('ambiguous remote key ownership')
-                        attrs = owned[0]['instances'][0].get('attributes', {})
-                        if attrs.get('bucket') != settings['bucket'] or attrs.get('key') != key:
-                            raise ValueError('remote key resource identity mismatch')
-                    elif await get_object(key, observed_path):
-                        raise ValueError('remote key ownership is missing')
         finally:
             observed_path.unlink(missing_ok=True)
         if operation == 'inspect' and not existing and not state['outputs']:
@@ -424,8 +382,6 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             raise ValueError('node state is absent')
         if operation == 'delete' and not existing and not state['outputs']:
             stage = 'cleanup'
-            for name in ('ssh-key', 'ssh-key.pub'):
-                (Path(directory) / name).unlink(missing_ok=True)
             return {'status': 'destroyed', 'directory': directory}
         if operation in ('create', 'delete'):
             args = ['tofu', 'plan', '-input=false', '-no-color', '-out=approved.tfplan']
@@ -442,8 +398,6 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             if after['resources'] or after['outputs']:
                 raise ValueError('node resources remain')
             stage = 'cleanup'
-            for name in ('ssh-key', 'ssh-key.pub'):
-                (Path(directory) / name).unlink(missing_ok=True)
             return {'status': 'destroyed', 'directory': directory}
         state_text = await run(['tofu', 'state', 'pull'])
         params = _params(state_text)
@@ -452,53 +406,9 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             raise ValueError('node state identity mismatch')
         if params.get('provider') != opts['provider-compute'] or params.get('node_id') != request['node_id']:
             raise ValueError('node state identity mismatch')
-        if operation != 'inspect':
-            stage = 'access'
-            settings = None if opts['provider-backend'] == 'local' else _key_settings(opts, plan['state_key'])
-            key_env = {key: value for key, value in child.items() if not key.startswith(('TF_', 'TOFU_'))}
-            if key_credentials:
-                for name in ('AWS_PROFILE', 'AWS_DEFAULT_PROFILE', 'AWS_SESSION_TOKEN'):
-                    key_env.pop(name, None)
-                key_env['AWS_ACCESS_KEY_ID'] = key_credentials['access_key']
-                key_env['AWS_SECRET_ACCESS_KEY'] = key_credentials['secret_key']
-            paths = []
-            try:
-                for kind, filename in (('private', 'ssh-key'), ('public', 'ssh-key.pub')):
-                    path = Path(directory) / (filename + '.download')
-                    path.unlink(missing_ok=True)
-                    _write(path, b'')
-                    paths.append(path)
-                    if opts['provider-backend'] == 'local':
-                        output = state_outputs.get('ssh_' + kind + '_key', {})
-                        value = output.get('value')
-                        if not isinstance(value, str) or not value.strip() or kind == 'private' and output.get('sensitive') is not True:
-                            raise ValueError('local key outputs are missing or invalid')
-                        if kind == 'private':
-                            diagnostic_secrets.add(value)
-                        _write(path, value.encode())
-                    else:
-                        args = ['aws', 's3api', 'get-object', '--bucket', settings['bucket'], '--key', plan['key_objects'][kind], str(path), '--region', settings['region'], '--no-cli-pager']
-                        if 'endpoints' in settings:
-                            args += ['--endpoint-url', settings['endpoints']['s3']]
-                        await run(args, key_env)
-                    path.chmod(0o600)
-                diagnostic_secrets.add(_read_file(paths[0]))
-                public = await run(['ssh-keygen', '-y', '-f', str(paths[0])], key_env)
-                if public.split()[:2] != paths[1].read_text().split()[:2]:
-                    raise ValueError('remote keypair mismatch')
-                fingerprint = 'SHA256:' + base64.b64encode(hashlib.sha256(base64.b64decode(public.split()[1], validate=True)).digest()).decode().rstrip('=')
-                if fingerprint != state_outputs.get('ssh_public_key_fingerprint', {}).get('value'):
-                    raise ValueError('remote key fingerprint mismatch')
-                for path, filename in zip(paths, ('ssh-key', 'ssh-key.pub')):
-                    os.replace(path, Path(directory) / filename)
-            except BaseException:
-                for name in ('ssh-key', 'ssh-key.pub', 'ssh-key.download', 'ssh-key.pub.download'):
-                    (Path(directory) / name).unlink(missing_ok=True)
-                raise
-            params['ssh_identity_file'] = str(Path(directory) / 'ssh-key')
         stage = 'state'
         templates = json.loads(files('colors_compute').joinpath('templates.json').read_text())[opts['provider-compute']]
-        allowed = {'ssh_identity_file'}
+        allowed = {'provider', 'node_id', 'id'} if (dependencies or {}).get('_registration') else set()
         for stage_name, documents in templates.items():
             if stage_name.startswith('node'):
                 for document in documents.values():
@@ -515,3 +425,62 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         return {'status': 'ready', 'directory': directory, 'params': params}
     except Exception as error:
         return failure(error, stage, changes, diagnostic_secrets)
+
+
+def _registration_request(request):
+    if set(request) != {'name', 'workdir', 'state_filename', 'ssh_resource'} or not _safe(request['name']):
+        raise ValueError('invalid SSH registration request')
+    return {'node_id': 'registration-' + request['name'], 'workdir': request['workdir'], 'state_filename': request['state_filename'], 'ssh_resource': request['ssh_resource']}
+
+
+def _registration_plan(opts, internal):
+    provider = opts['provider-compute']
+    if provider not in _REGISTRATIONS:
+        raise ValueError('provider needs no SSH registration')
+    identity = _public_identity(internal['ssh_resource'])
+    name = internal['node_id']
+    if not _safe(opts.get('profile')) or not _safe(name) or not _safe(opts['profile'] + '-' + name) or not _local_path(internal['workdir']) or not isinstance(internal['state_filename'], str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*\.tfstate', internal['state_filename']):
+        raise ValueError('invalid registration identity')
+    if any(token in json.dumps([opts, internal]) for token in ('${', '%{', '\\u0000')):
+        raise ValueError('invalid registration literal')
+    prefix = opts.get('s3-prefix', '')
+    if not isinstance(prefix, str) or prefix and any(not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', part) for part in prefix.split('/')):
+        raise ValueError('invalid S3 prefix')
+    state_key = '/'.join(part for part in (prefix, opts['profile'], internal['state_filename']) if part)
+    directory = str(Path(internal['workdir']) / opts['profile'] / name)
+    templates = json.loads(files('colors_compute').joinpath('templates.json').read_text())[provider]['shared-keygen']
+    root = {}
+    for document in templates.values():
+        _merge(root, {k: v for k, v in document.items() if k in ('terraform', 'provider')})
+    if provider == 'aws':
+        if not isinstance(opts.get('aws-region'), str) or not opts['aws-region'].strip():
+            raise ValueError('AWS region required')
+        root['provider']['aws']['region'] = opts['aws-region']
+    root['output'] = {'compute_identity': {'value': {'profile': opts['profile'], 'node_id': name, 'state_filename': internal['state_filename'], 'provider': provider, 'ssh_resource_reference': identity['reference'], 'ssh_fingerprint': identity['fingerprint']}}}
+    backend = {'terraform': {'backend': {'local': {'path': str(Path(directory) / internal['state_filename'])}}}} if opts['provider-backend'] == 'local' else backend_plan(opts, state_key)['config']
+    plan = {'status': 'planned', 'directory': directory, 'state_key': state_key, 'key_objects': {}, 'documents': {'compute.tf.json': root, 'backend.tf.json': backend}}
+    resource = {'key_name' if provider == 'aws' else 'name': opts['profile'] + '-' + name, 'ssh_key' if provider == 'vultr' else 'public_key': identity['public_key'], 'lifecycle': {'prevent_destroy': opts.get('compute-prevent-destroy', True)}}
+    reference = plan['state_key']
+    root['resource'] = {_REGISTRATIONS[provider]: {'machine': resource}}
+    root.pop('data', None)
+    root.pop('locals', None)
+    root['output'] = {'compute_identity': {'value': {**root['output']['compute_identity']['value'], 'kind': 'ssh-registration', 'provider_scope': opts.get('aws-region') if provider == 'aws' else provider}}, 'params': {'value': {'provider': provider, 'node_id': name, 'id': '${tostring(' + _REGISTRATIONS[provider] + '.machine.' + ('key_name' if provider == 'aws' else 'id') + ')}'}}}
+    return plan
+
+
+def registration_plan(opts, request):
+    return _registration_plan(opts, _registration_request(request))
+
+
+def build_registration(opts, request):
+    return build_node(opts, _registration_request(request), _registration_plan)
+
+
+async def compute_registration(opts, request, operation='create', environment=None, dependencies=None):
+    internal = _registration_request(request)
+    result = await compute_node(opts, internal, operation, environment, {**(dependencies or {}), '_planner': _registration_plan, '_registration': True})
+    if result['status'] == 'ready':
+        identity = _public_identity(request['ssh_resource'])
+        result = {**result, 'reference': registration_plan(opts, request)['state_key'], 'provider': opts['provider-compute'], 'ssh_resource_reference': identity['reference'], 'fingerprint': identity['fingerprint'], 'id': result['params']['id']}
+        del result['params']
+    return result

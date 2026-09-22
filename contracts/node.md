@@ -1,144 +1,97 @@
-# Single compute unit contract
+# Public-identity compute and registration contract (v2)
 
-This contract replaces deployment coordination, lifecycle journals, cluster
-orchestration, managed-backend lifecycle, and workstation-owned SSH keys.
-All three colors must implement the same pure plan and observable lifecycle.
+This is a greenfield breaking replacement. Compute never generates, stores,
+unlocks, downloads, or deletes a private SSH key. The SDK owns graph ordering:
+SSH resource ready → provider registration and compute; application access also
+waits for the scoped agent. See [SSH resources](ssh-resource.md).
 
-## Boundary and identity
+## Compute API
 
-One invocation addresses one persistent compute unit. Multiple invocations of
-that unit reuse its identity, state, and working directory. The caller supplies
-unique identifiers for different units and uses Colors SDK for fan-out, joins,
-ordering, scaling, and migration. No topology, role expansion, cluster inventory,
-or cross-node cleanup is part of this API.
+`node_plan(opts, request)` is pure; `build_node` persists templates;
+`compute_node(opts, request, operation, environment, dependencies)` executes
+`build`, `create`, `inspect`, or `delete`. Green exposes `node-plan`,
+`build-node!`, and `compute-node!` in `io.github.getcolors.compute-node`.
+There is no compute `prepare-access` operation.
 
-`node_plan(opts, request)` is pure. `build_node(opts, request)` writes its templates
-without cloud calls. `compute_node(opts, request, operation, environment,
-dependencies)` executes one unit. Green uses kebab-case native names with `!`
-on build and execution. Operations are `build`, `create`, `inspect`,
-`prepare-access`, and `delete` (create is the default). Build returns the plan
-with status `built`; the pure plan has status `planned`. Successful runtime
-results have `status: ready`, `directory`, and `params`; destruction returns
-`status: destroyed` and `directory`. Create and prepare-access add
-`params.ssh_identity_file` only after authoritative-key verification. Inspect performs
-no key download. Runtime failures return `status: error` with the [structured error contract](errors.md);
-cancellation propagates.
-Pure validation/build errors contain no credentials or raw provider data.
+Request fields are `node_id`, `state_filename`, absolute normalized `workdir`,
+`security`, optional `network`, and mandatory `ssh_resource`:
 
-Request fields are `node_id`, `state_filename`, `workdir`, `security`, and optional
-`network`. Node and profile identifiers are safe single path components; filename
-is a single `.tfstate` filename, never an arbitrary path. Workdir is an absolute
-SDK directory. Path traversal, symlink substitution, unknown request fields, and
-Terraform expression injection in caller values must be refused.
+```json
+{"reference":"opaque durable SSH resource reference",
+ "public_key":"ssh-ed25519 BASE64",
+ "fingerprint":"SHA256:BASE64"}
+```
 
-The working directory is `<workdir>/<profile>/<node_id>`. State key is
-`<s3-prefix>/<profile>/<state_filename>`; an empty prefix omits its separator.
-Prefix components must be validated; the library never invents a node filename.
-S3/R2/OCI use the state bucket for key objects. Local state owns its SSH keys
-locally, requires no S3 settings, and returns an empty `key_objects` map.
-GCS state requires
-`ssh-s3-bucket` and `ssh-s3-region`, with optional HTTPS `ssh-s3-endpoint`.
-Those explicit stores use ambient AWS authentication unless both
-`COLORS_PAR_SSH_S3_ACCESS_KEY_ID` and `COLORS_PAR_SSH_S3_SECRET_ACCESS_KEY`
-are supplied; a partial pair is refused. R2/OCI use their corresponding
-`COLORS_PAR_<BACKEND>_*` credentials. An explicit key-store override on S3/R2/OCI
-must not silently redirect authoritative key storage. Local backends reject
-`ssh-s3-*` options.
+The public blob must be an ED25519 wire-format key matching the fingerprint.
+A `status` field is accepted for direct composition of a ready SSH result.
+No private fields are accepted. Explicit references allow one identity to feed
+many machines or distinct identities to feed separate fan-outs.
 
-Remote key objects use `<s3-prefix>/<profile>/<node_id>/ssh-key` and `ssh-key.pub`.
-Distinct callers must not reuse identifiers or state filenames for different
-units. Renaming a unit or changing a state key is migration, not an update.
+AWS, DigitalOcean, Hetzner Cloud and Vultr also require `ssh_registration`, the
+ready result of the separately owned registration below. Its provider, SSH
+resource reference and fingerprint must match. Other providers consume the public
+key directly and reject a registration. A node never declares the registered
+provider key object; it uses the registration's `id`.
 
-## Persistent OpenTofu root
+The root lives at `<workdir>/<profile>/<node_id>`. Remote state is
+`<s3-prefix>/<profile>/<state_filename>`; empty prefix omits its separator.
+Local state is `<workdir>/<profile>/<node_id>/<state_filename>`.
+`key_objects` is always empty. The compute state identity pins profile, node,
+state filename, provider, SSH resource reference and fingerprint. Changing this
+identity or an existing backend is refused. Provider migration requires a distinct
+node identity. Input interpolation and path traversal are refused.
 
-Build renders one root configuration containing the machine, exclusively owned
-supporting resources, TLS key generation, backend config, and (for remote
-backends) S3 SSH key objects.
-Shared/node template fragments may be reused internally, but there is one state
-and one apply, with no intermediate shared state or externally visible stages.
-Provider expressions wire dependencies inside this unit only.
+Plans have `status: planned`, directory, state key, empty key objects and documents.
+Build returns the same with `status: built`. Runtime returns `status: ready`,
+directory and normalized `params`; these contain machine outputs and no
+`ssh_identity_file`. Agent access is a separate scope capability. Delete returns
+`status: destroyed`. Errors follow [structured diagnostics](errors.md).
 
-OpenTofu runs in the unit directory. Do not set `TF_DATA_DIR`, remove `.terraform`,
-or automatically delete templates, lock files, or the workdir. Build can update
-its owned templates but cannot discard files needed to destroy existing state.
-Persistent directories/files are private. Runtime credentials must not be
-embedded in rendered templates; cached backend settings, plans, and state can
-still contain secrets and require restrictive permissions.
+## Provider registration API
 
-Native backend locks protect state mutations. There is no journal, custom lease,
-conditional ownership object, or cluster-wide lock. The caller must serialize
-operations that share a local unit directory, including build and initialization;
-the native state lock does not serialize arbitrary filesystem writes or Ansible.
+`registration_plan`, `build_registration`, and `compute_registration` use the
+same lifecycle arguments. Green uses `registration-plan`, `build-registration!`,
+and `compute-registration!` in the same namespace.
 
-## SSH authority
+The request is exactly `name`, `workdir`, `state_filename`, and `ssh_resource`.
+The private OpenTofu root is `<workdir>/<profile>/registration-<name>`; its
+independently supplied state filename uses the same profile namespace. Names
+must keep the combined profile and registration node identity within 63 characters.
 
-`tls_private_key.machine` generates an ED25519 keypair. For remote backends, the two S3 object
-resources and any compute-provider key registration are in the same state as
-the machine. The machine depends on the remote key objects so destruction tears
-down the machine first. The object storage provider is separately aliased from
-an AWS compute provider; R2/OCI credentials must not replace AWS compute auth.
+The root owns exactly one `aws_key_pair`, `digitalocean_ssh_key`,
+`hcloud_ssh_key`, or `vultr_ssh_key`, plus its provider/backend configuration.
+It owns no machine, network, firewall, or SSH private material. AWS registration
+identity also pins its region. Provider credentials select the account/project;
+callers must keep that account stable for a registration's lifetime.
 
-Remote objects are the only source for local Ansible key material. Download both,
-validate that the private/public pair and recorded public fingerprint agree,
-then atomically replace private local files. A local key is never input to build,
-apply, upload, ownership adoption, or recovery. Retrieval failure fails the step
-and must not authorize access with a stale copy. No private key appears in API
-outputs, diagnostic messages, command arguments, or rendered templates.
+A ready result contains `status`, `directory`, `reference` (the profile-qualified
+state key), `provider`, `ssh_resource_reference`, `fingerprint`, and string `id`.
+AWS's `id` is its key name, the value an EC2 instance consumes. Other providers
+return their registered key identifier. The SDK graph must wait for this result
+before creating consuming nodes. Use separate registrations for separate provider
+accounts/projects/regions and give each one exclusive ownership.
 
-For the local backend, the local OpenTofu state is authoritative. The
-`ssh_private_key` (sensitive) and `ssh_public_key` outputs supply the access pair, which is
-verified and refreshed with the same checks as remote downloads. These outputs
-are internal to the runtime, never exposed in public API results. Local key
-copies without state refuse creation rather than being overwritten with a new
-identity. See [local backend](local-backend.md).
+## Persistent state and lifecycle guards
 
-Terraform state and saved plans necessarily contain generated key material.
-Read access to them is secret access even though the local copy is disposable.
-Use encrypted private storage and least-privilege object access. S3 object
-resource deletion must cover its versions according to the pinned provider;
-retained state versions/backups can retain historical key material. Legal holds
-must not be bypassed automatically. Key deletion occurs only after node destroy.
+Build is credential-free. OpenTofu uses the persistent root and its default
+`.terraform` directory. No redirected `TF_DATA_DIR`, automatic state import,
+force-unlock, journals, or uncertain mutation retries are introduced. Backend
+credentials are temporarily supplied in a private file and removed in cleanup.
+SSH passphrase bindings are never forwarded to provider processes.
 
-## Execution and recovery
+Native backend locks protect state mutation. The caller serializes operations
+sharing a local directory, including builds and initialization. Files and
+working directories are private and protected against symlink substitution.
+Templates and initialization files remain after destruction.
 
-Create initializes the persistent root, observes and validates existing state,
-refuses a mismatched provider or unit identity, creates a saved plan, validates
-its actions, applies, validates resulting state, and refreshes local SSH copies.
-Do not use `-lock=false`. Create refuses delete/replacement actions; delete
-requires explicit `compute-prevent-destroy: false` and refuses create/update
-infrastructure actions. Read errors never mean absence. Required-existing-state
-refuses absent state. No automatic provider migration, import, force-unlock,
-resource adoption, or retry of uncertain mutation is performed.
+Create validates state identity before planning. `compute-require-existing-state`
+refuses absent ownership. Read failures are never interpreted as absence.
+Create refuses delete/replacement actions; delete requires explicit
+`compute-prevent-destroy: false` and refuses create/update actions. Delete cannot
+proceed against independently missing state. Empty state with leftover outputs
+requires recovery; a strictly empty readable state can be inspected as destroyed.
+Cancellation propagates and owned command processes are cleaned up by the runner.
 
-Inspect validates state and returns normalized node outputs. A readable state
-with both empty resources and empty outputs returns `status: destroyed` from
-inspect without mutations, allowing the caller to resume local cleanup.
-Missing state remains an error. Access preparation
-retrieves current authoritative keys; it is not satisfied by existing local files.
-Delete refuses independently absent state: it cannot prove that lost state has
-no surviving cloud resources. A valid, strictly empty state allows idempotent
-local cleanup. Delete destroys the unit through its original configuration and backend, then
-removes disposable local keys. It retains templates and initialization files.
-Exceptions and cancellation stop dependent work, terminate owned local
-subprocesses, and preserve recovery files. An interrupted cloud operation can
-outlive its local process; the caller/operator must reconcile before retry.
-
-Remote key objects found without corresponding owned state must not be
-overwritten. Missing state cannot prove resource absence after a previous failed
-apply. Recover state or inspect/import resources explicitly before another create.
-No substitute ownership journal is introduced to reconstruct that history.
-
-## Compatibility and verification
-
-Provider migration uses distinct source/destination units. Both directories,
-keys, and states remain available until the caller completes cutover and
-explicitly destroys the source. Existing shared/node states and journals require
-reviewed state transfers before adopting this API; never delete old ownership
-records as a shortcut.
-
-Tests must exercise persistent workdir behavior, profile/node/key isolation,
-all-provider rendering, provider-mismatch refusal, replacement/destruction
-guards, secret separation, authoritative remote key overwrite, remote read
-failure, partial key copies, and deletion ordering. Three-color parity compares
-complete plans, not only state path strings. Schema validation verifies the
-combined root and aliased object provider without live infrastructure calls.
+Delete nodes first, then their separately owned registrations, then explicitly
+delete the durable SSH resource after all consumers are gone. Compute deletion
+needs no passphrase and never deletes durable SSH authority or starts an agent.

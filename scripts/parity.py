@@ -30,11 +30,11 @@ def check_output(color, output, cases):
 
 
 def main():
-    supported = {"validate", "credential_requirements", "render_template", "backend_plan", "provider_plan", "provider_request", "node_plan", "node_plan_valid", "sanitize_error", "node_runtime_error"}
+    supported = {"validate", "credential_requirements", "render_template", "backend_plan", "provider_plan", "provider_request", "node_plan", "registration_plan", "node_plan_valid", "sanitize_error", "node_runtime_error"}
     cases = []
     for filename in ("contracts", "provider-requests", "provider-icmp", "provider-endpoint",
                      "provider-network-created", "provider-roles", "compute-options", "network-none",
-                     "yandex-static-ip", "network-reference", "local-backend", "nodes", "node-validation", "errors"):
+                     "yandex-static-ip", "network-reference", "local-backend", "nodes", "registrations", "node-validation", "errors"):
         path = ROOT / "test/fixtures" / (filename + ".json")
         if path.exists():
             cases.extend(c for c in json.loads(path.read_text()) if c["op"] in supported)

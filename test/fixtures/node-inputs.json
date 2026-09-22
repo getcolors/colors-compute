@@ -50,6 +50,19 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "aws",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -109,6 +122,11 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]
@@ -162,6 +180,19 @@
           "mode": "discovered",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -218,6 +249,11 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]
@@ -262,6 +298,19 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "hcloud",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -323,6 +372,11 @@
           "mode": "discovered",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]
@@ -376,6 +430,19 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "vultr",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -436,6 +503,11 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]
@@ -489,6 +561,19 @@
           "mode": "discovered",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -543,6 +628,19 @@
           "mode": "discovered",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -594,6 +692,19 @@
           "mode": "discovered",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -650,6 +761,19 @@
           "mode": "discovered",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "digitalocean",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -702,6 +826,19 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "aws",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -758,6 +895,11 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]
@@ -811,6 +953,11 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]
@@ -852,6 +999,19 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "hcloud",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -910,6 +1070,11 @@
           "mode": "discovered",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]
@@ -960,6 +1125,19 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "ssh_registration": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "id": "12345",
+          "provider": "vultr",
+          "reference": "registration/fixture",
+          "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+          "status": "ready"
         }
       }
     ]
@@ -1017,6 +1195,11 @@
           "mode": "created",
           "subnet_cidr": "10.42.1.0/24",
           "zone": "eu-central"
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
         }
       }
     ]

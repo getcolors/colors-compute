@@ -1,0 +1,782 @@
+[
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-backend": "local",
+        "provider-compute": "aws",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "local": {
+                "path": "/tmp/sdk/example/registration-access/registration.tfstate"
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "aws",
+                "provider_scope": "eu-west-1",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(aws_key_pair.machine.key_name)}",
+                "node_id": "registration-access",
+                "provider": "aws"
+              }
+            }
+          },
+          "provider": {
+            "aws": {
+              "region": "eu-west-1"
+            }
+          },
+          "resource": {
+            "aws_key_pair": {
+              "machine": {
+                "key_name": "example-registration-access",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "aws": {
+                "source": "hashicorp/aws",
+                "version": "6.31.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "aws local independent registration",
+    "op": "registration_plan"
+  },
+  {
+    "args": [
+      {
+        "aws-availability-zone": "eu-west-1a",
+        "aws-image-id": "ami-0123456789abcdef0",
+        "aws-instance-type": "t3.small",
+        "aws-region": "eu-west-1",
+        "aws-root-volume-size-gb": 20,
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-backend": "r2",
+        "provider-compute": "aws",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "fixture",
+                "endpoints": {
+                  "s3": "https://example.r2.cloudflarestorage.com"
+                },
+                "key": "infrastructure/example/registration.tfstate",
+                "region": "auto",
+                "skip_credentials_validation": true,
+                "skip_metadata_api_check": true,
+                "skip_region_validation": true,
+                "skip_requesting_account_id": true,
+                "skip_s3_checksum": true,
+                "use_lockfile": true,
+                "use_path_style": false
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "aws",
+                "provider_scope": "eu-west-1",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(aws_key_pair.machine.key_name)}",
+                "node_id": "registration-access",
+                "provider": "aws"
+              }
+            }
+          },
+          "provider": {
+            "aws": {
+              "region": "eu-west-1"
+            }
+          },
+          "resource": {
+            "aws_key_pair": {
+              "machine": {
+                "key_name": "example-registration-access",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "aws": {
+                "source": "hashicorp/aws",
+                "version": "6.31.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "aws r2 independent registration",
+    "op": "registration_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-backend": "local",
+        "provider-compute": "digitalocean",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "local": {
+                "path": "/tmp/sdk/example/registration-access/registration.tfstate"
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "digitalocean",
+                "provider_scope": "digitalocean",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(digitalocean_ssh_key.machine.id)}",
+                "node_id": "registration-access",
+                "provider": "digitalocean"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-registration-access",
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "digitalocean local independent registration",
+    "op": "registration_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "digitalocean-image": "ubuntu-24-04-x64",
+        "digitalocean-region": "nyc3",
+        "digitalocean-size": "s-2vcpu-4gb",
+        "profile": "example",
+        "provider-backend": "r2",
+        "provider-compute": "digitalocean",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "fixture",
+                "endpoints": {
+                  "s3": "https://example.r2.cloudflarestorage.com"
+                },
+                "key": "infrastructure/example/registration.tfstate",
+                "region": "auto",
+                "skip_credentials_validation": true,
+                "skip_metadata_api_check": true,
+                "skip_region_validation": true,
+                "skip_requesting_account_id": true,
+                "skip_s3_checksum": true,
+                "use_lockfile": true,
+                "use_path_style": false
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "digitalocean",
+                "provider_scope": "digitalocean",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(digitalocean_ssh_key.machine.id)}",
+                "node_id": "registration-access",
+                "provider": "digitalocean"
+              }
+            }
+          },
+          "provider": {
+            "digitalocean": {}
+          },
+          "resource": {
+            "digitalocean_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-registration-access",
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "digitalocean": {
+                "source": "digitalocean/digitalocean",
+                "version": "2.51.0"
+              }
+            },
+            "required_version": ">= 1.8.0"
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "digitalocean r2 independent registration",
+    "op": "registration_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-backend": "local",
+        "provider-compute": "hcloud",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "local": {
+                "path": "/tmp/sdk/example/registration-access/registration.tfstate"
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "hcloud",
+                "provider_scope": "hcloud",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(hcloud_ssh_key.machine.id)}",
+                "node_id": "registration-access",
+                "provider": "hcloud"
+              }
+            }
+          },
+          "provider": {
+            "hcloud": {}
+          },
+          "resource": {
+            "hcloud_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-registration-access",
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "hcloud": {
+                "source": "hetznercloud/hcloud",
+                "version": "1.54.0"
+              }
+            }
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "hcloud local independent registration",
+    "op": "registration_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "hcloud-image": "ubuntu-24.04",
+        "hcloud-location": "fsn1",
+        "hcloud-server-type": "cx22",
+        "profile": "example",
+        "provider-backend": "r2",
+        "provider-compute": "hcloud",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "fixture",
+                "endpoints": {
+                  "s3": "https://example.r2.cloudflarestorage.com"
+                },
+                "key": "infrastructure/example/registration.tfstate",
+                "region": "auto",
+                "skip_credentials_validation": true,
+                "skip_metadata_api_check": true,
+                "skip_region_validation": true,
+                "skip_requesting_account_id": true,
+                "skip_s3_checksum": true,
+                "use_lockfile": true,
+                "use_path_style": false
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "hcloud",
+                "provider_scope": "hcloud",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(hcloud_ssh_key.machine.id)}",
+                "node_id": "registration-access",
+                "provider": "hcloud"
+              }
+            }
+          },
+          "provider": {
+            "hcloud": {}
+          },
+          "resource": {
+            "hcloud_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-registration-access",
+                "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "hcloud": {
+                "source": "hetznercloud/hcloud",
+                "version": "1.54.0"
+              }
+            }
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "hcloud r2 independent registration",
+    "op": "registration_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-backend": "local",
+        "provider-compute": "vultr",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "local": {
+                "path": "/tmp/sdk/example/registration-access/registration.tfstate"
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "vultr",
+                "provider_scope": "vultr",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(vultr_ssh_key.machine.id)}",
+                "node_id": "registration-access",
+                "provider": "vultr"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-registration-access",
+                "ssh_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "vultr local independent registration",
+    "op": "registration_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "profile": "example",
+        "provider-backend": "r2",
+        "provider-compute": "vultr",
+        "r2-bucket": "fixture",
+        "r2-endpoint": "https://example.r2.cloudflarestorage.com",
+        "s3-prefix": "infrastructure",
+        "vultr-os-id": 2284,
+        "vultr-plan": "vc2-2c-4gb",
+        "vultr-region": "ewr"
+      },
+      {
+        "name": "access",
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "registration.tfstate",
+        "workdir": "/tmp/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/tmp/sdk/example/registration-access",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "fixture",
+                "endpoints": {
+                  "s3": "https://example.r2.cloudflarestorage.com"
+                },
+                "key": "infrastructure/example/registration.tfstate",
+                "region": "auto",
+                "skip_credentials_validation": true,
+                "skip_metadata_api_check": true,
+                "skip_region_validation": true,
+                "skip_requesting_account_id": true,
+                "skip_s3_checksum": true,
+                "use_lockfile": true,
+                "use_path_style": false
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "output": {
+            "compute_identity": {
+              "value": {
+                "kind": "ssh-registration",
+                "node_id": "registration-access",
+                "profile": "example",
+                "provider": "vultr",
+                "provider_scope": "vultr",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "registration.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "id": "${tostring(vultr_ssh_key.machine.id)}",
+                "node_id": "registration-access",
+                "provider": "vultr"
+              }
+            }
+          },
+          "provider": {
+            "vultr": {}
+          },
+          "resource": {
+            "vultr_ssh_key": {
+              "machine": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-registration-access",
+                "ssh_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "vultr": {
+                "source": "vultr/vultr",
+                "version": "2.32.0"
+              }
+            }
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/example/registration.tfstate",
+      "status": "planned"
+    },
+    "name": "vultr r2 independent registration",
+    "op": "registration_plan"
+  }
+]
