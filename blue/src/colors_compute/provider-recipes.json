@@ -586,6 +586,14 @@
       },
       "zone": {
         "path": "opts.google-zone"
+      },
+      "boot_disk_type": {
+        "path": "opts.google-boot-disk-type",
+        "default": "pd-balanced"
+      },
+      "nic_type": {
+        "path": "opts.google-nic-type",
+        "default": null
       }
     },
     "endpoint_credentials": [],

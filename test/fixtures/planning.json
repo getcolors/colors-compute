@@ -1664,6 +1664,7 @@
                             "nat_ip": "${google_compute_address.node.address}"
                           }
                         ],
+                        "nic_type": null,
                         "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network"
                       }
                     ],
@@ -1757,6 +1758,7 @@
                             "nat_ip": "${google_compute_address.node.address}"
                           }
                         ],
+                        "nic_type": null,
                         "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network"
                       }
                     ],
@@ -1850,6 +1852,7 @@
                             "nat_ip": "${google_compute_address.node.address}"
                           }
                         ],
+                        "nic_type": null,
                         "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network"
                       }
                     ],

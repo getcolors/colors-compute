@@ -41,7 +41,7 @@
               {
                 "image": "{{image}}",
                 "size": "{{boot_disk_size}}",
-                "type": "pd-balanced"
+                "type": "{{boot_disk_type}}"
               }
             ]
           }
@@ -49,6 +49,7 @@
         "network_interface": [
           {
             "subnetwork": "{{subnetwork_id}}",
+            "nic_type": "{{nic_type}}",
             "access_config": [
               {
                 "nat_ip": "${google_compute_address.node.address}"

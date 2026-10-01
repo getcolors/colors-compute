@@ -38,6 +38,7 @@ state's ownership; they do not acquire a separate deletion guard.
 | `prevent_destroy` | Boolean, default true at library configuration boundary |
 | `node_id`, `name` | Stable node identity and valid Google instance/address name |
 | `machine_type`, `image`, `boot_disk_size` | Machine type, resolved image reference, numeric disk size in GB |
+| `boot_disk_type`, `nic_type` | Disk type (default `pd-balanced`) and optional NIC type (default null / provider default) |
 | `public_key` | Public SSH key content prepared before fan-out |
 | `subnetwork_id` | Shared subnetwork reference, within the selected region |
 
@@ -67,6 +68,14 @@ Node `params` reports node/provider identity, observed instance name, public
 `ip`, private `vpc_ip`, and `ubuntu` user/sudoer. Metadata retains instance ID,
 self-link, zone, subnetwork ID, and address ID. No UID is guessed. The join adds
 topology role/index and any prepared identity-file reference before Ansible.
+
+## N4A configuration
+
+Set `google-boot-disk-type: hyperdisk-balanced` and `google-nic-type: GVNIC`
+for `google-machine-type: n4a-highmem-1`, with an ARM64 image supporting IDPF.
+These optional bindings leave existing disk defaults unchanged. The caller owns
+machine/image compatibility and must verify availability before create.
+Google documents [N4A storage and networking requirements](https://docs.cloud.google.com/compute/docs/general-purpose-machines#n4a_machine_series).
 
 ## Verification and limits
 

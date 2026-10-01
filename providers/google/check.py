@@ -62,10 +62,20 @@ def main():
         # Schema checks need registry access but no ambient provider/backend credentials.
         env = {key: value for key, value in os.environ.items()
                if key in ('PATH', 'HOME', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NIX_SSL_CERT_FILE', 'LANG')}
-        for mode in ('shared', 'node'):
+        for mode in ('shared', 'node', 'n4a'):
             with tempfile.TemporaryDirectory(prefix='colors-compute-google-') as directory:
-                for source in (ROOT / 'examples' / mode).glob('*.tf.json'):
+                for source in (ROOT / 'examples' / ('node' if mode == 'n4a' else mode)).glob('*.tf.json'):
                     (Path(directory) / source.name).write_bytes(source.read_bytes())
+                if mode == 'n4a':
+                    path = Path(directory) / 'main.tf.json'
+                    document = json.loads(path.read_text())
+                    node = document['resource']['google_compute_instance']['node']
+                    node['machine_type'] = 'n4a-highmem-1'
+                    node['boot_disk'][0]['initialize_params'][0].update(
+                        image='projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-arm64',
+                        type='hyperdisk-balanced', size=100)
+                    node['network_interface'][0]['nic_type'] = 'GVNIC'
+                    path.write_text(json.dumps(document, indent=2) + '\n')
                 for command in (('fmt', '-check'), ('init', '-backend=false', '-input=false', '-no-color'), ('validate', '-no-color')):
                     subprocess.run([str(args.tofu.resolve()), f'-chdir={directory}', *command], env=env, check=True)
                 print(f'Provider schema {mode}: passed', flush=True)

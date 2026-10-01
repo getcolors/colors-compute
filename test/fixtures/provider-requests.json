@@ -1571,7 +1571,8 @@
                         "nat_ip": "${google_compute_address.node.address}"
                       }
                     ],
-                    "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network"
+                    "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+                    "nic_type": null
                   }
                 ],
                 "tags": [
@@ -1603,7 +1604,9 @@
         "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
         "region": "europe-west1",
         "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
-        "zone": "europe-west1-b"
+        "zone": "europe-west1-b",
+        "boot_disk_type": "pd-balanced",
+        "nic_type": null
       },
       "provider": "google",
       "stage": "node"
@@ -4927,6 +4930,194 @@
       "error": "invalid OCI CPU count"
     },
     "name": "oci-fractional-vcpus",
+    "op": "provider_request"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-boot-disk-type": "hyperdisk-balanced",
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-arm64-fixture",
+        "google-machine-type": "n4a-highmem-1",
+        "google-nic-type": "GVNIC",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "example",
+        "provider-compute": "google"
+      },
+      "node",
+      {
+        "key": {
+          "mode": "managed",
+          "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+        },
+        "name": "example-0",
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        }
+      },
+      {
+        "key_name": "example",
+        "params": {
+          "firewall_group_id": "firewall-fixture",
+          "firewall_id": 12345,
+          "nsg_ids": [
+            "nsg-fixture"
+          ],
+          "provider": "google",
+          "security_group_id": "security-fixture",
+          "subnet_id": "subnet-fixture",
+          "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+          "vpc_id": "network-fixture"
+        },
+        "ssh_key_id": 12345
+      }
+    ],
+    "expected": {
+      "documents": {
+        "node.tf.json": {
+          "locals": {
+            "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors"
+          },
+          "output": {
+            "params": {
+              "value": {
+                "ip": "${google_compute_address.node.address}",
+                "metadata": {
+                  "address_id": "${google_compute_address.node.id}",
+                  "instance_id": "${google_compute_instance.node.instance_id}",
+                  "self_link": "${google_compute_instance.node.self_link}",
+                  "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+                  "zone": "europe-west1-b"
+                },
+                "name": "${google_compute_instance.node.name}",
+                "node_id": "0",
+                "provider": "google",
+                "provider_id": "${google_compute_instance.node.id}",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
+              }
+            }
+          },
+          "provider": {
+            "google": {
+              "project": "colors-example-project",
+              "region": "europe-west1",
+              "zone": "europe-west1-b"
+            }
+          },
+          "resource": {
+            "google_compute_address": {
+              "node": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "example-0",
+                "region": "europe-west1"
+              }
+            },
+            "google_compute_instance": {
+              "node": {
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image": "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-arm64-fixture",
+                        "size": 20,
+                        "type": "hyperdisk-balanced"
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "machine_type": "n4a-highmem-1",
+                "metadata": {
+                  "block-project-ssh-keys": "true",
+                  "enable-oslogin": "false",
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "example-0",
+                "network_interface": [
+                  {
+                    "access_config": [
+                      {
+                        "nat_ip": "${google_compute_address.node.address}"
+                      }
+                    ],
+                    "nic_type": "GVNIC",
+                    "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network"
+                  }
+                ],
+                "tags": [
+                  "example-network"
+                ],
+                "zone": "europe-west1-b"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "google": {
+                "source": "hashicorp/google",
+                "version": "6.0.0"
+              }
+            }
+          }
+        }
+      },
+      "inputs": {
+        "boot_disk_size": 20,
+        "boot_disk_type": "hyperdisk-balanced",
+        "image": "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-arm64-fixture",
+        "machine_type": "n4a-highmem-1",
+        "name": "example-0",
+        "network_tag": "example-network",
+        "nic_type": "GVNIC",
+        "node_id": "0",
+        "prevent_destroy": true,
+        "project": "colors-example-project",
+        "public_key": "ssh-ed25519 PLACEHOLDER managed-by-colors",
+        "region": "europe-west1",
+        "subnetwork_id": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+        "zone": "europe-west1-b"
+      },
+      "provider": "google",
+      "stage": "node"
+    },
+    "name": "google-n4a-hyperdisk-gvnic",
     "op": "provider_request"
   }
 ]

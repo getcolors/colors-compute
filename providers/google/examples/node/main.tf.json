@@ -49,6 +49,7 @@
         "network_interface": [
           {
             "subnetwork": "projects/colors-example-project/regions/europe-west1/subnetworks/example-network",
+            "nic_type": null,
             "access_config": [
               {
                 "nat_ip": "${google_compute_address.node.address}"

@@ -999,6 +999,7 @@
                         "nat_ip": "${google_compute_address.node.address}"
                       }
                     ],
+                    "nic_type": null,
                     "subnetwork": "${google_compute_subnetwork.network.id}"
                   }
                 ],
@@ -3711,6 +3712,7 @@
                         "nat_ip": "${google_compute_address.node.address}"
                       }
                     ],
+                    "nic_type": null,
                     "subnetwork": "${google_compute_subnetwork.network.id}"
                   }
                 ],

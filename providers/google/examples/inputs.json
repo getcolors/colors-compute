@@ -35,5 +35,7 @@
         "10.42.0.0/24"
       ]
     }
-  }
+  },
+  "boot_disk_type": "pd-balanced",
+  "nic_type": null
 }
