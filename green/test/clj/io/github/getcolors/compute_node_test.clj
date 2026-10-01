@@ -144,3 +144,47 @@
           (when (contains? #{:malformed :nonempty :unknown-field} mode)
             (is (not-any? #(= "aws" (first %)) @calls))))
         (finally (remove-tree dir))))))
+
+(deftest live-connection-does-not-apply-or-use-stale-outputs
+  (doseq [[provider kind attribute] [["aws" "aws_instance" :id] ["azure" "azurerm_linux_virtual_machine" :virtual_machine_id]
+                                    ["digitalocean" "digitalocean_droplet" :id] ["google" "google_compute_instance" :instance_id]
+                                    ["hcloud" "hcloud_server" :id] ["oci" "oci_core_instance" :id]
+                                    ["vultr" "vultr_instance" :id] ["yandex" "yandex_compute_instance" :id]]
+          mode [:ready :changed :gone :unknown :empty-ip :wrong-identity :failed-plan :failed-show :detached]]
+    (let [dir (temp-dir) [opts request] (inputs dir provider)
+          plan (node/node-plan opts request)
+          ownership (get-in plan [:documents "compute.tf.json" :output :compute_identity])
+          params {:provider provider :node_id "app-0" :name "node" :ip "192.0.2.1" :user "ubuntu" :sudoer "ubuntu" :provider_id "owned"}
+          resource {:mode "managed" :type kind :name "node"}
+          state {:version 4 :serial 1 :lineage "connection-test"
+                 :resources [(assoc resource :instances [{:attributes {attribute "immutable"}}])]
+                 :outputs {:compute_identity ownership :params {:value params}}}
+          refreshed {:format_version "1.2"
+                     :planned_values {:root_module {:resources (if (= mode :gone) [] [(assoc resource :values (assoc {:id "vm-path" :network_interface_ids ["nic-path"]
+                                      :network_interface [{:access_config [{:nat_ip (if (= mode :detached) "192.0.2.3" "192.0.2.2")}]}]} attribute (if (= mode :changed) "replacement" "immutable")))])}
+                                      :outputs {:compute_identity (if (= mode :wrong-identity) {:value {}} ownership)
+                                                :params {:value (assoc params :ip (if (= mode :empty-ip) "" "192.0.2.2"))}}}
+                     :output_changes {:params {:after_unknown (if (= mode :unknown) {:ip true} false)}}}
+          refreshed (if (= provider "azure")
+                      (update-in refreshed [:planned_values :root_module :resources] into
+                                 [{:mode "managed" :type "azurerm_network_interface" :name "node"
+                                   :values {:id "nic-path" :virtual_machine_id (if (= mode :detached) "other-vm" "vm-path")
+                                            :ip_configuration [{:public_ip_address_id "ip-path"}]}}
+                                  {:mode "managed" :type "azurerm_public_ip" :name "node" :values {:id "ip-path" :ip_address "192.0.2.2"}}]) refreshed)
+          env (into {} (map (fn [[key _]] [(str "COLORS_PAR_" (str/upper-case (str/replace (name key) "-" "_"))) "fixture-secret"])
+                           (get-in io.github.getcolors.compute/registry [:compute (keyword provider) :tofu-env])))
+          calls (atom [])
+          runner (fn [args _ _ _]
+                   (swap! calls conj args)
+                   (if (or (and (= mode :failed-plan) (= "plan" (second args))) (and (= mode :failed-show) (= "show" (second args))))
+                     {:exit 1 :out "" :err "failure"}
+                     {:exit 0 :out (case (second args) "state" (json/generate-string state) "show" (json/generate-string refreshed) "{}") :err ""}))]
+      (try
+        (let [result (node/resolve-connection! opts request env {:runner runner})]
+          (is (= (if (or (= mode :ready) (and (= mode :detached) (not (contains? #{"google" "azure"} provider)))) "ready" "error") (:status result)) (str provider " " mode " " result))
+          (when (= mode :ready) (is (= "192.0.2.2" (get-in result [:params :ip]))))
+          (is (not-any? #(= "apply" (second %)) @calls))
+          (is (some #(and (= "plan" (second %)) (some #{"-refresh-only"} %) (some #{"-lock-timeout=60s"} %)) @calls))
+          (is (not (.exists (java.io.File. (str (:directory plan) "/connection.tfplan")))))
+          (is (not (.exists (java.io.File. (str (:directory plan) "/credentials.tfbackend.json"))))))
+        (finally (remove-tree dir))))))

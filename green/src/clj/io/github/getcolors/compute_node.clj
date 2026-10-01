@@ -207,7 +207,7 @@
       (require! (empty? (:outputs state)) "state without resources still has outputs; explicit recovery required"))
     state))
 (defn- guarded-plan! [text operation]
-  (let [plan (parse-one text) permitted (if (= operation "delete") #{"no-op" "read" "delete"} #{"no-op" "read" "create" "update"})]
+  (let [plan (parse-one text) permitted (case operation "delete" #{"no-op" "read" "delete"} "resolve-connection" #{"no-op" "read"} #{"no-op" "read" "create" "update"})]
     (require! (and (map? plan) (nonblank? (:format_version plan)) (map? (:planned_values plan))
                    (vector? (get plan :resource_changes []))
                    (every? (fn [r] (let [actions (get-in r [:change :actions])]
@@ -233,13 +233,60 @@
         (require! (not (or (str/includes? text secret) (str/includes? text (subs encoded 1 (dec (count encoded)))))) "credential compute output")))
     result))
 
+(def ^:private machine-identities
+  {"aws" ["aws_instance" :id] "azure" ["azurerm_linux_virtual_machine" :virtual_machine_id]
+   "digitalocean" ["digitalocean_droplet" :id] "google" ["google_compute_instance" :instance_id]
+   "hcloud" ["hcloud_server" :id] "oci" ["oci_core_instance" :id]
+   "vultr" ["vultr_instance" :id] "yandex" ["yandex_compute_instance" :id]})
+
+(defn- attached-address! [provider plan machine ip]
+  (case provider
+    "google" (require! (= ip (get-in machine [:network_interface 0 :access_config 0 :nat_ip])) "public address is not attached to the owned machine")
+    "azure" (let [resources (get-in plan [:planned_values :root_module :resources])
+                  values-for (fn [kind] (let [matches (filter #(and (= "managed" (:mode %)) (= kind (:type %)) (= "node" (:name %))) resources)]
+                                         (require! (= 1 (count matches)) "owned network resource is missing or ambiguous")
+                                         (:values (first matches))))
+                  nic (values-for "azurerm_network_interface")
+                  address (values-for "azurerm_public_ip")]
+              (require! (and (nonblank? (:id nic)) (nonblank? (:id machine)) (nonblank? (:id address))
+                             (some #{(:id nic)} (:network_interface_ids machine))
+                             (= (:id machine) (:virtual_machine_id nic))
+                             (some #(= (:id address) (:public_ip_address_id %)) (:ip_configuration nic))
+                             (= ip (:ip_address address))) "public address is not attached to the owned machine"))
+    nil))
+
+(defn- connection-params [text before identity environment]
+  (let [plan (parse-one text)
+        _ (guarded-plan! text "resolve-connection")
+        [kind attribute] (get machine-identities (:provider identity))
+        matches? #(and (= "managed" (:mode %)) (= kind (:type %)) (= "node" (:name %)) (nil? (:module %)))
+        old (filter matches? (:resources before))
+        fresh (filter matches? (get-in plan [:planned_values :root_module :resources]))
+        _ (require! (and (= 1 (count old)) (= 1 (count fresh))
+                         (= 1 (count (:instances (first old))))
+                         (nil? (:deposed (first (:instances (first old)))))) "owned compute machine is missing or ambiguous")
+        old-id (get-in (first old) [:instances 0 :attributes attribute])
+        new-id (get-in (first fresh) [:values attribute])
+        _ (require! (and (or (string? old-id) (number? old-id))
+                         (or (string? new-id) (number? new-id))
+                         (nonblank? (str old-id)) (= (str old-id) (str new-id))) "compute machine identity changed")
+        _ (require! (= identity (get-in plan [:planned_values :outputs :compute_identity :value])) "refreshed state identity mismatch")
+        _ (require! (not-any? true? (tree-seq coll? seq (get-in plan [:output_changes :params :after_unknown]))) "connection outputs are unknown")
+        params (normalized (get-in plan [:planned_values :outputs :params :value]) environment)]
+    (require! (and (= (:provider identity) (:provider params))
+                   (= (:node_id identity) (:node_id params))
+                   (some? (:provider_id params))
+                   (= (:provider_id params) (get-in before [:outputs :params :value :provider_id]))) "refreshed compute outputs changed identity")
+    (attached-address! (:provider identity) plan (:values (first fresh)) (:ip params))
+    params))
+
 (defn- compute-node*
   "Run one unit using native OpenTofu locking. deps accepts :runner for testing."
   ([opts node-request] (compute-node* opts node-request "create" (into {} (System/getenv)) {}))
   ([opts node-request operation] (compute-node* opts node-request operation (into {} (System/getenv)) {}))
   ([opts node-request operation environment] (compute-node* opts node-request operation environment {}))
   ([opts node-request operation environment deps]
-   (require! (contains? #{"create" "delete" "inspect"} operation) "invalid compute operation")
+   (require! (contains? #{"create" "delete" "inspect" "resolve-connection"} operation) "invalid compute operation")
    (require! (or (not (contains? opts :compute-require-existing-state)) (boolean? (:compute-require-existing-state opts))) "invalid existing-state requirement")
    (require! (or (not= "delete" operation) (false? (:compute-prevent-destroy opts))) "compute deletion requires compute-prevent-destroy=false")
    (let [plan (build-node! opts node-request) directory (local/path (:directory plan))
@@ -278,13 +325,23 @@
              before (when-not needs-presence? (valid-state! (:out pulled) identity))
              _ (require! (or before (and (= operation "create") (not (:compute-require-existing-state opts)))) "compute state is required")
 ]
-         (if (contains? #{"inspect"} operation)
+         (cond
+           (= "resolve-connection" operation)
+           (let [_ (require! (seq (:resources before)) "compute node does not exist")
+                 plan-path (write-private! directory "connection.tfplan" "")]
+             (try
+               (command ["plan" "-refresh-only" "-input=false" "-no-color" "-lock-timeout=60s" (str "-out=" plan-path)])
+               {:status "ready" :directory (:directory plan)
+                :params (connection-params (command ["show" "-json" plan-path]) before identity environment)}
+               (finally (diagnostics/cleanup! #(Files/deleteIfExists (local/path plan-path))))))
+           (= "inspect" operation)
            (if (and (= "inspect" operation) (empty? (:resources before)) (empty? (:outputs before)))
              {:status "destroyed" :directory (:directory plan)}
            (do (require! (seq (:resources before)) "compute node does not exist")
                (let [params ((or *normalizer* normalized) (get-in before [:outputs :params :value]) environment)]
                  {:status "ready" :directory (:directory plan)
                   :params params})))
+           :else
            (let [plan-path (str (.resolve directory "approved.tfplan"))]
              (command (cond-> ["plan" "-input=false" "-no-color" (str "-out=" plan-path)] (= operation "delete") (conj "-destroy")))
              (guarded-plan! (command ["show" "-json" plan-path]) operation)
@@ -310,6 +367,14 @@
            (compute-node* opts node-request operation environment deps))
        (catch InterruptedException error (throw error))
        (catch Exception error (diagnostics/failure error))))))
+
+
+(defn resolve-connection!
+  "Resolve a live owned machine without applying or persisting refreshed state."
+  ([opts request] (resolve-connection! opts request (into {} (System/getenv)) {}))
+  ([opts request environment] (resolve-connection! opts request environment {}))
+  ([opts request environment deps]
+   (compute-node! opts request "resolve-connection" environment deps)))
 
 
 (defn- registration-request [request]

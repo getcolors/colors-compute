@@ -9,7 +9,7 @@ waits for the scoped agent. See [SSH resources](ssh-resource.md).
 
 `node_plan(opts, request)` is pure; `build_node` persists templates;
 `compute_node(opts, request, operation, environment, dependencies)` executes
-`build`, `create`, `inspect`, or `delete`. Green exposes `node-plan`,
+`build`, `create`, `inspect`, `resolve-connection`, or `delete`. Green exposes `node-plan`,
 `build-node!`, and `compute-node!` in `io.github.getcolors.compute-node`.
 There is no compute `prepare-access` operation.
 
@@ -95,3 +95,28 @@ Cancellation propagates and owned command processes are cleaned up by the runner
 Delete nodes first, then their separately owned registrations, then explicitly
 delete the durable SSH resource after all consumers are gone. Compute deletion
 needs no passphrase and never deletes durable SSH authority or starts an agent.
+
+## Live connection resolution
+
+`resolve_connection(opts, request, environment, dependencies)` (Green:
+`resolve-connection!`) returns the usual ready result with freshly observed
+normalized `params`, including the current address. It requires existing owned
+node state and the same public SSH identity and registration request as compute.
+Provider and backend credentials are required; no SSH passphrase is needed.
+
+The resolver validates stored ownership, then uses an OpenTofu refresh-only
+saved plan and JSON inspection to read the provider's current machine. It never
+applies a plan or persists refreshed remote state. It checks the machine's
+immutable ID against owned state (Google's numeric instance ID and Azure's VM
+UUID, rather than their reusable resource paths), validates output identity, and
+refuses missing/replaced machines, unknown or incomplete outputs and provider
+failures. Google and Azure public addresses must still be attached to the
+observed owned machine; a detached or reassigned address is refused. It never
+falls back to the stored address.
+
+Initialization and rendering still use the persistent private local root; callers
+must serialize it with other operations. The plan uses native backend locking
+with a 60-second lock timeout. The private saved refresh plan is removed on all
+exits because plan files can contain sensitive provider data. Remote backend
+lock acquisition/release is the only remote write; no infrastructure or state
+mutation is requested. Connection readiness is not an SSH reachability check.

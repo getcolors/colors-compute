@@ -229,6 +229,49 @@ def build_node(opts, request, _planner=node_plan):
     return {**plan, 'status': 'built'}
 
 
+_MACHINES = {'aws': ('aws_instance', 'id'), 'azure': ('azurerm_linux_virtual_machine', 'virtual_machine_id'), 'digitalocean': ('digitalocean_droplet', 'id'), 'google': ('google_compute_instance', 'instance_id'), 'hcloud': ('hcloud_server', 'id'), 'oci': ('oci_core_instance', 'id'), 'vultr': ('vultr_instance', 'id'), 'yandex': ('yandex_compute_instance', 'id')}
+
+
+def _machine_identity(resources, provider, planned=False):
+    kind, field = _MACHINES[provider]
+    matches = [r for r in resources if r.get('type') == kind and r.get('name') == 'node' and r.get('mode') == 'managed' and not r.get('module')]
+    if len(matches) != 1:
+        raise ValueError('owned machine absent')
+    resource = matches[0]
+    if not planned and (len(resource.get('instances', [])) != 1 or resource['instances'][0].get('deposed')):
+        raise ValueError('ambiguous machine state')
+    value = (resource.get('values', {}) if planned else resource['instances'][0].get('attributes', {})).get(field)
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)) or not str(value).strip():
+        raise ValueError('machine identity absent')
+    return str(value)
+
+
+def _unknown(value):
+    return value is True or isinstance(value, dict) and any(map(_unknown, value.values())) or isinstance(value, list) and any(map(_unknown, value))
+
+
+def _connection_attachment(resources, provider, params):
+    if provider not in ('google', 'azure'):
+        return
+    def resource(kind):
+        matches = [r for r in resources if r.get('type') == kind and r.get('name') == 'node' and r.get('mode') == 'managed' and not r.get('module')]
+        if len(matches) != 1 or not isinstance(matches[0].get('values'), dict):
+            raise ValueError('connection resource missing')
+        return matches[0]['values']
+    machine = resource(_MACHINES[provider][0])
+    if provider == 'google':
+        if machine.get('network_interface', [{}])[0].get('access_config', [{}])[0].get('nat_ip') != params['ip']:
+            raise ValueError('public address is not attached to machine')
+        return
+    nic, ip = resource('azurerm_network_interface'), resource('azurerm_public_ip')
+    if not (isinstance(nic.get('id'), str) and nic['id'].strip() and isinstance(ip.get('id'), str) and ip['id'].strip() and isinstance(machine.get('id'), str) and machine['id'].strip() and nic['id'] in machine.get('network_interface_ids', []) and nic.get('virtual_machine_id') == machine['id'] and any(c.get('public_ip_address_id') == ip['id'] for c in nic.get('ip_configuration', [])) and ip.get('ip_address') == params['ip']):
+        raise ValueError('public address is not attached to machine')
+
+
+async def resolve_connection(opts, request, environment=None, dependencies=None):
+    return await compute_node(opts, request, 'resolve-connection', environment, dependencies)
+
+
 async def compute_node(opts, request, operation='create', environment=None, dependencies=None):
     """Run one node lifecycle with bounded, sanitized failure diagnostics."""
     stage, changes = 'validate', 'none'
@@ -237,7 +280,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         source = dict(os.environ if environment is None else environment)
         diagnostic_secrets = credential_values(source, opts)
         planner = (dependencies or {}).get('_planner', node_plan)
-        if operation not in ('create', 'delete', 'inspect', 'build'):
+        if operation not in ('create', 'delete', 'inspect', 'build', 'resolve-connection'):
             raise ValueError('invalid node operation')
         if operation == 'build':
             planner(opts, request)
@@ -399,8 +442,36 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                 raise ValueError('node resources remain')
             stage = 'cleanup'
             return {'status': 'destroyed', 'directory': directory}
-        state_text = await run(['tofu', 'state', 'pull'])
+        if operation == 'resolve-connection':
+            if not existing:
+                raise ValueError('node state absent')
+            machine = _machine_identity(existing, opts['provider-compute'])
+            refresh_path = Path(directory) / 'connection.tfplan'
+            try:
+                _write(refresh_path, b'')
+                await run(['tofu', 'plan', '-refresh-only', '-input=false', '-no-color', '-lock-timeout=60s', '-out=' + str(refresh_path)], timeout=1800000)
+                refreshed = json.loads(await run(['tofu', 'show', '-json', str(refresh_path)]))
+                if not isinstance(refreshed.get('format_version'), str) or not isinstance(refreshed.get('planned_values'), dict):
+                    raise ValueError('invalid refresh plan')
+                if any(r.get('change', {}).get('actions') not in (['no-op'], ['read']) for r in refreshed.get('resource_changes', [])):
+                    raise ValueError('refresh mutation refused')
+                values = refreshed['planned_values']
+                if values.get('outputs', {}).get('compute_identity', {}).get('value') != expected_identity:
+                    raise ValueError('refreshed identity mismatch')
+                if _unknown(refreshed.get('output_changes', {}).get('params', {}).get('after_unknown')):
+                    raise ValueError('unknown connection outputs')
+                if _machine_identity(values.get('root_module', {}).get('resources', []), opts['provider-compute'], True) != machine:
+                    raise ValueError('machine identity changed')
+                state_text = json.dumps({'version': 4, 'serial': 1, 'lineage': 'connection-observation', 'resources': existing, 'outputs': values['outputs']})
+            finally:
+                refresh_path.unlink(missing_ok=True)
+        else:
+            state_text = await run(['tofu', 'state', 'pull'])
         params = _params(state_text)
+        if operation == 'resolve-connection':
+            _connection_attachment(values.get('root_module', {}).get('resources', []), opts['provider-compute'], params)
+            if params.get('provider_id') is None or params.get('provider_id') != prior.get('provider_id') or any(not isinstance(params.get(k), str) or not params[k].strip() for k in ('provider', 'name', 'ip', 'user', 'sudoer')):
+                raise ValueError('incomplete or changed connection outputs')
         state_outputs = json.loads(state_text)['outputs']
         if state_outputs.get('compute_identity', {}).get('value') != expected_identity:
             raise ValueError('node state identity mismatch')

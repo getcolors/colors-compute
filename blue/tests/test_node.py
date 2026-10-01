@@ -206,3 +206,63 @@ async def test_uninitialized_snapshot_requires_independent_backend_absence(tmp_p
     assert result['status'] == ('ready' if mode == 'absent' and operation == 'create' else 'error')
     assert applied == (mode == 'absent' and operation == 'create')
     assert any(args[0] == 'aws' for args in calls)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('mode', ['ok', 'missing', 'destroyed', 'replaced', 'unknown', 'identity', 'empty-ip', 'mutation', 'failure', 'failed-show', 'detached'])
+@pytest.mark.parametrize('provider', ['aws', 'azure', 'digitalocean', 'google', 'hcloud', 'oci', 'vultr', 'yandex'])
+async def test_connection_resolution_is_live_and_read_only(tmp_path, mode, provider):
+    from colors_compute.node import resolve_connection, _MACHINES
+    from colors_compute.contract import registry
+    opts, req = inputs(tmp_path, provider)
+    plan = build_node(opts, req)
+    params = {'provider': provider, 'provider_id': '123', 'node_id': req['node_id'], 'name': 'node', 'ip': '192.0.2.1', 'user': 'root', 'sudoer': 'root'}
+    outputs = {'compute_identity': plan['documents']['compute.tf.json']['output']['compute_identity'], 'params': {'value': params}}
+    state = {'version': 4, 'serial': 1, 'lineage': 'fixture', 'resources': [{'type': _MACHINES[provider][0], 'name': 'node', 'mode': 'managed', 'instances': [{'attributes': {_MACHINES[provider][1]: '123'}}]}], 'outputs': outputs}
+    state_path = Path(plan['directory']) / req['state_filename']
+    if mode != 'missing':
+        state_path.write_text(json.dumps(state))
+    refreshed = {'format_version': '1.2', 'planned_values': {'outputs': json.loads(json.dumps(outputs)), 'root_module': {'resources': [{'type': _MACHINES[provider][0], 'name': 'node', 'mode': 'managed', 'values': {_MACHINES[provider][1]: '123'}}]}}}
+    refreshed['planned_values']['outputs']['params']['value']['ip'] = '' if mode == 'empty-ip' else '192.0.2.2'
+    resources = refreshed['planned_values']['root_module']['resources']
+    if provider == 'google':
+        resources[0]['values']['network_interface'] = [{'access_config': [{'nat_ip': '192.0.2.9' if mode == 'detached' else '192.0.2.2'}]}]
+    if provider == 'azure':
+        resources[0]['values'].update(id='machine', network_interface_ids=['nic'])
+        resources.extend([{'type': 'azurerm_network_interface', 'name': 'node', 'mode': 'managed', 'values': {'id': 'nic', 'virtual_machine_id': 'other' if mode == 'detached' else 'machine', 'ip_configuration': [{'public_ip_address_id': 'ip'}]}}, {'type': 'azurerm_public_ip', 'name': 'node', 'mode': 'managed', 'values': {'id': 'ip', 'ip_address': '192.0.2.2'}}])
+    if mode == 'destroyed':
+        refreshed['planned_values']['root_module']['resources'] = []
+    if mode == 'replaced':
+        refreshed['planned_values']['root_module']['resources'][0]['values'][_MACHINES[provider][1]] = '456'
+    if mode == 'identity':
+        refreshed['planned_values']['outputs']['compute_identity']['value']['profile'] = 'other'
+    if mode == 'unknown':
+        refreshed['output_changes'] = {'params': {'after_unknown': {'ip': True}}}
+    if mode == 'mutation':
+        refreshed['resource_changes'] = [{'change': {'actions': ['update']}}]
+    calls = []
+    async def runner(args, directory, env, timeout):
+        calls.append(args)
+        if args[1] == 'show' and mode == 'failed-show':
+            return ProcessResult(1, '', 'invalid plan')
+        if args[1] == 'plan':
+            assert '-refresh-only' in args and '-lock-timeout=60s' in args
+            if mode == 'failure':
+                return ProcessResult(1, '', 'provider unavailable')
+        return ProcessResult(0, json.dumps(refreshed if args[1] == 'show' else state), '')
+    result = await resolve_connection(opts, req, {'COLORS_PAR_' + k.upper().replace('-', '_'): 'fixture-secret' for k in registry()['compute'][provider]['tofu-env']}, {'runner': runner})
+    assert result['status'] == ('ready' if mode == 'ok' or mode == 'detached' and provider not in ('google', 'azure') else 'error')
+    if mode == 'ok':
+        assert result['params']['ip'] == '192.0.2.2'
+    assert not any(c[1] == 'apply' for c in calls)
+    assert not (Path(plan['directory']) / 'connection.tfplan').exists()
+    if mode != 'missing':
+        assert json.loads(state_path.read_text()) == state
+
+
+def test_package_exports_connection_resolver():
+    import colors_compute
+    from colors_compute.node import resolve_connection
+    assert colors_compute.resolve_connection is resolve_connection
+    assert callable(colors_compute.resolve_connection)
+    assert 'resolve_connection' in colors_compute.__all__
