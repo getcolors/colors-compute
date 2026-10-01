@@ -105,7 +105,10 @@ node state and the same public SSH identity and registration request as compute.
 Provider and backend credentials are required; no SSH passphrase is needed.
 
 The resolver validates stored ownership, then uses an OpenTofu refresh-only
-saved plan and JSON inspection to read the provider's current machine. It never
+saved plan and JSON inspection to read the provider's current machine. In that
+refresh-only JSON, `prior_state.values` contains the freshly observed resources;
+`planned_values` contains the recomputed outputs and need not contain resources.
+The resolver requires that refreshed snapshot and refuses errored plans. It never
 applies a plan or persists refreshed remote state. It checks the machine's
 immutable ID against owned state (Google's numeric instance ID and Azure's VM
 UUID, rather than their reusable resource paths), validates output identity, and

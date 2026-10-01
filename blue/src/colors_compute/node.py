@@ -453,6 +453,9 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                 refreshed = json.loads(await run(['tofu', 'show', '-json', str(refresh_path)]))
                 if not isinstance(refreshed.get('format_version'), str) or not isinstance(refreshed.get('planned_values'), dict):
                     raise ValueError('invalid refresh plan')
+                observed_resources = refreshed.get('prior_state', {}).get('values', {}).get('root_module', {}).get('resources')
+                if refreshed.get('errored') is True or not isinstance(observed_resources, list):
+                    raise ValueError('missing refreshed resource observation')
                 if any(r.get('change', {}).get('actions') not in (['no-op'], ['read']) for r in refreshed.get('resource_changes', [])):
                     raise ValueError('refresh mutation refused')
                 values = refreshed['planned_values']
@@ -460,7 +463,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
                     raise ValueError('refreshed identity mismatch')
                 if _unknown(refreshed.get('output_changes', {}).get('params', {}).get('after_unknown')):
                     raise ValueError('unknown connection outputs')
-                if _machine_identity(values.get('root_module', {}).get('resources', []), opts['provider-compute'], True) != machine:
+                if _machine_identity(observed_resources, opts['provider-compute'], True) != machine:
                     raise ValueError('machine identity changed')
                 state_text = json.dumps({'version': 4, 'serial': 1, 'lineage': 'connection-observation', 'resources': existing, 'outputs': values['outputs']})
             finally:
@@ -469,7 +472,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             state_text = await run(['tofu', 'state', 'pull'])
         params = _params(state_text)
         if operation == 'resolve-connection':
-            _connection_attachment(values.get('root_module', {}).get('resources', []), opts['provider-compute'], params)
+            _connection_attachment(observed_resources, opts['provider-compute'], params)
             if params.get('provider_id') is None or params.get('provider_id') != prior.get('provider_id') or any(not isinstance(params.get(k), str) or not params[k].strip() for k in ('provider', 'name', 'ip', 'user', 'sudoer')):
                 raise ValueError('incomplete or changed connection outputs')
         state_outputs = json.loads(state_text)['outputs']

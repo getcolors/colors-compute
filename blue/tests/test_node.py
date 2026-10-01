@@ -209,7 +209,7 @@ async def test_uninitialized_snapshot_requires_independent_backend_absence(tmp_p
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('mode', ['ok', 'missing', 'destroyed', 'replaced', 'unknown', 'identity', 'empty-ip', 'mutation', 'failure', 'failed-show', 'detached'])
+@pytest.mark.parametrize('mode', ['ok', 'missing', 'destroyed', 'replaced', 'unknown', 'identity', 'empty-ip', 'mutation', 'failure', 'failed-show', 'detached', 'errored', 'missing-prior-state'])
 @pytest.mark.parametrize('provider', ['aws', 'azure', 'digitalocean', 'google', 'hcloud', 'oci', 'vultr', 'yandex'])
 async def test_connection_resolution_is_live_and_read_only(tmp_path, mode, provider):
     from colors_compute.node import resolve_connection, _MACHINES
@@ -224,22 +224,27 @@ async def test_connection_resolution_is_live_and_read_only(tmp_path, mode, provi
         state_path.write_text(json.dumps(state))
     refreshed = {'format_version': '1.2', 'planned_values': {'outputs': json.loads(json.dumps(outputs)), 'root_module': {'resources': [{'type': _MACHINES[provider][0], 'name': 'node', 'mode': 'managed', 'values': {_MACHINES[provider][1]: '123'}}]}}}
     refreshed['planned_values']['outputs']['params']['value']['ip'] = '' if mode == 'empty-ip' else '192.0.2.2'
-    resources = refreshed['planned_values']['root_module']['resources']
+    refreshed['prior_state'] = {'values': {'root_module': refreshed['planned_values'].pop('root_module')}}
+    resources = refreshed['prior_state']['values']['root_module']['resources']
     if provider == 'google':
         resources[0]['values']['network_interface'] = [{'access_config': [{'nat_ip': '192.0.2.9' if mode == 'detached' else '192.0.2.2'}]}]
     if provider == 'azure':
         resources[0]['values'].update(id='machine', network_interface_ids=['nic'])
         resources.extend([{'type': 'azurerm_network_interface', 'name': 'node', 'mode': 'managed', 'values': {'id': 'nic', 'virtual_machine_id': 'other' if mode == 'detached' else 'machine', 'ip_configuration': [{'public_ip_address_id': 'ip'}]}}, {'type': 'azurerm_public_ip', 'name': 'node', 'mode': 'managed', 'values': {'id': 'ip', 'ip_address': '192.0.2.2'}}])
     if mode == 'destroyed':
-        refreshed['planned_values']['root_module']['resources'] = []
+        refreshed['prior_state']['values']['root_module']['resources'] = []
     if mode == 'replaced':
-        refreshed['planned_values']['root_module']['resources'][0]['values'][_MACHINES[provider][1]] = '456'
+        refreshed['prior_state']['values']['root_module']['resources'][0]['values'][_MACHINES[provider][1]] = '456'
     if mode == 'identity':
         refreshed['planned_values']['outputs']['compute_identity']['value']['profile'] = 'other'
     if mode == 'unknown':
         refreshed['output_changes'] = {'params': {'after_unknown': {'ip': True}}}
     if mode == 'mutation':
         refreshed['resource_changes'] = [{'change': {'actions': ['update']}}]
+    if mode == 'errored':
+        refreshed['errored'] = True
+    if mode == 'missing-prior-state':
+        del refreshed['prior_state']
     calls = []
     async def runner(args, directory, env, timeout):
         calls.append(args)

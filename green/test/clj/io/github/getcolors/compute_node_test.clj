@@ -150,7 +150,7 @@
                                     ["digitalocean" "digitalocean_droplet" :id] ["google" "google_compute_instance" :instance_id]
                                     ["hcloud" "hcloud_server" :id] ["oci" "oci_core_instance" :id]
                                     ["vultr" "vultr_instance" :id] ["yandex" "yandex_compute_instance" :id]]
-          mode [:ready :changed :gone :unknown :empty-ip :wrong-identity :failed-plan :failed-show :detached]]
+          mode [:ready :changed :gone :unknown :empty-ip :wrong-identity :failed-plan :failed-show :detached :errored :missing-snapshot]]
     (let [dir (temp-dir) [opts request] (inputs dir provider)
           plan (node/node-plan opts request)
           ownership (get-in plan [:documents "compute.tf.json" :output :compute_identity])
@@ -171,6 +171,17 @@
                                    :values {:id "nic-path" :virtual_machine_id (if (= mode :detached) "other-vm" "vm-path")
                                             :ip_configuration [{:public_ip_address_id "ip-path"}]}}
                                   {:mode "managed" :type "azurerm_public_ip" :name "node" :values {:id "ip-path" :ip_address "192.0.2.2"}}]) refreshed)
+          ;; Match real refresh-only show JSON: outputs are planned, resources
+          ;; are the refreshed prior_state, and planned root_module is null.
+          refreshed (-> refreshed
+                        (assoc :errored (= mode :errored)
+                               :prior_state {:format_version "1.0"
+                                             :values {:root_module (get-in refreshed [:planned_values :root_module])}})
+                        (assoc-in [:planned_values :root_module] nil))
+          refreshed (if (= mode :missing-snapshot)
+                      (-> refreshed
+                          (assoc-in [:planned_values :root_module] (get-in refreshed [:prior_state :values :root_module]))
+                          (dissoc :prior_state)) refreshed)
           env (into {} (map (fn [[key _]] [(str "COLORS_PAR_" (str/upper-case (str/replace (name key) "-" "_"))) "fixture-secret"])
                            (get-in io.github.getcolors.compute/registry [:compute (keyword provider) :tofu-env])))
           calls (atom [])

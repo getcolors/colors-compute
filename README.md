@@ -35,6 +35,7 @@ SSH resource storage and locking are described in their own contract.
 python3 scripts/registry.py
 python3 scripts/provider_resources.py
 python3 scripts/provider_recipes.py
+python3 scripts/connection_plan.py
 python3 scripts/ssh_resources.py
 uv run --project blue python scripts/parity.py
 uv run --project blue python scripts/ssh_parity.py

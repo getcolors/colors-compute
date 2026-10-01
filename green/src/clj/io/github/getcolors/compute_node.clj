@@ -239,11 +239,10 @@
    "hcloud" ["hcloud_server" :id] "oci" ["oci_core_instance" :id]
    "vultr" ["vultr_instance" :id] "yandex" ["yandex_compute_instance" :id]})
 
-(defn- attached-address! [provider plan machine ip]
+(defn- attached-address! [provider resources machine ip]
   (case provider
     "google" (require! (= ip (get-in machine [:network_interface 0 :access_config 0 :nat_ip])) "public address is not attached to the owned machine")
-    "azure" (let [resources (get-in plan [:planned_values :root_module :resources])
-                  values-for (fn [kind] (let [matches (filter #(and (= "managed" (:mode %)) (= kind (:type %)) (= "node" (:name %))) resources)]
+    "azure" (let [values-for (fn [kind] (let [matches (filter #(and (= "managed" (:mode %)) (= kind (:type %)) (= "node" (:name %))) resources)]
                                          (require! (= 1 (count matches)) "owned network resource is missing or ambiguous")
                                          (:values (first matches))))
                   nic (values-for "azurerm_network_interface")
@@ -258,10 +257,15 @@
 (defn- connection-params [text before identity environment]
   (let [plan (parse-one text)
         _ (guarded-plan! text "resolve-connection")
+        _ (require! (not (true? (:errored plan))) "refresh plan contains errors")
+        ;; A refresh-only plan has no planned resources. OpenTofu's prior_state
+        ;; is its newly refreshed snapshot, not the original state pulled above.
+        resources (get-in plan [:prior_state :values :root_module :resources])
+        _ (require! (vector? resources) "refreshed resource snapshot is missing")
         [kind attribute] (get machine-identities (:provider identity))
         matches? #(and (= "managed" (:mode %)) (= kind (:type %)) (= "node" (:name %)) (nil? (:module %)))
         old (filter matches? (:resources before))
-        fresh (filter matches? (get-in plan [:planned_values :root_module :resources]))
+        fresh (filter matches? resources)
         _ (require! (and (= 1 (count old)) (= 1 (count fresh))
                          (= 1 (count (:instances (first old))))
                          (nil? (:deposed (first (:instances (first old)))))) "owned compute machine is missing or ambiguous")
@@ -277,7 +281,7 @@
                    (= (:node_id identity) (:node_id params))
                    (some? (:provider_id params))
                    (= (:provider_id params) (get-in before [:outputs :params :value :provider_id]))) "refreshed compute outputs changed identity")
-    (attached-address! (:provider identity) plan (:values (first fresh)) (:ip params))
+    (attached-address! (:provider identity) resources (:values (first fresh)) (:ip params))
     params))
 
 (defn- compute-node*
