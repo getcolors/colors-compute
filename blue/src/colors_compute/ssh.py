@@ -158,3 +158,15 @@ async def start_agent(resources, environment, register, lifetime=900):
     except BaseException:
         await close()
         raise
+
+
+async def ssh_export(opts, request, destination, operation='install', environment=None):
+    """Install encrypted identity or inspect/remove an owned local export offline."""
+    plan = ssh_plan(opts, request)
+    source = os.environ if environment is None else environment
+    process, close = await _start({'plan': plan, 'request': request, 'operation': 'export',
+        'destination': destination, 'export_operation': operation}, _environment(source, [request]))
+    try:
+        return json.loads(await asyncio.wait_for(process.stdout.readline(), 180))
+    finally:
+        await close()

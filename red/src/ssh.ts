@@ -112,3 +112,10 @@ export async function start_agent(resources: Map[], source: Env, register: (phas
     return result;
   } catch (error) {await handle.close(); throw error;}
 }
+
+/** Install encrypted identity or inspect/remove an owned local export offline. */
+export async function ssh_export(opts: Map, request: Map, destination: string, operation = 'install', source: Env = process.env) {
+  const plan = ssh_plan(opts, request);
+  const handle = start({plan, request, operation: 'export', destination, export_operation: operation}, environment(source, [request]));
+  try {return await handle.ready;} finally {await handle.close();}
+}

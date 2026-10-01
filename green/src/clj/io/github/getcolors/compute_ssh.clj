@@ -142,3 +142,13 @@
          ;; References are opaque strings, not keyword names.
          (update result :identities #(into {} (map (fn [[k v]] [(if (keyword? k) (subs (str k) 1) k) v]) %))))
        (catch Throwable error ((:close handle)) (throw error))))))
+
+(defn ssh-export!
+  "Install encrypted local identity, inspect it, or remove owned files offline."
+  ([opts request destination] (ssh-export! opts request destination "install" (System/getenv)))
+  ([opts request destination operation environment-map]
+   (let [plan (ssh-plan opts request)
+         handle (start! {:plan plan :request request :operation "export"
+                         :destination destination :export_operation operation}
+                        (environment environment-map [request]))]
+     (try (ready! handle) (finally ((:close handle)))))))

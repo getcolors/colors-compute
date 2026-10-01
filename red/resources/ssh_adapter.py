@@ -2,6 +2,7 @@
 """Private OpenSSH/conditional-storage adapter. Protocol output never contains keys."""
 import base64
 import contextlib
+import ctypes
 import fcntl
 import hashlib
 import json
@@ -483,6 +484,144 @@ def resource(plan, request, operation):
         return result(final)
 
 
+def export_directory(destination, create=False):
+    require(isinstance(destination, str) and destination.startswith('/') and
+            os.path.normpath(destination) == destination and '\\' not in destination and
+            not any(ord(c) < 32 for c in destination), 'invalid SSH export directory')
+    path = Path(destination)
+    for part in reversed((path, *path.parents)):
+        try:
+            info = part.lstat()
+        except FileNotFoundError:
+            if not create:
+                return None
+            part.mkdir(mode=0o700)
+            info = part.lstat()
+        require(stat.S_ISDIR(info.st_mode), 'unsafe SSH export directory')
+        # Root-owned system ancestors are allowed, but writable shared parents
+        # must have sticky-bit protection (e.g. /tmp).
+        require(info.st_uid in (0, os.getuid()) and
+                (not info.st_mode & 0o022 or bool(info.st_mode & stat.S_ISVTX)),
+                'unsafe SSH export parent')
+    info = path.stat()
+    require(info.st_uid == os.getuid() and info.st_mode & 0o077 == 0,
+            'SSH export directory is not private')
+    return path
+
+
+def inspect_export(path, reference):
+    names = {'identity', 'identity.pub', 'ownership.json'}
+    require(set(p.name for p in path.iterdir()) == names, 'unowned or incomplete SSH export directory')
+    manifest = json.loads(read_private(path / 'ownership.json'))
+    require(manifest.get('version') == 1 and manifest.get('reference') == reference,
+            'SSH export ownership mismatch')
+    public = read_private(path / 'identity.pub').decode().strip()
+    ciphertext_bytes = read_private(path / 'identity')
+    ciphertext = ciphertext_bytes.decode()
+    require(hashlib.sha256(ciphertext_bytes).hexdigest() in manifest.get('private_hashes', []) and
+            hashlib.sha256(read_private(path / 'identity.pub')).hexdigest() == manifest.get('public_hash'),
+            'SSH export content changed')
+    require(encrypted_public(ciphertext) == public and fingerprint(public) == manifest.get('fingerprint'),
+            'SSH export fingerprint mismatch')
+    return {'status': 'installed', 'reference': reference,
+            'fingerprint': manifest['fingerprint'], 'public_key': public,
+            'private_key_file': str(path / 'identity'), 'public_key_file': str(path / 'identity.pub')}
+
+
+def publish_export(staged, destination):
+    # Atomically publish all three files, refusing even an empty destination.
+    libc = ctypes.CDLL(None, use_errno=True)
+    if sys.platform == 'darwin':
+        call = libc.renamex_np
+        call.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint)
+        code = call(os.fsencode(staged), os.fsencode(destination), 4)  # RENAME_EXCL
+    elif sys.platform.startswith('linux'):
+        call = libc.renameat2
+        call.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
+        code = call(-100, os.fsencode(staged), -100, os.fsencode(destination), 1)  # RENAME_NOREPLACE
+    else:
+        raise ResourceError('atomic SSH export requires Linux or macOS')
+    require(code == 0, 'SSH export destination appeared concurrently or publication failed')
+
+
+def export_resource(plan, request, destination, operation):
+    require(operation in ('install', 'inspect', 'remove'), 'invalid SSH export operation')
+    export_directory(destination)
+    parent = export_directory(str(Path(destination).parent), create=operation == 'install')
+    if parent is None:
+        return {'status': 'absent', 'reference': plan['reference']}
+    fd = os.open(parent, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ResourceError('SSH export busy') from None
+        return _export_resource(plan, request, destination, operation)
+    finally:
+        os.close(fd)
+
+
+def _export_resource(plan, request, destination, operation):
+    require(operation in ('install', 'inspect', 'remove'), 'invalid SSH export operation')
+    path = export_directory(destination)
+    if operation != 'install':
+        if path is None:
+            return {'status': 'absent', 'reference': plan['reference']}
+        current = inspect_export(path, plan['reference'])
+        expected = request.get('expected')
+        if expected:
+            require(all(current.get(k) == expected.get(k) for k in ('reference', 'public_key', 'fingerprint')),
+                    'SSH expected identity mismatch')
+        if operation == 'inspect':
+            return current
+        # Remove the public location atomically before destroying its contents.
+        # An interruption never leaves a half-owned installation at destination.
+        with tempfile.TemporaryDirectory(prefix='.ssh-export-remove-', dir=path.parent) as temporary:
+            retired = Path(temporary) / 'export'
+            os.rename(path, retired)
+            for name in ('identity', 'identity.pub', 'ownership.json'):
+                (retired / name).unlink()
+            retired.rmdir()
+        return {'status': 'removed', 'reference': plan['reference']}
+    # Read and validate existing ownership before obtaining remote credentials.
+    current = inspect_export(path, plan['reference']) if path is not None else None
+    record, _ = Store(plan).read()
+    require(record is not None and record['status'] == 'ready', 'SSH authority missing or not ready')
+    expected = request.get('expected')
+    if expected:
+        require(all(record.get(k) == expected.get(k) for k in ('reference', 'public_key', 'fingerprint')),
+                'SSH expected identity mismatch')
+    if current:
+        require(current['fingerprint'] == record['fingerprint'], 'SSH export identity changed; remove explicitly first')
+        # Rotation changes only ciphertext. The ownership fingerprint stays valid
+        # across this single atomic replacement, including interrupted refreshes.
+        ciphertext = record['encrypted_key'].encode()
+        manifest = json.loads(read_private(path / 'ownership.json'))
+        new_hash = hashlib.sha256(ciphertext).hexdigest()
+        # Journal both valid ciphertext hashes before the one-file replacement.
+        # A crash on either side leaves a verifiable export and a retry can finish.
+        old_hash = hashlib.sha256(read_private(path / 'identity')).hexdigest()
+        manifest['private_hashes'] = sorted({old_hash, new_hash})
+        atomic_write(path / 'ownership.json', canonical(manifest).encode())
+        atomic_write(path / 'identity', ciphertext)
+        manifest['private_hashes'] = [new_hash]
+        atomic_write(path / 'ownership.json', canonical(manifest).encode())
+    else:
+        parent = export_directory(str(Path(destination).parent), create=True)
+        with tempfile.TemporaryDirectory(prefix='.ssh-export-', dir=parent) as temporary:
+            staged = Path(temporary) / 'export'
+            staged.mkdir(mode=0o700)
+            atomic_write(staged / 'identity', record['encrypted_key'].encode())
+            atomic_write(staged / 'identity.pub', (record['public_key'] + '\n').encode())
+            atomic_write(staged / 'ownership.json', canonical({'version': 1,
+                'reference': plan['reference'], 'fingerprint': record['fingerprint'],
+                'private_hashes': [hashlib.sha256(record['encrypted_key'].encode()).hexdigest()],
+                'public_hash': hashlib.sha256((record['public_key'] + '\n').encode()).hexdigest()}).encode())
+            publish_export(staged, destination)
+        path = Path(destination)
+    return inspect_export(path, plan['reference'])
+
+
 @contextlib.contextmanager
 def agent_session(entries, lifetime=900):
     require(type(lifetime) is int and 1 <= lifetime <= 3600, 'invalid agent lifetime')
@@ -568,6 +707,8 @@ def main():
                             break
                     else:
                         renew()
+        elif message['operation'] == 'export':
+            print(canonical(export_resource(message['plan'], message['request'], message['destination'], message['export_operation'])), flush=True)
         else:
             print(canonical(resource(message['plan'], message['request'], message['operation'])), flush=True)
     except (Exception, KeyboardInterrupt) as error:

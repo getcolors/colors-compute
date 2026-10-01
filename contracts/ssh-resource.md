@@ -122,3 +122,30 @@ Backend endpoints without these semantics are unsupported; there is no
 unconditional fallback. Cloud providers other than the recorded live Alice
 DigitalOcean/R2 run are covered by plans and synthetic lifecycle checks, not
 a claim of live end-to-end verification.
+
+### Explicit encrypted local export
+
+`ssh-export!` (Green) / `ssh_export` (Red, Blue) accepts
+`(opts, request, destination, operation, environment)`; operation defaults to
+`install`. The destination is a normalized absolute private directory owned by
+this export, not a key filename. It contains encrypted OpenSSH `identity`,
+`identity.pub`, and `ownership.json`, all mode 0600, in a mode 0700 directory.
+No private key bytes appear in the result or protocol output. The passphrase is
+not needed to copy the encrypted authority; ordinary OpenSSH asks for it later.
+
+`install` reads ready authority, checks expected identity when supplied, and
+refuses unowned, modified, symlinked, hardlinked or non-private destinations.
+The manifest binds the backend resource reference, fingerprint and file hashes.
+Repeated installs refresh ciphertext after passphrase rotation for the same
+fingerprint. Rotation journals old/new hashes around an atomic key replacement,
+so interruption leaves a verifiable export. A changed fingerprint requires
+explicit removal first. Initial publication atomically refuses collisions on
+Linux/macOS. Operations serialize through a lock on the private parent directory.
+
+`inspect` and `remove` require no backend/provider credentials or passphrase and
+never touch remote authority. Missing destinations return `status: absent`.
+Inspection returns `status: installed`, `reference`, `fingerprint`, `public_key`,
+`private_key_file`, and `public_key_file`. Removal validates ownership and content,
+then atomically withdraws the directory before deleting its files, returning
+`status: removed`. A process killed during final deletion can leave encrypted
+files in a private `.ssh-export-remove-*` tombstone in the parent directory.
