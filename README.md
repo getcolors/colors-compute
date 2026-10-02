@@ -48,6 +48,8 @@ uv run --directory blue pytest -q
 Shared fixtures compare complete three-color node and registration plans.
 Lifecycle tests exercise public identity binding, independent registration
 ownership, persistent workdirs, replacement/deletion guards, and diagnostics.
+Native-runner parity distinguishes missing executables, failed process starts,
+and deadlines; see the [command failure contract](contracts/node.md#command-failure-diagnostics).
 Provider schema validation and synthetic runners do not establish cloud
 permissions or application readiness; live verification is separately recorded.
 

@@ -26,6 +26,16 @@ never returned: they may contain credentials, local paths, or key material.
 The executable is resolved using the supplied environment and working directory,
 not the assistant's or caller's unrelated shell.
 
+Native runner failures may also include `command_reason`: `executable_not_found`
+when no command candidate exists in the supplied PATH, `process_start_failed`
+when a candidate cannot run (including permissions, invalid cwd, or a missing
+script interpreter), or `timeout` when execution or captured output exceeds its
+deadline. These failures retain `exit_code: -1`; that status alone never proves
+an executable is missing. A launched child's nonzero exit, including 127, has
+no reason field. Custom runners may omit it; unsupported reason values are
+not forwarded. Consumers should fall back to the safe message if the field is
+absent or unfamiliar. See [execution details](node.md#command-failure-diagnostics).
+
 Codes distinguish `command_failed`, `missing_credentials`, `state_unreadable`,
 `state_absent`, `identity_mismatch`, `unsafe_plan`, `invalid_request`,
 `key_access_failed`, `filesystem_error`, and `internal_error`. Stages identify

@@ -1,10 +1,21 @@
-export interface BackendCommandResult {exit: number; out: string; err: string}
+import {existsSync,statSync} from 'node:fs';
+import {resolve,delimiter} from 'node:path';
+import {executable} from './diagnostics.ts';
+export interface BackendCommandResult {exit: number; out: string; err: string; command_reason?: 'executable_not_found' | 'process_start_failed' | 'timeout'}
 export type BackendRunner = (args: string[], options: {cwd: string; env: Record<string, string>; timeoutMs: number}) => Promise<BackendCommandResult>;
 export type StateRead = {status: 'present'; params: Record<string, unknown>; outputs?:Record<string,unknown>; state_empty?:boolean} | {status: 'error'};
 const object = (value: unknown): value is Record<string, any> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const missing = (value: unknown) => typeof value !== 'string' || !value.trim() || value.trim().toUpperCase() === 'REPLACE_ME';
 export const executeBackendCommand: BackendRunner = async (args, options) => {
-  const child = Bun.spawn(args, {cwd: options.cwd, env: options.env, detached:process.platform !== 'win32', stdin:'ignore',stdout:'pipe',stderr:'pipe'});
+  const failed = (command_reason: BackendCommandResult['command_reason']): BackendCommandResult => ({exit:-1,out:'',err:'',command_reason});
+  try {if (!statSync(options.cwd).isDirectory()) return failed('process_start_failed');} catch {return failed('process_start_failed');}
+  const resolved = executable(args[0],options.cwd,options.env);
+  if (!resolved) {
+    const candidates=args[0].includes('/')?[resolve(options.cwd,args[0])]:options.env.PATH===undefined?[]:options.env.PATH.split(delimiter).map(part=>resolve(options.cwd,part,args[0]));
+    return failed(candidates.some(path=>existsSync(path))?'process_start_failed':'executable_not_found');
+  }
+  let child;
+  try {child = Bun.spawn([resolved,...args.slice(1)], {cwd: options.cwd, env: options.env, detached:process.platform !== 'win32', stdin:'ignore',stdout:'pipe',stderr:'pipe'});} catch {return failed('process_start_failed');}
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
@@ -17,7 +28,7 @@ export const executeBackendCommand: BackendRunner = async (args, options) => {
   }, options.timeoutMs);
   try {
     const [out,err,exit] = await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
-    if (timedOut) throw new Error('backend command timed out');
+    if (timedOut) return failed('timeout');
     return {exit,out,err};
   } finally {clearTimeout(timer);}
 };

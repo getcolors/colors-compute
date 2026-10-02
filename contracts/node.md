@@ -96,6 +96,28 @@ Delete nodes first, then their separately owned registrations, then explicitly
 delete the durable SSH resource after all consumers are gone. Compute deletion
 needs no passphrase and never deletes durable SSH authority or starts an agent.
 
+## Command failure diagnostics
+
+Lifecycle errors retain their stage-specific `code`, authored `message`, safe
+`command` prefix, optional resolved `executable`, `exit_code`, and bounded,
+redacted `stderr`. They never contain stdout, full argv, or raw exceptions.
+The additive `command_reason` field distinguishes native runner failures:
+
+- `executable_not_found`: no command candidate exists in the supplied PATH.
+- `process_start_failed`: an existing candidate cannot execute, the working
+  directory is invalid, or the operating system cannot start the process
+  (including an unavailable script interpreter).
+- `timeout`: the process or its captured output exceeded the deadline; the
+  runner terminates its owned processes.
+
+These failures retain `exit_code: -1` for compatibility. A child that actually
+exits with a nonzero status, including 127, has no `command_reason`. Callers must
+not infer missing executables from a negative status. Custom runners may omit
+the field; unknown values are not forwarded. Execution resolves only the
+supplied PATH, with relative and empty entries relative to the working
+directory. An omitted PATH never inherits the parent process's search path.
+Cancellation continues to propagate instead of becoming a command failure.
+
 ## Live connection resolution
 
 `resolve_connection(opts, request, environment, dependencies)` (Green:

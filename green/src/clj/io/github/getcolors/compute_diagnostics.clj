@@ -91,6 +91,7 @@
     (cond-> {:command (command-prefix argv)}
       path (assoc :executable (redact path opts source))
       (integer? (:exit result)) (assoc :exit_code (:exit result))
+      (contains? #{"executable_not_found" "process_start_failed" "timeout"} (:command_reason result)) (assoc :command_reason (:command_reason result))
       stderr (assoc :stderr stderr)
       reason (assoc :auth_reason reason))))
 

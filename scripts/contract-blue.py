@@ -17,6 +17,10 @@ operations["node_plan_valid"] = node_plan_valid
 from colors_compute.diagnostics import sanitize_stderr, credential_values
 operations["sanitize_error"] = lambda value, opts, environment: sanitize_stderr(value, credential_values(opts, environment)) or None
 operations["node_runtime_error"] = lambda opts, request, operation: asyncio.run(compute_node(opts, request, operation, {}))
+from colors_compute.backend import _run, ProcessResult
+from colors_compute.diagnostics import command_metadata, NodeError, failure
+operations["run_command"] = lambda args, cwd, env, timeout: {k: v for k, v in asyncio.run(_run(args, cwd, env, timeout))._asdict().items() if v is not None}
+operations["command_error"] = lambda reason: failure(NodeError('command_failed', **command_metadata(['tofu', 'init'], {}, '/tmp', ProcessResult(-1, '', '', reason))), 'init', 'none', set())
 for line in sys.stdin:
     try:
         case = json.loads(line)

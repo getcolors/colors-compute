@@ -1,0 +1,186 @@
+[
+  {
+    "name": "missing command",
+    "op": "run_command",
+    "args": [
+      [
+        "colors-compute-no-such-executable"
+      ],
+      "/tmp",
+      {},
+      1000
+    ],
+    "expected": {
+      "exit": -1,
+      "out": "",
+      "err": "",
+      "command_reason": "executable_not_found"
+    }
+  },
+  {
+    "name": "non executable directory",
+    "op": "run_command",
+    "args": [
+      [
+        "/bin"
+      ],
+      "/tmp",
+      {},
+      1000
+    ],
+    "expected": {
+      "exit": -1,
+      "out": "",
+      "err": "",
+      "command_reason": "process_start_failed"
+    }
+  },
+  {
+    "name": "invalid cwd",
+    "op": "run_command",
+    "args": [
+      [
+        "colors-compute-no-such-executable"
+      ],
+      "/colors-compute-no-such-directory",
+      {},
+      1000
+    ],
+    "expected": {
+      "exit": -1,
+      "out": "",
+      "err": "",
+      "command_reason": "process_start_failed"
+    }
+  },
+  {
+    "name": "command deadline",
+    "op": "run_command",
+    "args": [
+      [
+        "/bin/sh",
+        "-c",
+        "sleep 5"
+      ],
+      "/tmp",
+      {
+        "PATH": "/bin:/usr/bin"
+      },
+      25
+    ],
+    "expected": {
+      "exit": -1,
+      "out": "",
+      "err": "",
+      "command_reason": "timeout"
+    }
+  },
+  {
+    "name": "command metadata executable_not_found",
+    "op": "command_error",
+    "args": [
+      "executable_not_found"
+    ],
+    "expected": {
+      "status": "error",
+      "error": {
+        "code": "command_failed",
+        "stage": "init",
+        "message": "Required command failed.",
+        "infrastructure_changes": "none",
+        "command": [
+          "tofu",
+          "init"
+        ],
+        "exit_code": -1,
+        "command_reason": "executable_not_found"
+      }
+    }
+  },
+  {
+    "name": "command metadata process_start_failed",
+    "op": "command_error",
+    "args": [
+      "process_start_failed"
+    ],
+    "expected": {
+      "status": "error",
+      "error": {
+        "code": "command_failed",
+        "stage": "init",
+        "message": "Required command failed.",
+        "infrastructure_changes": "none",
+        "command": [
+          "tofu",
+          "init"
+        ],
+        "exit_code": -1,
+        "command_reason": "process_start_failed"
+      }
+    }
+  },
+  {
+    "name": "command metadata timeout",
+    "op": "command_error",
+    "args": [
+      "timeout"
+    ],
+    "expected": {
+      "status": "error",
+      "error": {
+        "code": "command_failed",
+        "stage": "init",
+        "message": "Required command failed.",
+        "infrastructure_changes": "none",
+        "command": [
+          "tofu",
+          "init"
+        ],
+        "exit_code": -1,
+        "command_reason": "timeout"
+      }
+    }
+  },
+  {
+    "name": "command metadata unknown_future_reason",
+    "op": "command_error",
+    "args": [
+      "unknown_future_reason"
+    ],
+    "expected": {
+      "status": "error",
+      "error": {
+        "code": "command_failed",
+        "stage": "init",
+        "message": "Required command failed.",
+        "infrastructure_changes": "none",
+        "command": [
+          "tofu",
+          "init"
+        ],
+        "exit_code": -1
+      }
+    }
+  },
+  {
+    "name": "command metadata None",
+    "op": "command_error",
+    "args": [
+      null
+    ],
+    "expected": {
+      "status": "error",
+      "error": {
+        "code": "command_failed",
+        "stage": "init",
+        "message": "Required command failed.",
+        "infrastructure_changes": "none",
+        "command": [
+          "tofu",
+          "init"
+        ],
+        "exit_code": -1
+      }
+    }
+  }
+]

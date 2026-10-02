@@ -6,9 +6,15 @@
 (require '[cheshire.core :as json] '[io.github.getcolors.compute :as compute]
          '[io.github.getcolors.compute-request :as request]
          '[io.github.getcolors.compute-node :as node]
+         '[io.github.getcolors.compute-runtime :as runtime]
          '[io.github.getcolors.compute-diagnostics :as diagnostic])
 (def operations
-  {"sanitize_error" diagnostic/redact
+  {"run_command" (fn [args cwd env timeout] (runtime/run-command args cwd (into {} (map (fn [[k v]] [(name k) v]) env)) timeout))
+   "command_error" (fn [reason] (binding [diagnostic/*context* (atom {:stage "init" :opts {} :source {}})]
+                                (try ((diagnostic/wrap-runner (fn [& _] {:exit -1 :out "" :err "" :command_reason reason})) ["tofu" "init"] "/tmp" {} 1)
+                                     (diagnostic/command-error!)
+                                     (catch Exception error (diagnostic/failure error)))))
+   "sanitize_error" diagnostic/redact
    "node_runtime_error" (fn [opts request operation] (node/compute-node! opts request operation {} {}))
    "node_plan_valid" (fn [opts request] (try (node/node-plan opts request) true (catch Exception _ false)))
    "registration_plan" node/registration-plan

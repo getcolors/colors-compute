@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,11 +31,11 @@ def check_output(color, output, cases):
 
 
 def main():
-    supported = {"validate", "credential_requirements", "render_template", "backend_plan", "provider_plan", "provider_request", "node_plan", "registration_plan", "node_plan_valid", "sanitize_error", "node_runtime_error"}
+    supported = {"validate", "credential_requirements", "render_template", "backend_plan", "provider_plan", "provider_request", "node_plan", "registration_plan", "node_plan_valid", "sanitize_error", "node_runtime_error", "run_command", "command_error"}
     cases = []
     for filename in ("contracts", "provider-requests", "provider-icmp", "provider-endpoint",
                      "provider-network-created", "provider-roles", "compute-options", "network-none",
-                     "yandex-static-ip", "network-reference", "local-backend", "nodes", "registrations", "node-validation", "errors"):
+                     "yandex-static-ip", "network-reference", "local-backend", "nodes", "registrations", "node-validation", "errors", "command-errors"):
         path = ROOT / "test/fixtures" / (filename + ".json")
         if path.exists():
             cases.extend(c for c in json.loads(path.read_text()) if c["op"] in supported)
@@ -51,6 +52,24 @@ def main():
                   "expected": {"config": {"terraform": {"backend": {"local": {
                       "path": home + "/.local/state/colors/demo/compute/shared.tfstate"}}}},
                       "credential_bindings": {}, "environment": {}}})
+    # Run real executables as well as synthetic diagnostics: launch errors must
+    # never be guessed from an exit status or exception text.
+    scratch = tempfile.TemporaryDirectory(prefix="colors-command-parity-")
+    directory = Path(scratch.name)
+    for name, content, mode in (("denied", "#!/bin/sh\n", 0o600),
+                                ("bad-interpreter", "#!/colors-no-such-interpreter\n", 0o700),
+                                ("ordinary", "#!/bin/sh\nprintf 'tool error' >&2\nexit 127\n", 0o700)):
+        path = directory / name
+        path.write_text(content)
+        path.chmod(mode)
+    for name, args, env, expected in (
+        ("permission denied", [str(directory / "denied")], {}, {"exit": -1, "out": "", "err": "", "command_reason": "process_start_failed"}),
+        ("missing interpreter", [str(directory / "bad-interpreter")], {}, {"exit": -1, "out": "", "err": "", "command_reason": "process_start_failed"}),
+        ("empty path entry uses cwd", ["ordinary"], {"PATH": ""}, {"exit": 127, "out": "", "err": "tool error"}),
+        ("relative path uses cwd", ["ordinary"], {"PATH": "."}, {"exit": 127, "out": "", "err": "tool error"}),
+        ("absent path refuses ambient fallback", ["sh"], {}, {"exit": -1, "out": "", "err": "", "command_reason": "executable_not_found"}),
+    ):
+        cases.append({"name": name, "op": "run_command", "args": [args, str(directory), env, 1000], "expected": expected})
     fixture = "".join(json.dumps({"op": case["op"], "args": case["args"]}) + "\n" for case in cases)
     for color, command in {
         "green": [os.environ.get("BB", "bb"), "scripts/contract-green.clj"],
@@ -60,6 +79,7 @@ def main():
         result = subprocess.run(command, input=fixture, text=True, capture_output=True, cwd=ROOT, check=True)
         check_output(color, result.stdout, cases)
         print(f"{color}: {len(cases)} parity cases passed")
+    scratch.cleanup()
     # Prove the comparator refuses a divergent result, without altering source.
     changed = [json.dumps(case["expected"]) for case in cases]
     changed[0] = json.dumps({"intentional": "regression"})

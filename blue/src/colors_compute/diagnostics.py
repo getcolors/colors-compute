@@ -95,10 +95,14 @@ def command_metadata(args, environment, directory, result=None, provider=None):
     if result is not None:
         if type(result.exit) is int:
             metadata['exit_code'] = result.exit
-        metadata['stderr'] = result.err
+        if result.err:
+            metadata['stderr'] = result.err
         reason = auth_reason(args, provider, result)
         if reason:
             metadata['auth_reason'] = reason
+        reason = getattr(result, 'command_reason', None)
+        if reason in ('executable_not_found', 'process_start_failed', 'timeout'):
+            metadata['command_reason'] = reason
     return metadata
 
 

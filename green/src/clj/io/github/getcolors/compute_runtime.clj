@@ -26,7 +26,8 @@
                        (map (fn [entry] (io/file (absolute-file (if (empty? entry) "." entry)) program))
                             (str/split (get environment "PATH") #":" -1))))]
     (or (some #(when (and (.isFile %) (.canExecute %)) (.getAbsolutePath %)) candidates)
-        (throw (ex-info "executable unavailable in supplied environment" {})))))
+        (throw (ex-info "executable unavailable in supplied environment"
+                        {:command_reason (if (some #(.exists %) candidates) "process_start_failed" "executable_not_found")})))))
 
 (defn run-command
   "Run fixed argv with an exact environment and a bounded process/output deadline.
@@ -35,7 +36,8 @@
   (let [active (atom nil)
         descendants (atom #{})]
     (try
-      (let [argv (assoc (vec argv) 0 (resolve-program (first argv) dir env))
+      (let [_ (when-not (.isDirectory (io/file dir)) (throw (ex-info "invalid working directory" {:command_reason "process_start_failed"})))
+            argv (assoc (vec argv) 0 (resolve-program (first argv) dir env))
             builder (ProcessBuilder. ^java.util.List argv)
             _ (.directory builder (io/file dir))
             _ (.clear (.environment builder))
@@ -62,13 +64,13 @@
               (stop-process! process @descendants)
               (future-cancel out)
               (future-cancel err)
-              {:exit -1 :out "" :err ""}))))
+              {:exit -1 :out "" :err "" :command_reason "timeout"}))))
       (catch InterruptedException error
         (stop-process! @active @descendants)
         (throw error))
-      (catch Exception _
+      (catch Exception error
         (stop-process! @active @descendants)
-        {:exit -1 :out "" :err ""}))))
+        {:exit -1 :out "" :err "" :command_reason (or (:command_reason (ex-data error)) "process_start_failed")}))))
 
 (defn valid-state? [state]
   (and (map? state)
