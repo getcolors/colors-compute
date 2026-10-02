@@ -65,7 +65,16 @@ def sanitize_stderr(value, secrets):
     return value[:2000]
 
 
-def command_metadata(args, environment, directory, result=None):
+def auth_reason(args, provider, result):
+    if (provider == 'google' and list(args[:2]) == ['tofu', 'plan']
+            and type(result.exit) is int and result.exit != 0
+            and isinstance(result.err, str)
+            and all(marker in result.err for marker in ('oauth2:', 'invalid_grant', 'invalid_rapt'))):
+        return 'google_reauth_required'
+    return None
+
+
+def command_metadata(args, environment, directory, result=None, provider=None):
     executable = str(args[0])
     name = Path(executable).name
     if name == 'tofu':
@@ -87,6 +96,9 @@ def command_metadata(args, environment, directory, result=None):
         if type(result.exit) is int:
             metadata['exit_code'] = result.exit
         metadata['stderr'] = result.err
+        reason = auth_reason(args, provider, result)
+        if reason:
+            metadata['auth_reason'] = reason
     return metadata
 
 

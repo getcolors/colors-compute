@@ -3,6 +3,7 @@
             [cheshire.core :as json]
             [clojure.string :as str]
             [io.github.getcolors.compute-node :as node]
+            [io.github.getcolors.compute-diagnostics :as diagnostics]
             [io.github.getcolors.compute-local :as local])
   (:import [java.nio.file Files Path]))
 (def fixtures (json/parse-string (slurp "../test/fixtures/provider-requests.json") true))
@@ -199,3 +200,35 @@
           (is (not (.exists (java.io.File. (str (:directory plan) "/connection.tfplan")))))
           (is (not (.exists (java.io.File. (str (:directory plan) "/credentials.tfbackend.json"))))))
         (finally (remove-tree dir))))))
+
+(deftest google-reauth-diagnostics
+  (doseq [{:keys [name argv provider result expected]} (json/parse-string (slurp "../test/fixtures/reauth.json") true)]
+    (testing name
+      (binding [diagnostics/*context* (atom {:opts {:provider-compute provider} :source {}})]
+        ((diagnostics/wrap-runner (fn [& _] result)) argv "/tmp" {} 100)
+        (let [details (:last-command @diagnostics/*context*)]
+          (is (= expected (:auth_reason details)))
+          (is (not (str/includes? (pr-str details) "PRIVATE-CANARY")))
+          (is (not (str/includes? (pr-str details) "PRIVATE-STDOUT"))))))))
+
+(deftest connection-resolution-preserves-reauth-reason
+  (let [dir (temp-dir) [opts request] (inputs dir "google") plan (node/node-plan opts request)
+        state {:version 4 :serial 1 :lineage "reauth-fixture" :resources [{:type "google_compute_instance"}]
+               :outputs {:compute_identity (get-in plan [:documents "compute.tf.json" :output :compute_identity])
+                         :params {:value {:provider "google"}}}}
+        calls (atom [])]
+    (try
+      (node/build-node! opts request)
+      (spit (str (:directory plan) "/" (:state_filename request)) (json/generate-string state))
+      (let [result (node/resolve-connection! opts request {}
+                     {:runner (fn [args _ _ _]
+                                (swap! calls conj (second args))
+                                (case (second args)
+                                  "plan" {:exit 1 :out "PRIVATE-STDOUT" :err "oauth2: invalid_grant invalid_rapt\n{\"private_key\":\"PRIVATE-CANARY\"}"}
+                                  "state" {:exit 0 :out (json/generate-string state) :err ""}
+                                  {:exit 0 :out "" :err ""}))})]
+        (is (= "google_reauth_required" (get-in result [:error :auth_reason])))
+        (is (= "none" (get-in result [:error :infrastructure_changes])))
+        (is (= ["init" "state" "plan"] @calls))
+        (is (not (str/includes? (pr-str result) "PRIVATE-CANARY"))))
+      (finally (remove-tree dir)))))

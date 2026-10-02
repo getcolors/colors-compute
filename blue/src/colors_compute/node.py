@@ -336,7 +336,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             result = await invoke(args, command_env, timeout)
             if result.exit != 0:
                 code = 'state_unreadable' if stage == 'state' else 'key_access_failed' if stage == 'access' else 'command_failed'
-                raise NodeError(code, **command_metadata(args, command_env, directory, result))
+                raise NodeError(code, **command_metadata(args, command_env, directory, result, opts.get('provider-compute')))
             for filename in ('approved.tfplan', '.terraform.lock.hcl', request['state_filename'], request['state_filename'] + '.backup'):
                 candidate = Path(directory) / filename
                 if candidate.exists():

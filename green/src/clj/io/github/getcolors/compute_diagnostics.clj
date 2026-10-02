@@ -76,14 +76,23 @@
       "gcloud" (vec (take 3 (assoc (vec argv) 0 "gcloud")))
       "ssh-keygen" ["ssh-keygen"]
       [])))
+(defn auth-reason [argv provider result]
+  (when (and (= "google" provider) (= ["tofu" "plan"] (vec (take 2 argv)))
+             (integer? (:exit result)) (not (zero? (:exit result)))
+             (string? (:err result))
+             (every? #(str/includes? (:err result) %) ["oauth2:" "invalid_grant" "invalid_rapt"]))
+    "google_reauth_required"))
+
 (defn- command-details [argv cwd environment result]
   (let [{:keys [opts source]} (when *context* @*context*)
         path (executable (first argv) cwd environment)
-        stderr (redact (:err result) opts source)]
+        stderr (redact (:err result) opts source)
+        reason (auth-reason argv (:provider-compute opts) result)]
     (cond-> {:command (command-prefix argv)}
       path (assoc :executable (redact path opts source))
       (integer? (:exit result)) (assoc :exit_code (:exit result))
-      stderr (assoc :stderr stderr))))
+      stderr (assoc :stderr stderr)
+      reason (assoc :auth_reason reason))))
 
 (defn command-error!
   ([] (command-error! (case (:stage (when *context* @*context*)) "state" "state_unreadable" "access" "key_access_failed" "command_failed")))

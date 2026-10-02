@@ -1,0 +1,111 @@
+[
+  {
+    "name": "Google reauth survives structured suppression",
+    "argv": [
+      "tofu",
+      "plan"
+    ],
+    "provider": "google",
+    "result": {
+      "exit": 1,
+      "err": "Error: oauth2: \"invalid_grant\" \"reauth related error (invalid_rapt)\"\n{\"private_key\":\"PRIVATE-CANARY\"}",
+      "out": "PRIVATE-STDOUT"
+    },
+    "expected": "google_reauth_required"
+  },
+  {
+    "name": "another provider",
+    "argv": [
+      "tofu",
+      "plan"
+    ],
+    "provider": "aws",
+    "result": {
+      "exit": 1,
+      "err": "Error: oauth2: \"invalid_grant\" \"reauth related error (invalid_rapt)\"\n{\"private_key\":\"PRIVATE-CANARY\"}",
+      "out": "PRIVATE-STDOUT"
+    },
+    "expected": null
+  },
+  {
+    "name": "apply",
+    "argv": [
+      "tofu",
+      "apply"
+    ],
+    "provider": "google",
+    "result": {
+      "exit": 1,
+      "err": "Error: oauth2: \"invalid_grant\" \"reauth related error (invalid_rapt)\"\n{\"private_key\":\"PRIVATE-CANARY\"}",
+      "out": "PRIVATE-STDOUT"
+    },
+    "expected": null
+  },
+  {
+    "name": "backend init",
+    "argv": [
+      "tofu",
+      "init"
+    ],
+    "provider": "google",
+    "result": {
+      "exit": 1,
+      "err": "Error: oauth2: \"invalid_grant\" \"reauth related error (invalid_rapt)\"\n{\"private_key\":\"PRIVATE-CANARY\"}",
+      "out": "PRIVATE-STDOUT"
+    },
+    "expected": null
+  },
+  {
+    "name": "success",
+    "argv": [
+      "tofu",
+      "plan"
+    ],
+    "provider": "google",
+    "result": {
+      "exit": 0,
+      "err": "Error: oauth2: \"invalid_grant\" \"reauth related error (invalid_rapt)\"\n{\"private_key\":\"PRIVATE-CANARY\"}",
+      "out": "PRIVATE-STDOUT"
+    },
+    "expected": null
+  },
+  {
+    "name": "generic revoked token",
+    "argv": [
+      "tofu",
+      "plan"
+    ],
+    "provider": "google",
+    "result": {
+      "exit": 1,
+      "err": "oauth2: \"invalid_grant\""
+    },
+    "expected": null
+  },
+  {
+    "name": "permission denied",
+    "argv": [
+      "tofu",
+      "plan"
+    ],
+    "provider": "google",
+    "result": {
+      "exit": 1,
+      "err": "Error 403: forbidden"
+    },
+    "expected": null
+  },
+  {
+    "name": "unrelated marker",
+    "argv": [
+      "tofu",
+      "plan"
+    ],
+    "provider": "google",
+    "result": {
+      "exit": 1,
+      "err": "invalid_rapt"
+    },
+    "expected": null
+  }
+]

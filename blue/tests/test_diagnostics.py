@@ -113,3 +113,39 @@ def test_clojure_maps_and_api_keys_are_suppressed():
     assert secrets == {'opaque-api-value', 'second-api-value'}
     assert sanitize_stderr('provider says opaque-api-value', secrets) == 'provider says [REDACTED]'
     assert sanitize_stderr('api_key=unknown-api-value', set()) == 'api_key=[REDACTED]'
+
+@pytest.mark.parametrize('case', json.loads((Path(__file__).parents[2] / 'test/fixtures/reauth.json').read_text()), ids=lambda case: case['name'])
+def test_google_reauth_metadata(case):
+    from colors_compute.diagnostics import command_metadata, NodeError, failure
+    result = ProcessResult(case['result']['exit'], case['result'].get('out', ''), case['result']['err'])
+    details = command_metadata(case['argv'], {}, '/tmp', result, case['provider'])
+    error = failure(NodeError('command_failed', **details), 'plan', 'none', set())
+    assert error['error'].get('auth_reason') == case['expected']
+    assert 'PRIVATE-CANARY' not in json.dumps(error)
+    assert 'PRIVATE-STDOUT' not in json.dumps(error)
+
+@pytest.mark.asyncio
+async def test_connection_resolver_returns_google_reauth_reason(tmp_path):
+    from colors_compute.node import resolve_connection
+    fixtures = json.loads((Path(__file__).parents[2] / 'test/fixtures/provider-requests.json').read_text())
+    opts, _, source, *_ = next(case['args'] for case in fixtures if case['args'][0]['provider-compute'] == 'google' and case['args'][1] == 'shared')
+    opts = {**opts, 'provider-backend': 'local'}
+    _, request = inputs(tmp_path)
+    request = {**request, 'security': source['security'], 'network': source['network']}
+    request.pop('ssh_registration', None)
+    plan = node_plan(opts, request)
+    state = {'version': 4, 'serial': 1, 'lineage': 'reauth-fixture', 'resources': [{'type': 'google_compute_instance', 'mode': 'managed', 'name': 'node', 'instances': [{'attributes': {'instance_id': '123'}}]}],
+             'outputs': {'compute_identity': plan['documents']['compute.tf.json']['output']['compute_identity'], 'params': {'value': {'provider': 'google', 'node_id': request['node_id'], 'name': 'node', 'ip': '192.0.2.1', 'user': 'ubuntu', 'sudoer': 'ubuntu', 'provider_id': '123'}}}}
+    Path(plan['directory']).mkdir(parents=True, exist_ok=True)
+    (Path(plan['directory']) / request['state_filename']).write_text(json.dumps(state))
+    calls = []
+    async def runner(args, cwd, env, timeout):
+        calls.append(args[1])
+        if args[1] == 'plan':
+            return ProcessResult(1, 'PRIVATE-STDOUT', 'oauth2: invalid_grant invalid_rapt\n{"private_key":"PRIVATE-CANARY"}')
+        return ProcessResult(0, json.dumps(state) if args[1] == 'state' else '', '')
+    result = await resolve_connection(opts, request, {}, {'runner': runner})
+    assert result['error'].get('auth_reason') == 'google_reauth_required', (result, calls)
+    assert result['error']['infrastructure_changes'] == 'none'
+    assert calls == ['init', 'plan']  # Local backend reads its state file directly.
+    assert 'PRIVATE-CANARY' not in json.dumps(result)

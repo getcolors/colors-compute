@@ -53,3 +53,19 @@ Packages own presentation and environment-specific advice. Alice can show the
 executable and stderr and suggest its direnv toolchain for an asdf version
 failure. The library does not prescribe direnv or tell the caller to rerun an
 operation automatically.
+
+## Google user reauthentication
+
+Failed Google provider `tofu plan` commands whose stderr contains the OAuth
+`invalid_grant` / `invalid_rapt` reauthentication response include the optional
+`auth_reason: "google_reauth_required"`. Classification happens before stderr
+sanitization and exposes only this authored constant; structured output remains
+suppressed. Generic token revocation, permission errors, other providers, and
+backend commands do not receive this hint. The error code remains
+`command_failed`; existing consumers may ignore the additional field.
+
+This is a diagnosis, not authorization to replace credentials. A caller may
+interactively renew local user ADC and retry a read-only connection lookup once.
+It must verify the active credential source, preserve cancellation, and never
+use this hint to replay an apply or to switch service-account/federated identity.
+The library neither launches login nor retries the operation.
