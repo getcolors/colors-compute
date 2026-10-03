@@ -3,11 +3,25 @@ import {accessSync,constants,statSync} from 'node:fs';
 import {delimiter,isAbsolute,resolve} from 'node:path';
 type Map=Record<string,any>;
 export const messages:Record<string,string>={command_failed:'Required command failed.',missing_credentials:'Required credentials are not set.',state_unreadable:'Compute state could not be read.',state_absent:'Required compute state is absent.',identity_mismatch:'Compute state identity does not match the requested node.',unsafe_plan:'Compute plan requires an unauthorized change.',invalid_request:'Invalid compute request.',key_access_failed:'SSH key access could not be prepared.',filesystem_error:'Compute working files could not be accessed.',internal_error:'Compute operation failed.'};
+// Suppress structured fragments without discarding adjacent tofu diagnostics.
+function suppressStructured(text:string):string {
+ const pattern=/(?:^|\n)[ \t]*[\[{](?!REDACTED\])|\{\s*(?:["':}]|[A-Za-z][\w-]*\s*:)|\[\s*(?:["'{\[\d-]|true\b|false\b|null\b|\])/g;
+ let cursor=0,output='',match:RegExpExecArray|null;
+ while((match=pattern.exec(text))){
+  let start=match.index;while(!'[{'.includes(text[start]))start++;
+  const stack:string[]=[];let quote='',escaped=false,end=start;
+  while(end<text.length){const char=text[end++];if(quote){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char===quote)quote='';}
+   else if(char==='"'||char==="'")quote=char;else if('[{'.includes(char))stack.push(char);
+   else if(']}'.includes(char)){if(stack.pop()!==(char===']'?'[':'{')){end=text.length;break;}if(!stack.length)break;}}
+  let replacement='[structured output suppressed]';
+  output+=text.slice(cursor,start)+replacement;cursor=end;pattern.lastIndex=end;
+ }
+ return (output+text.slice(cursor)).replace(/"(?:resources|planned_values|resource_changes|outputs|private_key|private_key_openssh)"\s*:[\s\S]*/,'[structured output suppressed]');
+}
 export function redact(stderr:unknown,opts:Map,environment:Map):string|undefined{
  if(typeof stderr!=='string'||!stderr.trim())return undefined;
  let text=stderr.replace(/\x1b\][\s\S]*?(?:\x07|\x1b\\)/g,'').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'').replace(/[\p{Cc}\p{Cf}]/gu,char=>char==='\n'||char==='\t'?char:'');
- // Remove blocks first: replacing a known header must never strand a key payload.
- if(/(?:^|\n)\s*[\[{]/.test(text)||/[{]\s*(?:["':]|[A-Za-z][\w-]*\s*:)|\[\s*["'{]/.test(text)||/"(?:resources|planned_values|resource_changes|outputs|private_key_openssh)"\s*:/.test(text))return '[structured output suppressed]';
+ text=suppressStructured(text);
  text=text.replace(/-----BEGIN [^-\r\n]+-----[\s\S]*?(?:-----END [^-\r\n]+-----|$)/g,'[private material suppressed]');
  const secrets:string[]=[];
  function collect(v:any,key='',inherited=false){const sensitive=inherited||/(?:secret|token|password|credential|authorization|access.?key|api.?key|private.?key)/i.test(key)||key.startsWith('COLORS_PAR_');if(typeof v==='string'&&v&&sensitive)secrets.push(v);else if(v&&typeof v==='object')for(const [k,x] of Object.entries(v))collect(x,k,sensitive);}

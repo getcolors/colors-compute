@@ -45,12 +45,53 @@ def credential_values(*sources):
     return values
 
 
+STRUCTURED = re.compile(r"(?:^|\n)[ \t]*[\[{](?!REDACTED\])|\{\s*(?:[\"':}]|[A-Za-z][\w-]*\s*:)|\[\s*(?:[\"'{\[\d-]|true\b|false\b|null\b|\])")
+
+
+def suppress_structured(value):
+    """Keep surrounding tool diagnostics, never arbitrary structured payloads."""
+    output = []
+    cursor = 0
+    while match := STRUCTURED.search(value, cursor):
+        start = match.start()
+        while value[start] not in '[{':
+            start += 1
+        stack, quote_char, escaped = [], None, False
+        end = start
+        while end < len(value):
+            char = value[end]
+            end += 1
+            if quote_char:
+                if escaped:
+                    escaped = False
+                elif char == '\\':
+                    escaped = True
+                elif char == quote_char:
+                    quote_char = None
+            elif char in '\"\'':
+                quote_char = char
+            elif char in '[{':
+                stack.append(char)
+            elif char in ']}':
+                if not stack or stack.pop() != ('[' if char == ']' else '{'):
+                    end = len(value)
+                    break
+                if not stack:
+                    break
+        replacement = '[structured output suppressed]'
+        output.extend((value[cursor:start], replacement))
+        cursor = end
+    output.append(value[cursor:])
+    return re.sub(r'"(?:resources|planned_values|resource_changes|outputs|private_key|private_key_openssh)"\s*:[\s\S]*', '[structured output suppressed]', ''.join(output))
+
+
 def sanitize_stderr(value, secrets):
     if not isinstance(value, str):
         return ''
     value = re.sub(r'\x1b\][^\x07]*(?:\x07|\x1b\\)', '', value)
     value = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', value)
     value = ''.join(char for char in value if char in '\n\t' or unicodedata.category(char) not in ('Cc', 'Cf'))
+    value = suppress_structured(value)
     value = re.sub(r'-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|$)', '[private material suppressed]', value)
     for secret in sorted(secrets, key=len, reverse=True):
         variants = {secret, json.dumps(secret)[1:-1], json.dumps(secret, ensure_ascii=False)[1:-1], quote(secret, safe=''), quote_plus(secret, safe=''), base64.b64encode(secret.encode()).decode(), base64.urlsafe_b64encode(secret.encode()).decode()}
@@ -60,8 +101,6 @@ def sanitize_stderr(value, secrets):
                 value = value.replace(variant, '[REDACTED]')
     value = re.sub(r"(?im)(\b(?:[A-Za-z0-9_-]*(?:token|secret|password|private[_-]?key|access[_-]?key|api[_-]?key)[A-Za-z0-9_-]*|authorization)\b[\"']?\s*[=:]\s*)[^\n]*", r'\1[REDACTED]', value)
     value = re.sub(r'(?i)\bBearer\s+\S+', 'Bearer [REDACTED]', value)
-    if re.search(r'(?:\{\s*[:"\'}]|\[\s*["\'{\[]|"(?:resources|outputs|planned_values|resource_changes|private_key)"\s*:)', value):
-        return '[structured output suppressed]'
     return value[:2000]
 
 

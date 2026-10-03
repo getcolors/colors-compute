@@ -54,9 +54,11 @@ to propagate instead of becoming an ordinary error result.
 Diagnostics never expose command stdout, raw state, plans, or arbitrary caught
 exception messages. Stderr is bounded to 2,000 characters after sanitization.
 Known credential values, encoded variants, private-key blocks, and sensitive
-assignments are redacted; structured state/plan dumps are suppressed. Terminal
-control sequences are removed. Useful toolchain errors such as asdf's missing
-version message remain visible. Sanitization applies before truncation so a
+assignments are redacted; structured state/plan dumps and OpenTofu JSON source
+excerpts are suppressed without discarding surrounding plain-text diagnostics.
+For example, an OCI `401-NotAuthenticated` error remains visible when OpenTofu
+also prints a JSON configuration excerpt. Terminal control sequences are removed.
+Useful toolchain errors such as asdf's missing version message remain visible. Sanitization applies before truncation so a
 truncated private-key block cannot escape filtering.
 
 Packages own presentation and environment-specific advice. Alice can show the
@@ -69,9 +71,10 @@ operation automatically.
 Failed Google provider `tofu plan` commands whose stderr contains the OAuth
 `invalid_grant` / `invalid_rapt` reauthentication response include the optional
 `auth_reason: "google_reauth_required"`. Classification happens before stderr
-sanitization and exposes only this authored constant; structured output remains
-suppressed. Generic token revocation, permission errors, other providers, and
-backend commands do not receive this hint. The error code remains
+sanitization and exposes only this authored constant; structured fragments remain
+suppressed while safe surrounding diagnostic text is preserved. Generic token
+revocation, permission errors, other providers, and backend commands do not
+receive this hint. The error code remains
 `command_failed`; existing consumers may ignore the additional field.
 
 This is a diagnosis, not authorization to replace credentials. A caller may

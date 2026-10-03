@@ -107,7 +107,7 @@ async def test_cancellation_propagates_and_retains_templates(tmp_path, at):
 
 
 def test_clojure_maps_and_api_keys_are_suppressed():
-    assert sanitize_stderr('error: {:password "unknown"}', set()) == '[structured output suppressed]'
+    assert sanitize_stderr('error: {:password "unknown"}', set()) == 'error: [structured output suppressed]'
     assert sanitize_stderr('{:resources [{:private_key "opaque"}]}', set()) == '[structured output suppressed]'
     secrets = credential_values({'API_KEY': 'opaque-api-value'}, {'provider-api-key': 'second-api-value'})
     assert secrets == {'opaque-api-value', 'second-api-value'}
@@ -149,3 +149,9 @@ async def test_connection_resolver_returns_google_reauth_reason(tmp_path):
     assert result['error']['infrastructure_changes'] == 'none'
     assert calls == ['init', 'plan']  # Local backend reads its state file directly.
     assert 'PRIVATE-CANARY' not in json.dumps(result)
+
+
+@pytest.mark.parametrize('case', [case for case in json.loads((Path(__file__).parents[2] / 'test/fixtures/errors.json').read_text()) if case['op'] == 'sanitize_error'], ids=lambda case: case['name'])
+def test_shared_sanitizer_fixtures(case):
+    value, opts, environment = case['args']
+    assert (sanitize_stderr(value, credential_values(opts, environment)) or None) == case['expected']

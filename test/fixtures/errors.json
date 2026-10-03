@@ -85,7 +85,7 @@
       {},
       {}
     ],
-    "expected": "[structured output suppressed]",
+    "expected": "Error: [structured output suppressed]",
     "name": "structured state stderr suppressed",
     "op": "sanitize_error"
   },
@@ -180,5 +180,97 @@
     "expected": "password: [REDACTED]\nProvider failed",
     "name": "unknown multiword password suppressed",
     "op": "sanitize_error"
+  },
+  {
+    "name": "OCI auth error survives tofu JSON source excerpt",
+    "op": "sanitize_error",
+    "args": [
+      "Error: 401-NotAuthenticated, The required information to complete authentication was not provided or was incorrect.\n\n  on compute.tf.json line 1:\n   1: {\"provider\":{\"oci\":{\"config_file_profile\":\"example\"}},\"resource\":{\"password\":\"PRIVATE-CANARY\"}}\n",
+      {},
+      {}
+    ],
+    "expected": "Error: 401-NotAuthenticated, The required information to complete authentication was not provided or was incorrect.\n\n  on compute.tf.json line 1:\n   1: [structured output suppressed]\n"
+  },
+  {
+    "name": "ordinary diagnostic survives multiline structured state",
+    "op": "sanitize_error",
+    "args": [
+      "Provider authentication failed\n{\n \"resources\": [{\"values\": \"PRIVATE-CANARY\", \"nested\": {\"items\": [1, 2]}}]\n}\nRetry after refreshing credentials",
+      {},
+      {}
+    ],
+    "expected": "Provider authentication failed\n[structured output suppressed]\nRetry after refreshing credentials"
+  },
+  {
+    "name": "unclosed structured content fails closed",
+    "op": "sanitize_error",
+    "args": [
+      "Provider authentication failed\n{\"resources\": [{\"values\":\"PRIVATE-CANARY\"}\nremaining payload",
+      {},
+      {}
+    ],
+    "expected": "Provider authentication failed\n[structured output suppressed]"
+  },
+  {
+    "name": "mismatched brackets fail closed",
+    "op": "sanitize_error",
+    "args": [
+      "Provider authentication failed\n{\"resources\": ] PRIVATE-CANARY\nmore",
+      {},
+      {}
+    ],
+    "expected": "Provider authentication failed\n[structured output suppressed]"
+  },
+  {
+    "name": "escaped braces in structured strings stay suppressed",
+    "op": "sanitize_error",
+    "args": [
+      "Error: {\"message\":\"escaped \\\" } PRIVATE-CANARY\", \"nested\":{\"secret\":\"PRIVATE-CANARY\"}}\nSafe diagnostic",
+      {},
+      {}
+    ],
+    "expected": "Error: [structured output suppressed]\nSafe diagnostic"
+  },
+  {
+    "name": "bare truncated state field stays suppressed",
+    "op": "sanitize_error",
+    "args": [
+      "Provider failed\n\"resources\": \"PRIVATE-CANARY\"",
+      {},
+      {}
+    ],
+    "expected": "Provider failed\n[structured output suppressed]"
+  },
+  {
+    "name": "bare private key field stays suppressed",
+    "op": "sanitize_error",
+    "args": [
+      "Provider failed\n\"private_key_openssh\": \"PRIVATE-CANARY\"",
+      {},
+      {}
+    ],
+    "expected": "Provider failed\n[structured output suppressed]"
+  },
+  {
+    "name": "existing redaction marker remains readable",
+    "op": "sanitize_error",
+    "args": [
+      "[REDACTED] authentication failed",
+      {},
+      {}
+    ],
+    "expected": "[REDACTED] authentication failed"
+  },
+  {
+    "name": "known secrets surrounding JSON stay redacted",
+    "op": "sanitize_error",
+    "args": [
+      "token-value was rejected\n{\"secret\":\"PRIVATE-CANARY\"}\nAuthorization: Bearer unknown",
+      {},
+      {
+        "COLORS_PAR_OCI_TOKEN": "token-value"
+      }
+    ],
+    "expected": "[REDACTED] was rejected\n[structured output suppressed]\nAuthorization: [REDACTED]"
   }
 ]

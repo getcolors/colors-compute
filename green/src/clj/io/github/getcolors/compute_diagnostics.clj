@@ -39,6 +39,38 @@
                (str/replace (URLEncoder/encode secret "UTF-8") "+" "%20")
                (.encodeToString (Base64/getEncoder) (.getBytes ^String secret "UTF-8"))])))
 
+(def ^:private structured-pattern
+  #"(?:^|\n)[ \t]*[\[{](?!REDACTED\])|\{\s*(?:[\"':}]|[A-Za-z][\w-]*\s*:)|\[\s*(?:[\"'{\[\d-]|true\b|false\b|null\b|\])")
+
+(defn- structured-end [text start]
+  (loop [index start stack [] quote-char nil escaped? false]
+    (if (>= index (count text)) index
+      (let [char (.charAt ^String text index) next-index (inc index)]
+        (cond
+          quote-char (cond escaped? (recur next-index stack quote-char false)
+                           (= char \\) (recur next-index stack quote-char true)
+                           (= char quote-char) (recur next-index stack nil false)
+                           :else (recur next-index stack quote-char false))
+          (contains? #{\" \'} char) (recur next-index stack char false)
+          (contains? #{\[ \{} char) (recur next-index (conj stack char) nil false)
+          (contains? #{\] \}} char) (cond
+                                      (not= (peek stack) (if (= char \]) \[ \{)) (count text)
+                                      (= 1 (count stack)) next-index
+                                      :else (recur next-index (pop stack) nil false))
+          :else (recur next-index stack nil false))))))
+
+(defn- suppress-structured
+  [text]
+   (let [matcher (re-matcher structured-pattern text)]
+     (loop [cursor 0 output ""]
+       (if (.find matcher cursor)
+         (let [start (loop [index (.start matcher)]
+                       (if (contains? #{\[ \{} (.charAt ^String text index)) index (recur (inc index))))
+               end (structured-end text start)
+               replacement "[structured output suppressed]"]
+           (recur end (str output (subs text cursor start) replacement)))
+         (str/replace (str output (subs text cursor)) #"\"(?:resources|planned_values|resource_changes|outputs|private_key|private_key_openssh)\"\s*:[\s\S]*" "[structured output suppressed]")))))
+
 (defn redact
   "Redact all known credential forms before limiting diagnostic length."
   [value opts environment]
@@ -47,18 +79,15 @@
                    (str/replace #"\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)" "")
                    (str/replace #"\u001b\[[0-?]*[ -/]*[@-~]" "")
                    (str/replace #"[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]" ""))]
-      (if (or (re-find #"(?:^|\n)\s*[\[{]" text)
-              (re-find #"\{\s*\"" text)
-              (re-find #"\"(?:resources|planned_values|resource_changes|outputs|private_key_openssh)\"\s*:" text))
-        "[structured output suppressed]"
-        (let [text (str/replace text #"-----BEGIN [^-\r\n]+-----[\s\S]*?(?:-----END [^-\r\n]+-----|$)" "[private material suppressed]")
+        (let [text (suppress-structured text)
+              text (str/replace text #"-----BEGIN [^-\r\n]+-----[\s\S]*?(?:-----END [^-\r\n]+-----|$)" "[private material suppressed]")
               secrets (sort-by count > (distinct (concat (secret-values opts) (secret-values environment))))
               text (reduce (fn [text secret] (reduce #(str/replace %1 %2 "[REDACTED]") text (variants secret))) text secrets)
               text (-> text
                        (str/replace #"(?i)(authorization\s*[:=]\s*)[^\r\n]+" "$1[REDACTED]")
                        (str/replace #"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+" "$1[REDACTED]")
                        (str/replace #"(?i)(\b[A-Za-z0-9_-]*(?:secret|token|password|access[_-]?key|api[_-]?key|private[_-]?key)[A-Za-z0-9_-]*\b[\"']?\s*[:=]\s*)[^\r\n]*" "$1[REDACTED]"))]
-          (subs text 0 (min 2000 (count text))))))))
+          (subs text 0 (min 2000 (count text)))))))
 
 (defn executable
   "Resolve from the command's exact PATH, preserving a shim path for diagnosis."
