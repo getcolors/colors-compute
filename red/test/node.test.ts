@@ -41,3 +41,20 @@ test('connection resolver returns safe Google reauth reason', async () => {
     expect(JSON.stringify(result)).not.toContain('PRIVATE-CANARY');
   } finally {rmSync(dir,{recursive:true,force:true});}
 });
+
+test('inconsistent node and registration state explains recovery without mutation',async()=>{
+ for(const registration of [false,true])for(const operation of ['create','inspect','delete']){
+  const dir=root();try{
+   const sampleInput=sample(dir),opts={...sampleInput.opts,'compute-prevent-destroy':false};
+   const request=registration?{name:'access',workdir:dir,state_filename:'registration.tfstate',ssh_resource:identity}:sampleInput.request;
+   const {build_registration}=await import('../src/node.ts');
+   const plan=registration?build_registration(opts,request):build_node(opts,request);
+   const state=JSON.stringify({version:4,serial:1,lineage:'fixture',resources:[],outputs:{compute_identity:{value:'SECRET_STATE_CONTENT'}}});
+   const path=join(plan.directory,request.state_filename);writeFileSync(path,state);const calls:string[][]=[];
+   const result:any=await (registration?compute_registration:compute_node)(opts,request,operation,{COLORS_PAR_DO_TOKEN:'fixture'},{runner:async(args:string[])=>{calls.push(args);return {exit:0,out:args[1]==='state'?state:'{}',err:''};}});
+   expect(result.error.code).toBe('state_inconsistent');expect(result.error.stage).toBe('state');expect(result.error.infrastructure_changes).toBe('none');expect(result.error.message).toContain('Back up');expect(JSON.stringify(result)).not.toContain('SECRET_STATE_CONTENT');expect(calls.some(c=>['plan','apply','destroy'].includes(c[1]))).toBe(false);
+  }finally{rmSync(dir,{recursive:true,force:true});}
+ }
+});
+
+test('inconsistent state after apply retains possible changes',async()=>{const dir=root();try{const h=harness(dir);let applied=false;const result:any=await compute_node(h.opts,h.request,'create',h.env,{runner:async(args:string[],options:any)=>{if(args[1]==='apply')applied=true;const r=await h.runner(args,options);if(applied&&args[1]==='state')return {...r,out:JSON.stringify({...JSON.parse(r.out),resources:[]})};return r;}});expect(result.error.code).toBe('state_inconsistent');expect(result.error.infrastructure_changes).toBe('possible');}finally{rmSync(dir,{recursive:true,force:true});}});

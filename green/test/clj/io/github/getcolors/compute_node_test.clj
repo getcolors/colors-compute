@@ -232,3 +232,39 @@
         (is (= ["init" "state" "plan"] @calls))
         (is (not (str/includes? (pr-str result) "PRIVATE-CANARY"))))
       (finally (remove-tree dir)))))
+
+(deftest inconsistent-state-is-actionable-without-mutation
+  (doseq [registration? [false true] operation ["create" "inspect" "delete"]]
+    (let [dir (temp-dir) [base request] (inputs dir "digitalocean")
+          opts (assoc base :compute-prevent-destroy false)
+          request (if registration? {:name "access" :workdir dir :state_filename "registration.tfstate" :ssh_resource identity} request)
+          planner (if registration? node/build-registration! node/build-node!)
+          lifecycle (if registration? node/compute-registration! node/compute-node!)
+          plan (planner opts request)
+          text (json/generate-string {:version 4 :serial 1 :lineage "fixture" :resources [] :outputs {:compute_identity {:value "SECRET_STATE_CONTENT"}}})
+          path (str (:directory plan) "/" (:state_filename request)) calls (atom [])]
+      (try
+        (spit path text)
+        (let [result (lifecycle opts request operation {"COLORS_PAR_DO_TOKEN" "fixture"}
+                                {:runner (fn [args & _] (swap! calls conj args) {:exit 0 :err "" :out (if (= "state" (second args)) text "{}")})})]
+          (is (= "state_inconsistent" (get-in result [:error :code])))
+          (is (= "state" (get-in result [:error :stage])))
+          (is (= "none" (get-in result [:error :infrastructure_changes])))
+          (is (str/includes? (get-in result [:error :message]) "Back up"))
+          (is (not (str/includes? (json/generate-string result) "SECRET_STATE_CONTENT")))
+          (is (not-any? #(contains? #{"plan" "apply" "destroy"} (second %)) @calls))
+          (is (= text (slurp path))))
+        (finally (remove-tree dir))))))
+
+(deftest inconsistent-state-after-apply-retains-possible-changes
+  (let [dir (temp-dir) {:keys [opts request runner env]} (harness dir) applied? (atom false)]
+    (try
+      (let [result (node/compute-node! opts request "create" env
+                    {:runner (fn [args cwd env timeout]
+                               (when (= "apply" (second args)) (reset! applied? true))
+                               (let [r (runner args cwd env timeout)]
+                                 (if (and @applied? (= "state" (second args)))
+                                   (update r :out #(json/generate-string (assoc (json/parse-string % true) :resources []))) r)))})]
+        (is (= "state_inconsistent" (get-in result [:error :code])))
+        (is (= "possible" (get-in result [:error :infrastructure_changes]))))
+      (finally (remove-tree dir)))))

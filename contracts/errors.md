@@ -37,7 +37,7 @@ not forwarded. Consumers should fall back to the safe message if the field is
 absent or unfamiliar. See [execution details](node.md#command-failure-diagnostics).
 
 Codes distinguish `command_failed`, `missing_credentials`, `state_unreadable`,
-`state_absent`, `identity_mismatch`, `unsafe_plan`, `invalid_request`,
+`state_inconsistent`, `state_absent`, `identity_mismatch`, `unsafe_plan`, `invalid_request`,
 `key_access_failed`, `filesystem_error`, and `internal_error`. Stages identify
 `validate`, `build`, `credentials`, `init`, `state`, `plan`, `plan-validation`,
 `apply`, `access`, or `cleanup`. Consumers should tolerate future codes/stages
@@ -98,3 +98,15 @@ Callers can explain that DigitalOcean rejected `COLORS_PAR_DO_TOKEN` and ask the
 operator to replace the credential in their deployment environment. The library
 does not renew credentials or retry an operation, and a rejected token does not
 prove that an apply or destroy made no infrastructure changes.
+
+## Inconsistent state
+
+A valid, readable state envelope with no resources but remaining outputs returns
+`state_inconsistent`, rather than `state_unreadable`. Its authored message explains
+that retrying unchanged will fail and asks the operator to back up the affected
+state and verify actual provider resources before recovery. It warns against
+blindly deleting state or replacing the SSH identity. Callers should identify
+the affected state using their known deployment context. No state output names
+or values are included, and no recovery or provider mutation is attempted.
+The current stage and infrastructure-change status remain accurate, including
+`possible` if an apply has already been invoked.

@@ -408,7 +408,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             state = json.loads(state_text) if present else {'resources': [], 'outputs': {}}
             existing = state['resources']
             if not existing and state['outputs']:
-                raise ValueError('state with leftover outputs requires explicit recovery')
+                raise NodeError('state_inconsistent')
             identity = state['outputs'].get('compute_identity', {}).get('value')
             expected_identity = plan['documents']['compute.tf.json']['output']['compute_identity']['value']
             if existing and (identity != expected_identity or prior.get('provider') != opts['provider-compute']):
@@ -438,6 +438,8 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             after_text = await run(['tofu', 'state', 'pull'])
             _params(after_text)
             after = json.loads(after_text)
+            if not after['resources'] and after['outputs']:
+                raise NodeError('state_inconsistent')
             if after['resources'] or after['outputs']:
                 raise ValueError('node resources remain')
             stage = 'cleanup'
@@ -471,6 +473,9 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         else:
             state_text = await run(['tofu', 'state', 'pull'])
         params = _params(state_text)
+        final_state = json.loads(state_text)
+        if not final_state['resources'] and final_state['outputs']:
+            raise NodeError('state_inconsistent')
         if operation == 'resolve-connection':
             _connection_attachment(observed_resources, opts['provider-compute'], params)
             if params.get('provider_id') is None or params.get('provider_id') != prior.get('provider_id') or any(not isinstance(params.get(k), str) or not params[k].strip() for k in ('provider', 'name', 'ip', 'user', 'sudoer')):
