@@ -106,11 +106,16 @@
       "ssh-keygen" ["ssh-keygen"]
       [])))
 (defn auth-reason [argv provider result]
-  (when (and (= "google" provider) (= ["tofu" "plan"] (vec (take 2 argv)))
+  (when (and (= "tofu" (first argv))
              (integer? (:exit result)) (not (zero? (:exit result)))
-             (string? (:err result))
-             (every? #(str/includes? (:err result) %) ["oauth2:" "invalid_grant" "invalid_rapt"]))
-    "google_reauth_required"))
+             (string? (:err result)))
+    (cond
+      (and (= "google" provider) (= "plan" (second argv))
+           (every? #(str/includes? (:err result) %) ["oauth2:" "invalid_grant" "invalid_rapt"]))
+      "google_reauth_required"
+      (and (= "digitalocean" provider) (contains? #{"plan" "apply" "destroy"} (second argv))
+           (re-find #"https://api\.digitalocean\.com/[^\s]*[ \t]+401(?:[ \t:]|$)" (:err result)))
+      "digitalocean_token_rejected")))
 
 (defn- command-details [argv cwd environment result]
   (let [{:keys [opts source]} (when *context* @*context*)

@@ -36,7 +36,10 @@ export function executable(program:string,cwd:string,environment:Map):string|und
  for(const path of candidates)try{if(statSync(path).isFile()){accessSync(path,constants.X_OK);return path;}}catch{}return undefined;
 }
 export function authReason(args:string[],provider:unknown,result:Map):string|undefined {
- return provider==='google' && args[0]==='tofu' && args[1]==='plan' && Number.isInteger(result.exit) && result.exit!==0 && typeof result.err==='string' && ['oauth2:','invalid_grant','invalid_rapt'].every(marker=>result.err.includes(marker)) ? 'google_reauth_required' : undefined;
+ if(args[0]!=='tofu'||!Number.isInteger(result.exit)||result.exit===0||typeof result.err!=='string')return undefined;
+ if(provider==='google'&&args[1]==='plan'&&['oauth2:','invalid_grant','invalid_rapt'].every(marker=>result.err.includes(marker)))return 'google_reauth_required';
+ if(provider==='digitalocean'&&['plan','apply','destroy'].includes(args[1])&&/https:\/\/api\.digitalocean\.com\/[^\s]*[ \t]+401(?:[ \t:]|$)/.test(result.err))return 'digitalocean_token_rejected';
+ return undefined;
 }
 export class CommandFailure extends Error {constructor(public details:Map){super('command failed');}}
 export function commandFailure(args:string[],cwd:string,env:Map,result:Map,opts:Map,source:Map){const command=args[0]==='tofu'?args.slice(0,args[1]==='state'?3:2):args[0]==='aws'?args.slice(0,3):args[0]==='ssh-keygen'?['ssh-keygen']:args[0]==='gcloud'?args.slice(0,3):[args[0]];const resolved=executable(args[0],cwd,env),stderr=redact(result.err,opts,source),reason=authReason(args,opts["provider-compute"],result);return new CommandFailure({command,...(['executable_not_found','process_start_failed','timeout'].includes(result.command_reason)?{command_reason:result.command_reason}:{}),...(resolved&&redact(resolved,opts,source)===resolved&&!/[\p{Cc}\p{Cf}]/u.test(resolved)?{executable:resolved}:{}),...(Number.isInteger(result.exit)?{exit_code:result.exit}:{}),...(stderr?{stderr}:{}),...(reason?{auth_reason:reason}:{})});}

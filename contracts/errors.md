@@ -82,3 +82,19 @@ interactively renew local user ADC and retry a read-only connection lookup once.
 It must verify the active credential source, preserve cancellation, and never
 use this hint to replay an apply or to switch service-account/federated identity.
 The library neither launches login nor retries the operation.
+
+## DigitalOcean authentication
+
+Failed DigitalOcean provider `tofu plan`, `apply`, and `destroy` commands whose
+stderr reports an HTTP 401 response from `https://api.digitalocean.com/` include
+`auth_reason: "digitalocean_token_rejected"`. The response status must immediately
+follow the API URL, as in the provider's Go client error format. Classification
+happens before sanitization and exposes only this authored constant. The error
+code, stage, and infrastructure-change status remain unchanged. Successful
+commands, backend commands, 403 permission failures, and unrelated 401 responses
+do not receive this hint.
+
+Callers can explain that DigitalOcean rejected `COLORS_PAR_DO_TOKEN` and ask the
+operator to replace the credential in their deployment environment. The library
+does not renew credentials or retry an operation, and a rejected token does not
+prove that an apply or destroy made no infrastructure changes.

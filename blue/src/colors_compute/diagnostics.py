@@ -110,6 +110,12 @@ def auth_reason(args, provider, result):
             and isinstance(result.err, str)
             and all(marker in result.err for marker in ('oauth2:', 'invalid_grant', 'invalid_rapt'))):
         return 'google_reauth_required'
+    if (provider == 'digitalocean' and args[0:1] == ['tofu']
+            and args[1:2] in (['plan'], ['apply'], ['destroy'])
+            and type(result.exit) is int and result.exit != 0
+            and isinstance(result.err, str)
+            and re.search(r'https://api\.digitalocean\.com/[^\s]*[ \t]+401(?:[ \t:]|$)', result.err)):
+        return 'digitalocean_token_rejected'
     return None
 
 
