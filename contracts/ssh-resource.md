@@ -10,6 +10,8 @@ it does not reinterpret or migrate existing state.
 
 `ssh_plan(opts, request)` / Green `ssh-plan` accepts `name`, absolute `workdir`,
 `passphrase_env` (a `COLORS_PAR_*` binding), and optional `backend` overrides.
+Remote fresh creation also requires the per-operation `verified_absent` boolean
+attestation described below; it does not alter the resource reference.
 The profile always comes from opts. Backend overrides merge over workflow opts.
 The resource directory is `<workdir>/<profile>/ssh/<name>`; local authority is
 `resource.json` there. Remote authority is one JSON object at
@@ -82,7 +84,9 @@ agent is changed. Handles are runtime capabilities and must not be serialized.
 
 `ssh_resource(..., operation, environment)` supports `create`, `inspect`,
 `rotate`, `delete`, and `recover`. `create` reuses ready authority without changing
-identity. `inspect` never unlocks it. `rotate` takes `new_passphrase_env` in the
+identity. Creating an absent remote authority requires `verified_absent: true`
+after caller verification; see "Verified fresh creation with remote storage".
+`inspect` never unlocks it. `rotate` takes `new_passphrase_env` in the
 request. `delete` requires `allow_delete: true` and caller confirmation that all
 machines and registrations were destroyed (`consumers_destroyed: true`). These
 are explicit caller attestations, not inferred from one node. No passphrase is
@@ -101,8 +105,10 @@ with the new binding before their next identity renewal.
 
 Public caches are separated by a hash of the full resource reference, including
 backend overrides, so concurrent scopes cannot overwrite another resource's
-identity selection file. Local lock-file evidence or a known public cache also
-refuses recreation when authority disappears on the same workstation. Callers
+identity selection file. For local-backed resources, local lock-file evidence
+or a known public cache refuses recreation when authority disappears. For remote
+resources, remote authority and caller provider verification govern existence;
+local caches never establish or veto existence. Callers
 on a new workstation must supply `expected` when retrieving an existing identity.
 
 ## Verification and references
@@ -160,3 +166,22 @@ prove there are no existing consumers and never authorizes generating a new key.
 Backend read failures, denied access, malformed records, and non-ready records
 remain `ssh_resource_failed`; they must not be interpreted as confirmed absence.
 No credential values, encrypted records, or arbitrary exception text are emitted.
+
+## Verified fresh creation with remote storage
+
+Creating an absent remote-backed SSH authority requires the request boolean
+`verified_absent: true`. The caller must first successfully inspect the remote
+compute and registration records and verify directly with the provider that no
+consuming machines or public-key registrations exist. Failed reads, uncertain
+provider results, and inconsistent state do not establish absence. This is a
+per-operation attestation from the owning workflow, not a persisted desired-state
+option or a replacement for provider checks. Existing consumers without their
+records require explicit recovery of the original authority.
+
+A remote-backed public selector and local runtime lock are disposable cache;
+they neither prove deployment existence nor veto a verified fresh creation.
+Existing remote records still govern ready, locked, deleted, and expected-identity
+checks. The authority is reread and reserved by conditional write; the attestation
+does not bypass a concurrent authority write. Local-backed resources retain their
+local record, lock, and cache recovery guards. No automatic key replacement,
+state adoption, or provider cleanup is introduced.

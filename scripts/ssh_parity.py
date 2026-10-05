@@ -31,6 +31,8 @@ def main():
         cases.append({'name': 'invalid endpoint ' + endpoint, 'opts': {**BASE, 'provider-backend': 'r2', 'r2-bucket': 'alice-state', 'r2-endpoint': endpoint}, 'request': REQUEST, 'invalid': True})
     for namespace in ['', None, 'bad.namespace', '${oops}']:
         cases.append({'name': 'invalid OCI namespace ' + str(namespace), 'opts': {**BASE, 'provider-backend': 'oci', 'oci-bucket': 'state-bucket', 'oci-region': 'eu-frankfurt-1', 'oci-namespace': namespace}, 'request': REQUEST, 'invalid': True})
+    for value in [True, False, 'true', 1, None]:
+        cases.append({'name': 'verified absence ' + repr(value), 'opts': BASE, 'request': {**REQUEST, 'verified_absent': value}, 'invalid': type(value) is not bool})
     payload = json.dumps(cases)
     programs = {
         'green': ['bb', '-cp', str(ROOT / 'green/src/clj') + ':' + str(ROOT / 'green/src/resources'), '-e', '''(require '[cheshire.core :as json] '[io.github.getcolors.compute-ssh :as ssh]) (println (json/generate-string (mapv (fn [c] (try (ssh/ssh-plan (:opts c) (:request c)) (catch Exception _ {:error true}))) (json/parse-string (slurp *in*) true))))'''],

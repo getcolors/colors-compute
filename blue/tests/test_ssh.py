@@ -202,8 +202,10 @@ def test_tampered_fingerprint_fails_before_reuse(setup):
     with pytest.raises(adapter.ResourceError): adapter.resource(plan, request, 'create')
 
 
-def test_missing_local_authority_never_regenerates_without_expected(setup):
+@pytest.mark.parametrize('verified_absent', [False, True])
+def test_missing_local_authority_never_regenerates_without_expected(setup, verified_absent):
     _, request, plan = setup
+    request = dict(request, verified_absent=verified_absent)
     adapter.resource(plan, request, 'create')
     (Path(plan['directory']) / 'resource.json').unlink()
     with pytest.raises(adapter.ResourceError, match='authority missing'):
@@ -256,3 +258,63 @@ def test_packaged_inspect_classifies_only_confirmed_absence(setup, tmp_path, ada
     assert 'SECRET_' not in child.stdout + child.stderr
     assert authority.exists() == (mode == 'malformed')
     assert not (directory / '.lock').exists()
+
+
+@pytest.mark.parametrize('adapter_path', [
+    'agents/ssh-resource.py', 'blue/src/colors_compute/ssh_adapter.py',
+    'red/resources/ssh_adapter.py', 'green/src/resources/colors_compute/ssh_adapter.py',
+])
+@pytest.mark.parametrize('cached', [False, True])
+@pytest.mark.parametrize('attested', [False, True])
+def test_remote_missing_creation_requires_verified_absence_not_cache(setup, monkeypatch, adapter_path, cached, attested):
+    import importlib.util
+    opts, request, _ = setup
+    root = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location('ssh_test_adapter', root / adapter_path)
+    packaged = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(packaged)
+    plan = ssh_plan(opts, dict(request, backend={'provider-backend': 'r2', 'r2-bucket': 'fixture', 'r2-endpoint': 'https://fixture.example.com'}))
+    monkeypatch.setenv('COLORS_PAR_R2_ACCESS_KEY_ID', 'fixture')
+    monkeypatch.setenv('COLORS_PAR_R2_SECRET_ACCESS_KEY', 'fixture')
+    directory = packaged.private_directory(plan['directory'])
+    if cached:
+        packaged.public_cache(plan).write_text('stale public selector')
+        packaged.public_cache(plan).chmod(0o600)
+        (directory / '.lock').write_text('stale local lock')
+    writes = []
+    monkeypatch.setattr(packaged.Store, 'read', lambda self: (None, None))
+    def write(self, record, version):
+        writes.append((dict(record), version))
+        return 'revision'
+    monkeypatch.setattr(packaged.Store, 'write', write)
+    if not attested:
+        with pytest.raises(packaged.ResourceError, match='verified absence'):
+            packaged.resource(plan, request, 'create')
+        assert writes == []
+    else:
+        result = packaged.resource(plan, dict(request, verified_absent=True), 'create')
+        assert result['status'] == 'ready'
+        assert writes[0][1] is None  # The absent-object reservation remains conditional.
+        assert writes[-1][0]['status'] == 'ready'
+        assert packaged.public_cache(plan).read_text().strip() == result['public_key']
+
+
+@pytest.mark.parametrize('mode', ['expected', 'locked', 'deleted', 'read-failure'])
+def test_verified_absence_never_overrides_remote_authority_guards(setup, monkeypatch, mode):
+    opts, request, _ = setup
+    plan = ssh_plan(opts, dict(request, backend={'provider-backend': 'r2', 'r2-bucket': 'fixture', 'r2-endpoint': 'https://fixture.example.com'}))
+    monkeypatch.setenv('COLORS_PAR_R2_ACCESS_KEY_ID', 'fixture')
+    monkeypatch.setenv('COLORS_PAR_R2_SECRET_ACCESS_KEY', 'fixture')
+    writes = []
+    def read(self):
+        if mode == 'read-failure':
+            raise adapter.ResourceError('SSH backend read failed')
+        return (None if mode == 'expected' else {'status': mode}, None)
+    monkeypatch.setattr(adapter.Store, 'read', read)
+    monkeypatch.setattr(adapter.Store, 'write', lambda *args: writes.append(args))
+    request = dict(request, verified_absent=True)
+    if mode == 'expected':
+        request['expected'] = {'fingerprint': 'known'}
+    with pytest.raises(adapter.ResourceError):
+        adapter.resource(plan, request, 'create')
+    assert writes == []

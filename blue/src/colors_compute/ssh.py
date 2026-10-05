@@ -10,8 +10,10 @@ from .contract import _safe, _local_path
 
 
 def ssh_plan(opts, request):
-    if not isinstance(request, dict) or set(request) - {'name', 'workdir', 'passphrase_env', 'backend', 'expected', 'new_passphrase_env', 'allow_delete', 'consumers_destroyed', 'lock_token'}:
+    if not isinstance(request, dict) or set(request) - {'name', 'workdir', 'passphrase_env', 'backend', 'expected', 'new_passphrase_env', 'allow_delete', 'consumers_destroyed', 'lock_token', 'verified_absent'}:
         raise ValueError('invalid SSH request')
+    if 'verified_absent' in request and type(request['verified_absent']) is not bool:
+        raise ValueError('invalid verified absence attestation')
     if not _safe(opts.get('profile')) or not _safe(request.get('name')) or not _local_path(request.get('workdir')):
         raise ValueError('invalid SSH resource identity')
     if not isinstance(request.get('passphrase_env'), str) or not re.fullmatch(r'COLORS_PAR_[A-Z][A-Z0-9_]*', request['passphrase_env']):

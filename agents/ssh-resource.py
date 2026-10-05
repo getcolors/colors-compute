@@ -386,13 +386,16 @@ class Store:
 
 
 @contextlib.contextmanager
-def locked(plan, expected=None, recover_token=None, allow_absent=False):
+def locked(plan, expected=None, recover_token=None, allow_absent=False, verified_absent=False):
     store = Store(plan)
     with store.local_lock():
         record, version = store.read()
         if record is None:
-            require(not store.local or store.first_local_lock, 'SSH authority missing beside existing resource lock; recover explicitly')
-            require(not public_cache(plan).exists(), 'SSH authority missing beside known public identity; recover explicitly')
+            if store.local:
+                require(store.first_local_lock, 'SSH authority missing beside existing resource lock; recover explicitly')
+                require(not public_cache(plan).exists(), 'SSH authority missing beside known public identity; recover explicitly')
+            elif allow_absent:
+                require(verified_absent is True, 'Missing remote SSH authority requires verified absence of provider consumers and registrations before creating a new identity')
         require(record is not None or allow_absent, 'SSH authority missing; recover explicitly')
         if expected is not None:
             require(record is not None, 'SSH authority missing; recover explicitly')
@@ -427,6 +430,7 @@ def verify_unlock(record, binding, directory):
 
 def resource(plan, request, operation):
     require(operation in ('create', 'inspect', 'rotate', 'delete', 'recover'), 'invalid SSH operation')
+    require('verified_absent' not in request or type(request['verified_absent']) is bool, 'invalid verified absence attestation')
     expected = request.get('expected')
     if operation == 'inspect':
         store = Store(plan)
@@ -449,7 +453,7 @@ def resource(plan, request, operation):
             if prior and prior['status'] == 'deleted':
                 public_cache(plan).unlink(missing_ok=True)
                 return {'status': 'destroyed', 'reference': plan['reference']}
-    with locked(plan, expected, request.get('lock_token') if operation == 'recover' else None, operation == 'create') as (store, record, version, previous):
+    with locked(plan, expected, request.get('lock_token') if operation == 'recover' else None, operation == 'create', request.get('verified_absent', False)) as (store, record, version, previous):
         if operation != 'create':
             require(previous is not None and record.get('encrypted_key'), 'SSH authority missing; recover explicitly')
         if operation == 'delete':

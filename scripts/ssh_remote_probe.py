@@ -22,8 +22,14 @@ a=p.parse_args()
 async def main():
  with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as other:
   opts={'profile':a.profile,'provider-backend':'r2','r2-bucket':a.bucket,'r2-endpoint':a.endpoint}
-  req={'name':'protocol-probe-'+uuid.uuid4().hex[:12],'workdir':str(Path(first).resolve()),'passphrase_env':'COLORS_PAR_PROBE_OLD'}
+  req={'name':'protocol-probe-'+uuid.uuid4().hex,'workdir':str(Path(first).resolve()),'passphrase_env':'COLORS_PAR_PROBE_OLD'}
   env=dict(os.environ,COLORS_PAR_PROBE_OLD=secrets.token_urlsafe(48),COLORS_PAR_PROBE_NEW=secrets.token_urlsafe(48))
+  # This freshly generated probe name has never been exposed to a compute or
+  # registration workflow; the probe creates neither. Confirm backend absence
+  # before attesting this isolated identity has no consumers.
+  absent=await ssh_resource(opts,req,'inspect',env)
+  assert absent.get('error',{}).get('code')=='ssh_authority_missing','probe authority is not confirmed absent'
+  req=dict(req,verified_absent=True)
   results=await asyncio.gather(*(ssh_resource(opts,req,environment=env) for _ in range(2)))
   ready=[r for r in results if r.get('status')=='ready']
   assert ready,'no concurrent creator succeeded'

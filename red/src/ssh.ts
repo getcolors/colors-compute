@@ -13,7 +13,8 @@ function canonical(v: any): string {
   return JSON.stringify(v);
 }
 export function ssh_plan(opts: Map, request: Map) {
-  need(request && Object.keys(request).every(k => ['name','workdir','passphrase_env','backend','expected','new_passphrase_env','allow_delete','consumers_destroyed','lock_token'].includes(k)), 'invalid SSH request');
+  need(request && Object.keys(request).every(k => ['name','workdir','passphrase_env','backend','expected','new_passphrase_env','allow_delete','consumers_destroyed','lock_token','verified_absent'].includes(k)), 'invalid SSH request');
+  need(!Object.hasOwn(request,'verified_absent') || typeof request.verified_absent === 'boolean', 'invalid verified absence attestation');
   need(match(/^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/, opts.profile) && match(/^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/, request.name)
     && typeof request.workdir === 'string' && isAbsolute(request.workdir) && resolve(request.workdir) === request.workdir && !/[\\\0]/.test(request.workdir), 'invalid SSH resource identity');
   need(match(/^COLORS_PAR_[A-Z][A-Z0-9_]*$/, request.passphrase_env), 'invalid passphrase binding');

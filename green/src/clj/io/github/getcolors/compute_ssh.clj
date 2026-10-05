@@ -15,7 +15,8 @@
   (json/generate-string (walk/postwalk #(if (map? %) (into (sorted-map) %) %) value)))
 
 (defn ssh-plan [opts request]
-  (need (and (map? request) (every? #{:name :workdir :passphrase_env :backend :expected :new_passphrase_env :allow_delete :consumers_destroyed :lock_token} (keys request))) "invalid SSH request")
+  (need (and (map? request) (every? #{:name :workdir :passphrase_env :backend :expected :new_passphrase_env :allow_delete :consumers_destroyed :lock_token :verified_absent} (keys request))) "invalid SSH request")
+  (need (or (not (contains? request :verified_absent)) (boolean? (:verified_absent request))) "invalid verified absence attestation")
   (let [{:keys [name workdir passphrase_env]} request
         profile (:profile opts)
         _ (need (and (matches #"[A-Za-z0-9][A-Za-z0-9_-]{0,62}" profile)
