@@ -7,7 +7,7 @@ import templates from '../resources/templates.json';
 import {registry} from './index.ts';
 import {provider_request} from './provider-request.ts';
 import {backend_plan} from './rendering.ts';
-import {commandFailure,failure} from './diagnostics.ts';
+import {commandFailure,failure,StateInconsistent} from './diagnostics.ts';
 import {executeBackendCommand,parseStateEnvelope,stateOutputs,type BackendRunner} from './backend.ts';
 type Map=Record<string,any>;type Env=Record<string,string|undefined>;
 const safe=(v:unknown):v is string=>typeof v==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/.exec(v)?.[0]===v;
@@ -87,7 +87,7 @@ export async function compute_node(opts:Map,request:Map,operation='create',envir
  // Presence was independently established. An empty-lineage synthetic snapshot
  // here is inconsistent with that observation and must fail strict validation.
  if(before.trim())current=parseStateEnvelope(before).document;
- demand(!current||current.resources.length>0||Object.keys(current.outputs).length===0,'empty resource state has leftover outputs');if(operation==='inspect'&&present&&current&&current.resources.length===0&&Object.keys(current.outputs).length===0)return {status:'destroyed',directory:plan.directory};const populated=current&&current.resources.length>0;const identity=plan.documents['compute.tf.json'].output.compute_identity.value;if(populated){demand(Object.entries(identity).every(([k,v])=>current!.outputs.compute_identity?.value?.[k]===v),'state identity mismatch; explicit recovery required');}demand(!populated||current!.outputs.params?.value?.provider===opts['provider-compute'],'state provider mismatch');demand(operation!=='create'||opts['compute-require-existing-state']!==true||populated,'required state absent');
+ if(current&&current.resources.length===0&&Object.keys(current.outputs).length>0)throw new StateInconsistent();if(operation==='inspect'&&present&&current&&current.resources.length===0&&Object.keys(current.outputs).length===0)return {status:'destroyed',directory:plan.directory};const populated=current&&current.resources.length>0;const identity=plan.documents['compute.tf.json'].output.compute_identity.value;if(populated){demand(Object.entries(identity).every(([k,v])=>current!.outputs.compute_identity?.value?.[k]===v),'state identity mismatch; explicit recovery required');}demand(!populated||current!.outputs.params?.value?.provider===opts['provider-compute'],'state provider mismatch');demand(operation!=='create'||opts['compute-require-existing-state']!==true||populated,'required state absent');
  if(operation==='inspect'){demand(populated,'state absent');return {status:'ready',directory:plan.directory,params:normalize(current!.outputs.params.value,environment)};}
  if(operation==='resolve-connection'){
  demand(populated,'node state absent');const machine=machineIdentity(current!.resources,opts['provider-compute']);const path=join(plan.directory,'connection.tfplan');
@@ -95,6 +95,7 @@ export async function compute_node(opts:Map,request:Map,operation='create',envir
  }
  if(operation==='delete'&&!populated){demand(present&&current&&Object.keys(current.outputs).length===0,'absent state requires explicit recovery');stage='cleanup';return {status:'destroyed',directory:plan.directory};}
  const planPath=join(plan.directory,'approved.tfplan');await execute(['plan','-input=false','-no-color','-out='+planPath,...(operation==='delete'?['-destroy']:[])],1800000);planAllowed(await execute(['show','-json',planPath]),operation);await execute(['apply','-input=false','-no-color',planPath],1800000);const after=await execute(['state','pull']),final=parseStateEnvelope(after);
+ if(final.document.resources.length===0&&Object.keys(final.document.outputs).length>0)throw new StateInconsistent();
  if(operation==='delete'){demand(final.document.resources.length===0,'destruction incomplete');stage='cleanup';return {status:'destroyed',directory:plan.directory};}
  demand(final.params.provider===opts['provider-compute']&&final.params.node_id===request.node_id&&Object.entries(identity).every(([k,v])=>final.document.outputs.compute_identity?.value?.[k]===v),'invalid compute outputs');const outputs=opts['provider-backend']==='local'?{params:final.params}:stateOutputs(after);const secrets=Object.entries(environment).filter(([k,v])=>v&&(/SECRET|TOKEN|PASSWORD|ACCESS_KEY|API_KEY/.test(k))).map(([,v])=>v!);demand(!secrets.some(v=>JSON.stringify(outputs).includes(v)),'credential in compute output');return {status:'ready',directory:plan.directory,params:normalize(final.params,environment)};
  }catch(error){if(error instanceof Error&&error.name==='AbortError'){cancelled=true;throw error;}return failure(error,stage,infrastructure_changes);}finally{if(credentialPath)try{rmSync(credentialPath,{force:true});}catch(error){if(!cancelled)return failure(error,'cleanup',infrastructure_changes);}}

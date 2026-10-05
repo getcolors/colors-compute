@@ -218,7 +218,8 @@
     (if (seq (:resources state))
       (do (require! (= identity (get-in state [:outputs :compute_identity :value])) "state identity mismatch; recover or delete the original node first")
           (require! (= (:provider identity) (get-in state [:outputs :params :value :provider])) "state provider mismatch; recover or delete the original node first"))
-      (require! (empty? (:outputs state)) "state without resources still has outputs; explicit recovery required"))
+      (when (seq (:outputs state))
+        (throw (ex-info "inconsistent state" {:compute-code "state_inconsistent"}))))
     state))
 (defn- guarded-plan! [text operation]
   (let [plan (parse-one text) permitted (case operation "delete" #{"no-op" "read" "delete"} "resolve-connection" #{"no-op" "read"} #{"no-op" "read" "create" "update"})]

@@ -271,3 +271,47 @@ def test_package_exports_connection_resolver():
     assert colors_compute.resolve_connection is resolve_connection
     assert callable(colors_compute.resolve_connection)
     assert 'resolve_connection' in colors_compute.__all__
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('registration', [False, True])
+@pytest.mark.parametrize('operation', ['create', 'inspect', 'delete'])
+async def test_inconsistent_state_actionable_and_does_not_mutate(tmp_path, registration, operation):
+    opts, req = inputs(tmp_path)
+    opts['compute-prevent-destroy'] = False
+    if registration:
+        req = {'name': 'access', 'workdir': str(tmp_path), 'state_filename': 'registration.tfstate', 'ssh_resource': IDENTITY}
+    planner = registration_plan if registration else node_plan
+    lifecycle = compute_registration if registration else compute_node
+    plan = planner(opts, req)
+    state = {'version': 4, 'serial': 1, 'lineage': 'fixture', 'resources': [], 'outputs': {'compute_identity': {'value': 'SECRET_STATE_CONTENT'}}}
+    path = Path(plan['directory'])
+    path.mkdir(parents=True, exist_ok=True)
+    state_text = json.dumps(state)
+    (path / req['state_filename']).write_text(state_text)
+    calls = []
+    async def runner(args, cwd, env, timeout):
+        calls.append(args)
+        return ProcessResult(0, state_text if args[1] == 'state' else '{}')
+    result = await lifecycle(opts, req, operation, {'COLORS_PAR_DO_TOKEN': 'fixture'}, {'runner': runner})
+    assert result['error']['code'] == 'state_inconsistent'
+    assert result['error']['stage'] == 'state'
+    assert result['error']['infrastructure_changes'] == 'none'
+    assert 'Back up' in result['error']['message']
+    assert 'SECRET_STATE_CONTENT' not in json.dumps(result)
+    assert not any(c[1] in ('plan', 'apply', 'destroy') for c in calls)
+    assert (path / req['state_filename']).read_text() == state_text
+
+
+@pytest.mark.asyncio
+async def test_inconsistent_state_after_apply_retains_possible_changes(tmp_path):
+    opts, req = inputs(tmp_path)
+    runner = LocalRunner(opts, req)
+    async def inconsistent(args, cwd, env, timeout):
+        result = await runner(args, cwd, env, timeout)
+        if args[1] == 'state':
+            return ProcessResult(0, json.dumps({**runner.state(), 'resources': []}))
+        return result
+    result = await execute(opts, req, inconsistent)
+    assert result['error']['code'] == 'state_inconsistent'
+    assert result['error']['infrastructure_changes'] == 'possible'
