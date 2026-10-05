@@ -224,3 +224,35 @@ def test_backend_overrides_have_distinct_public_caches(setup):
     remote=ssh_plan(opts,dict(request,backend={'provider-backend':'r2','r2-bucket':'alice-state','r2-endpoint':'https://account.r2.cloudflarestorage.com'}))
     assert local['directory']==remote['directory']
     assert adapter.public_cache(local)!=adapter.public_cache(remote)
+
+
+@pytest.mark.parametrize('adapter_path', [
+    'agents/ssh-resource.py', 'blue/src/colors_compute/ssh_adapter.py',
+    'red/resources/ssh_adapter.py', 'green/src/resources/colors_compute/ssh_adapter.py',
+])
+@pytest.mark.parametrize('mode', ['missing', 'malformed', 'remote-missing', 'remote-denied'])
+def test_packaged_inspect_classifies_only_confirmed_absence(setup, tmp_path, adapter_path, mode):
+    import sys
+    opts, request, plan = setup
+    environment = dict(os.environ)
+    if mode.startswith('remote-'):
+        plan = ssh_plan(opts, dict(request, backend={'provider-backend': 'r2', 'r2-bucket': 'fixture', 'r2-endpoint': 'https://fixture.example.com'}))
+        stub = tmp_path / 'aws'
+        detail = 'An error occurred (NoSuchKey) when calling the GetObject operation' if mode == 'remote-missing' else 'AccessDenied SECRET_PROVIDER_CONTENT'
+        stub.write_text('#!' + sys.executable + '\nimport sys\nsys.stderr.write(' + repr(detail) + ')\nsys.exit(1)\n')
+        stub.chmod(0o700)
+        environment.update(PATH=str(tmp_path) + os.pathsep + environment['PATH'], COLORS_PAR_R2_ACCESS_KEY_ID='fixture', COLORS_PAR_R2_SECRET_ACCESS_KEY='SECRET_CREDENTIAL')
+    directory = Path(plan['directory'])
+    directory.mkdir(parents=True, exist_ok=True)
+    authority = directory / 'resource.json'
+    if mode == 'malformed':
+        authority.write_text('SECRET_MALFORMED_RECORD')
+        authority.chmod(0o600)
+    root = Path(__file__).resolve().parents[2]
+    child = subprocess.run([sys.executable, str(root / adapter_path)], input=json.dumps({'operation': 'inspect', 'plan': plan, 'request': request}), text=True, capture_output=True, env=environment)
+    assert child.returncode == 1
+    result = json.loads(child.stdout)
+    assert result['error']['code'] == ('ssh_authority_missing' if mode in ('missing', 'remote-missing') else 'ssh_resource_failed')
+    assert 'SECRET_' not in child.stdout + child.stderr
+    assert authority.exists() == (mode == 'malformed')
+    assert not (directory / '.lock').exists()

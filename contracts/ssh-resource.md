@@ -149,3 +149,14 @@ Inspection returns `status: installed`, `reference`, `fingerprint`, `public_key`
 then atomically withdraws the directory before deleting its files, returning
 `status: removed`. A process killed during final deletion can leave encrypted
 files in a private `.ssh-export-remove-*` tombstone in the parent directory.
+
+## Missing authority diagnostics
+
+An `inspect` lookup that successfully confirms no authority exists returns
+`status: "error"` with `error.code: "ssh_authority_missing"` and the authored
+message `SSH authority missing`. Callers can identify the expected location and
+explain how to restore the original encrypted authority. This code does not
+prove there are no existing consumers and never authorizes generating a new key.
+Backend read failures, denied access, malformed records, and non-ready records
+remain `ssh_resource_failed`; they must not be interpreted as confirmed absence.
+No credential values, encrypted records, or arbitrary exception text are emitted.

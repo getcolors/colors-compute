@@ -26,6 +26,11 @@ class ResourceError(Exception):
     pass
 
 
+class AuthorityMissing(ResourceError):
+    """A successful authority lookup confirmed absence during inspection."""
+    pass
+
+
 def require(ok, message):
     if not ok:
         raise ResourceError(message)
@@ -426,7 +431,8 @@ def resource(plan, request, operation):
     if operation == 'inspect':
         store = Store(plan)
         record, _ = store.read()
-        require(record is not None, 'SSH authority missing')
+        if record is None:
+            raise AuthorityMissing('SSH authority missing')
         require(record['status'] == 'ready', 'SSH resource not ready; explicit recovery required')
         if expected:
             require(all(record.get(k) == expected.get(k) for k in ('reference', 'public_key', 'fingerprint')), 'SSH expected identity mismatch')
@@ -713,7 +719,7 @@ def main():
             print(canonical(resource(message['plan'], message['request'], message['operation'])), flush=True)
     except (Exception, KeyboardInterrupt) as error:
         # Deliberately omit raw exception/provider/SSH diagnostics and all inputs.
-        print(canonical({'status': 'error', 'error': {'code': 'ssh_resource_failed',
+        print(canonical({'status': 'error', 'error': {'code': 'ssh_authority_missing' if isinstance(error, AuthorityMissing) else 'ssh_resource_failed',
             'message': str(error) if isinstance(error, ResourceError) else 'SSH resource operation failed; inspect authority and credential bindings before retry'}}), flush=True)
         sys.exit(1)
 
