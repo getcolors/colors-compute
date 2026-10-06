@@ -4632,5 +4632,765 @@
     },
     "name": "yandex local state and local keys",
     "op": "node_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "c4a-standard-4-lssd",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1",
+        "google-local-ssd-count": 1,
+        "google-boot-disk-type": "hyperdisk-balanced",
+        "google-nic-type": "GVNIC"
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/sdk/production/app-0",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "compute-fixture",
+                "key": "infrastructure/production/app-0.tfstate",
+                "region": "eu-west-1",
+                "use_lockfile": true
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer:private": {
+                "name": "production-app-0-1fe634a6041b",
+                "ports": [
+                  "9093-9094"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ssh:192.0.2.1/32": {
+                "name": "production-app-0-54ac72a076a8",
+                "ports": [
+                  "22"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "192.0.2.1/32"
+                ]
+              }
+            },
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+          },
+          "output": {
+            "compute_identity": {
+              "value": {
+                "node_id": "app-0",
+                "profile": "production",
+                "provider": "google",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "app-0.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "ip": "${google_compute_address.node.address}",
+                "metadata": {
+                  "address_id": "${google_compute_address.node.id}",
+                  "instance_id": "${google_compute_instance.node.instance_id}",
+                  "self_link": "${google_compute_instance.node.self_link}",
+                  "subnetwork_id": "${google_compute_subnetwork.network.id}",
+                  "zone": "europe-west1-b"
+                },
+                "name": "${google_compute_instance.node.name}",
+                "node_id": "app-0",
+                "provider": "google",
+                "provider_id": "${google_compute_instance.node.id}",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
+              }
+            }
+          },
+          "provider": {
+            "google": {
+              "project": "colors-example-project",
+              "region": "europe-west1",
+              "zone": "europe-west1-b"
+            }
+          },
+          "resource": {
+            "google_compute_address": {
+              "node": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0",
+                "region": "europe-west1"
+              }
+            },
+            "google_compute_firewall": {
+              "ingress": {
+                "allow": [
+                  {
+                    "ports": "${each.value.ports}",
+                    "protocol": "${each.value.protocol}"
+                  }
+                ],
+                "direction": "INGRESS",
+                "for_each": "${local.ingress}",
+                "name": "${each.value.name}",
+                "network": "${google_compute_network.network.id}",
+                "source_ranges": "${each.value.source_ranges}",
+                "target_tags": [
+                  "production-app-0-network"
+                ]
+              }
+            },
+            "google_compute_instance": {
+              "node": {
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+                        "size": 20,
+                        "type": "hyperdisk-balanced"
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "machine_type": "c4a-standard-4-lssd",
+                "metadata": {
+                  "block-project-ssh-keys": "true",
+                  "enable-oslogin": "false",
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "production-app-0",
+                "network_interface": [
+                  {
+                    "access_config": [
+                      {
+                        "nat_ip": "${google_compute_address.node.address}"
+                      }
+                    ],
+                    "nic_type": "GVNIC",
+                    "subnetwork": "${google_compute_subnetwork.network.id}"
+                  }
+                ],
+                "tags": [
+                  "production-app-0-network"
+                ],
+                "zone": "europe-west1-b",
+                "scratch_disk": [
+                  {
+                    "interface": "NVME",
+                    "size": 375
+                  }
+                ]
+              }
+            },
+            "google_compute_network": {
+              "network": {
+                "auto_create_subnetworks": false,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0-network"
+              }
+            },
+            "google_compute_subnetwork": {
+              "network": {
+                "ip_cidr_range": "10.42.0.0/16",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0-network",
+                "network": "${google_compute_network.network.id}",
+                "region": "europe-west1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "google": {
+                "source": "hashicorp/google",
+                "version": "6.0.0"
+              }
+            }
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/production/app-0.tfstate",
+      "status": "planned"
+    },
+    "name": "Google explicit Local SSD c4a-standard-4-lssd",
+    "op": "node_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "c4a-highmem-4-lssd",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1",
+        "google-local-ssd-count": 1,
+        "google-boot-disk-type": "hyperdisk-balanced",
+        "google-nic-type": "GVNIC"
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/sdk/production/app-0",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "compute-fixture",
+                "key": "infrastructure/production/app-0.tfstate",
+                "region": "eu-west-1",
+                "use_lockfile": true
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer:private": {
+                "name": "production-app-0-1fe634a6041b",
+                "ports": [
+                  "9093-9094"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ssh:192.0.2.1/32": {
+                "name": "production-app-0-54ac72a076a8",
+                "ports": [
+                  "22"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "192.0.2.1/32"
+                ]
+              }
+            },
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+          },
+          "output": {
+            "compute_identity": {
+              "value": {
+                "node_id": "app-0",
+                "profile": "production",
+                "provider": "google",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "app-0.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "ip": "${google_compute_address.node.address}",
+                "metadata": {
+                  "address_id": "${google_compute_address.node.id}",
+                  "instance_id": "${google_compute_instance.node.instance_id}",
+                  "self_link": "${google_compute_instance.node.self_link}",
+                  "subnetwork_id": "${google_compute_subnetwork.network.id}",
+                  "zone": "europe-west1-b"
+                },
+                "name": "${google_compute_instance.node.name}",
+                "node_id": "app-0",
+                "provider": "google",
+                "provider_id": "${google_compute_instance.node.id}",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
+              }
+            }
+          },
+          "provider": {
+            "google": {
+              "project": "colors-example-project",
+              "region": "europe-west1",
+              "zone": "europe-west1-b"
+            }
+          },
+          "resource": {
+            "google_compute_address": {
+              "node": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0",
+                "region": "europe-west1"
+              }
+            },
+            "google_compute_firewall": {
+              "ingress": {
+                "allow": [
+                  {
+                    "ports": "${each.value.ports}",
+                    "protocol": "${each.value.protocol}"
+                  }
+                ],
+                "direction": "INGRESS",
+                "for_each": "${local.ingress}",
+                "name": "${each.value.name}",
+                "network": "${google_compute_network.network.id}",
+                "source_ranges": "${each.value.source_ranges}",
+                "target_tags": [
+                  "production-app-0-network"
+                ]
+              }
+            },
+            "google_compute_instance": {
+              "node": {
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+                        "size": 20,
+                        "type": "hyperdisk-balanced"
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "machine_type": "c4a-highmem-4-lssd",
+                "metadata": {
+                  "block-project-ssh-keys": "true",
+                  "enable-oslogin": "false",
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "production-app-0",
+                "network_interface": [
+                  {
+                    "access_config": [
+                      {
+                        "nat_ip": "${google_compute_address.node.address}"
+                      }
+                    ],
+                    "nic_type": "GVNIC",
+                    "subnetwork": "${google_compute_subnetwork.network.id}"
+                  }
+                ],
+                "tags": [
+                  "production-app-0-network"
+                ],
+                "zone": "europe-west1-b",
+                "scratch_disk": [
+                  {
+                    "interface": "NVME",
+                    "size": 375
+                  }
+                ]
+              }
+            },
+            "google_compute_network": {
+              "network": {
+                "auto_create_subnetworks": false,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0-network"
+              }
+            },
+            "google_compute_subnetwork": {
+              "network": {
+                "ip_cidr_range": "10.42.0.0/16",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0-network",
+                "network": "${google_compute_network.network.id}",
+                "region": "europe-west1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "google": {
+                "source": "hashicorp/google",
+                "version": "6.0.0"
+              }
+            }
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/production/app-0.tfstate",
+      "status": "planned"
+    },
+    "name": "Google explicit Local SSD c4a-highmem-4-lssd",
+    "op": "node_plan"
+  },
+  {
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "c4a-standard-8-lssd",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1",
+        "google-local-ssd-count": 2,
+        "google-boot-disk-type": "hyperdisk-balanced",
+        "google-nic-type": "GVNIC"
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": {
+      "directory": "/sdk/production/app-0",
+      "documents": {
+        "backend.tf.json": {
+          "terraform": {
+            "backend": {
+              "s3": {
+                "bucket": "compute-fixture",
+                "key": "infrastructure/production/app-0.tfstate",
+                "region": "eu-west-1",
+                "use_lockfile": true
+              }
+            }
+          }
+        },
+        "compute.tf.json": {
+          "locals": {
+            "ingress": {
+              "peer:private": {
+                "name": "production-app-0-1fe634a6041b",
+                "ports": [
+                  "9093-9094"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "10.42.0.0/16"
+                ]
+              },
+              "ssh:192.0.2.1/32": {
+                "name": "production-app-0-54ac72a076a8",
+                "ports": [
+                  "22"
+                ],
+                "protocol": "tcp",
+                "source_ranges": [
+                  "192.0.2.1/32"
+                ]
+              }
+            },
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"
+          },
+          "output": {
+            "compute_identity": {
+              "value": {
+                "node_id": "app-0",
+                "profile": "production",
+                "provider": "google",
+                "ssh_fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+                "ssh_resource_reference": "ssh/v2/fixture/production/app-access",
+                "state_filename": "app-0.tfstate"
+              }
+            },
+            "params": {
+              "value": {
+                "ip": "${google_compute_address.node.address}",
+                "metadata": {
+                  "address_id": "${google_compute_address.node.id}",
+                  "instance_id": "${google_compute_instance.node.instance_id}",
+                  "self_link": "${google_compute_instance.node.self_link}",
+                  "subnetwork_id": "${google_compute_subnetwork.network.id}",
+                  "zone": "europe-west1-b"
+                },
+                "name": "${google_compute_instance.node.name}",
+                "node_id": "app-0",
+                "provider": "google",
+                "provider_id": "${google_compute_instance.node.id}",
+                "sudoer": "ubuntu",
+                "user": "ubuntu",
+                "vpc_ip": "${google_compute_instance.node.network_interface[0].network_ip}"
+              }
+            }
+          },
+          "provider": {
+            "google": {
+              "project": "colors-example-project",
+              "region": "europe-west1",
+              "zone": "europe-west1-b"
+            }
+          },
+          "resource": {
+            "google_compute_address": {
+              "node": {
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0",
+                "region": "europe-west1"
+              }
+            },
+            "google_compute_firewall": {
+              "ingress": {
+                "allow": [
+                  {
+                    "ports": "${each.value.ports}",
+                    "protocol": "${each.value.protocol}"
+                  }
+                ],
+                "direction": "INGRESS",
+                "for_each": "${local.ingress}",
+                "name": "${each.value.name}",
+                "network": "${google_compute_network.network.id}",
+                "source_ranges": "${each.value.source_ranges}",
+                "target_tags": [
+                  "production-app-0-network"
+                ]
+              }
+            },
+            "google_compute_instance": {
+              "node": {
+                "boot_disk": [
+                  {
+                    "initialize_params": [
+                      {
+                        "image": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+                        "size": 20,
+                        "type": "hyperdisk-balanced"
+                      }
+                    ]
+                  }
+                ],
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "machine_type": "c4a-standard-8-lssd",
+                "metadata": {
+                  "block-project-ssh-keys": "true",
+                  "enable-oslogin": "false",
+                  "ssh-keys": "ubuntu:${trimspace(local.public_key)}"
+                },
+                "name": "production-app-0",
+                "network_interface": [
+                  {
+                    "access_config": [
+                      {
+                        "nat_ip": "${google_compute_address.node.address}"
+                      }
+                    ],
+                    "nic_type": "GVNIC",
+                    "subnetwork": "${google_compute_subnetwork.network.id}"
+                  }
+                ],
+                "tags": [
+                  "production-app-0-network"
+                ],
+                "zone": "europe-west1-b",
+                "scratch_disk": [
+                  {
+                    "interface": "NVME",
+                    "size": 375
+                  },
+                  {
+                    "interface": "NVME",
+                    "size": 375
+                  }
+                ]
+              }
+            },
+            "google_compute_network": {
+              "network": {
+                "auto_create_subnetworks": false,
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0-network"
+              }
+            },
+            "google_compute_subnetwork": {
+              "network": {
+                "ip_cidr_range": "10.42.0.0/16",
+                "lifecycle": {
+                  "prevent_destroy": true
+                },
+                "name": "production-app-0-network",
+                "network": "${google_compute_network.network.id}",
+                "region": "europe-west1"
+              }
+            }
+          },
+          "terraform": {
+            "required_providers": {
+              "google": {
+                "source": "hashicorp/google",
+                "version": "6.0.0"
+              }
+            }
+          }
+        }
+      },
+      "key_objects": {},
+      "state_key": "infrastructure/production/app-0.tfstate",
+      "status": "planned"
+    },
+    "name": "Google explicit Local SSD c4a-standard-8-lssd",
+    "op": "node_plan"
   }
 ]

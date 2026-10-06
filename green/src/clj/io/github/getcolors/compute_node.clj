@@ -72,6 +72,20 @@
       (do (require! (and (map? value) (= "ready" (:status value)) (= provider (:provider value)) (= (:reference identity) (:ssh_resource_reference value)) (= (:fingerprint identity) (:fingerprint value)) (nonblank? (:id value)) (nonblank? (:reference value))) "matching SSH registration required") value)
       (do (require! (nil? value) "provider consumes public identity directly") nil))))
 
+(defn- google-local-disks [opts root]
+  (let [machine (:google-machine-type opts)
+        count-present? (contains? opts :google-local-ssd-count)
+        match (when (string? machine) (re-matches #"c4a-(?:standard|highmem)-(4|8|16|32|48|64|72)-lssd" machine))]
+    (if (or count-present? (and (= "google" (:provider-compute opts)) match))
+      (let [n (:google-local-ssd-count opts)
+            expected (get {"4" 1 "8" 2 "16" 4 "32" 6 "48" 10 "64" 14 "72" 16} (second match))]
+        (require! (and (= "google" (:provider-compute opts)) match
+                       (integer? n) (= expected n))
+                  "google-local-ssd-count must match the fixed disk count of a C4A -lssd machine")
+        (assoc-in root [:resource :google_compute_instance :node :scratch_disk]
+                  (vec (repeat n {:interface "NVME" :size 375}))))
+      root)))
+
 (defn node-plan
   "Render a single root module. request includes node_id, state_filename and SDK workdir."
   [opts node-request]
@@ -117,7 +131,7 @@
         root (deep-merge (dissoc shared-root :output) (apply deep-merge (vals node)))
         root (walk/postwalk #(loop [v %] (if (and (string? v) (contains? @replacements v)) (recur (get @replacements v)) v)) root)
         state-key (joined prefix profile state_filename)
-        root (cond-> root registration (update :resource dissoc (keyword (get registrations provider))))
+        root (google-local-disks opts (cond-> root registration (update :resource dissoc (keyword (get registrations provider)))))
         root (assoc-in root [:output :compute_identity] {:value {:profile profile :node_id node_id :state_filename state_filename :provider provider :ssh_resource_reference (:reference identity) :ssh_fingerprint (:fingerprint identity)}})
         backend (if (= "local" (:provider-backend opts))
                   {:config {:terraform {:backend {:local {:path (joined workdir profile node_id state_filename)}}}}}

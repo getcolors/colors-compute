@@ -1843,5 +1843,319 @@
     "expected": true,
     "name": "accept SDK root directory",
     "op": "node_plan_valid"
+  },
+  {
+    "name": "Google Local SSD refuses missing",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "c4a-standard-4-lssd",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1"
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "Google Local SSD refuses wrong count",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "c4a-standard-4-lssd",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1",
+        "google-local-ssd-count": 2
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "Google Local SSD refuses boolean",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "c4a-standard-4-lssd",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1",
+        "google-local-ssd-count": true
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "Google Local SSD refuses string",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "c4a-standard-4-lssd",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1",
+        "google-local-ssd-count": "1"
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": false
+  },
+  {
+    "name": "Google Local SSD refuses wrong shape",
+    "op": "node_plan_valid",
+    "args": [
+      {
+        "compute-prevent-destroy": true,
+        "google-boot-disk-size-gb": 20,
+        "google-image-id": "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts",
+        "google-machine-type": "n4a-standard-4",
+        "google-project": "colors-example-project",
+        "google-region": "europe-west1",
+        "google-zone": "europe-west1-b",
+        "profile": "production",
+        "provider-backend": "s3",
+        "provider-compute": "google",
+        "s3-bucket": "compute-fixture",
+        "s3-prefix": "infrastructure",
+        "s3-region": "eu-west-1",
+        "google-local-ssd-count": 1
+      },
+      {
+        "network": {
+          "cidr": "10.42.0.0/16",
+          "mode": "created",
+          "subnet_cidr": "10.42.1.0/24",
+          "zone": "eu-central"
+        },
+        "node_id": "app-0",
+        "security": {
+          "egress": "all",
+          "ingress": [
+            {
+              "from_port": 22,
+              "id": "ssh",
+              "protocol": "tcp",
+              "sources": [
+                "192.0.2.1/32"
+              ],
+              "to_port": 22
+            },
+            {
+              "from_port": 9093,
+              "id": "peer",
+              "protocol": "tcp",
+              "sources": [
+                "private"
+              ],
+              "to_port": 9094
+            }
+          ],
+          "private_filter": true
+        },
+        "ssh_resource": {
+          "fingerprint": "SHA256:ZkAslGjFiUHdGf/WUL8rQvkib4PTvQatUV0OUQSncCA",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f",
+          "reference": "ssh/v2/fixture/production/app-access"
+        },
+        "state_filename": "app-0.tfstate",
+        "workdir": "/sdk"
+      }
+    ],
+    "expected": false
   }
 ]
