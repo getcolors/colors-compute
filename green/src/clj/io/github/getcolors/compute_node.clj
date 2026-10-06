@@ -212,13 +212,25 @@
            (nil? (:check_results state))))
     (catch Exception _ false)))
 
-(defn- valid-state! [text identity]
-  (let [state (parse-one text)]
+(defn- valid-state! [text identity retry?]
+  (let [state (parse-one text)
+        output (get-in state [:outputs :compute_identity])]
     (require! (runtime/valid-state? state) "invalid compute state")
     (if (seq (:resources state))
       (do (require! (= identity (get-in state [:outputs :compute_identity :value])) "state identity mismatch; recover or delete the original node first")
           (require! (= (:provider identity) (get-in state [:outputs :params :value :provider])) "state provider mismatch; recover or delete the original node first"))
-      (when (seq (:outputs state))
+      ;; A failed first apply can persist ownership before creating resources.
+      ;; Keep that state (including its lineage) for the next ordinary apply.
+      (when (and (seq (:outputs state))
+                 (not (and retry?
+                           (= #{:compute_identity} (set (keys (:outputs state))))
+                           (map? output)
+                           (every? #{:value :sensitive :type} (keys output))
+                           (= identity (:value output))
+                           (false? (get output :sensitive false))
+                           (or (not (contains? output :type))
+                               (= ["object" (into {} (map (fn [k] [k "string"]) (keys identity)))]
+                                  (:type output))))))
         (throw (ex-info "inconsistent state" {:compute-code "state_inconsistent"}))))
     state))
 (defn- guarded-plan! [text operation]
@@ -341,7 +353,10 @@
                                   (if (request "GET" (gcs/object-path (:gcs-bucket opts) (str (:state_key plan) "/default.tfstate")) nil {}) "present" "absent"))
                           "error"))
              _ (when-not (or (not needs-presence?) (= "absent" observed)) (diagnostics/command-error! "state_unreadable"))
-             before (when-not needs-presence? (valid-state! (:out pulled) identity))
+             before (when-not needs-presence? (valid-state! (:out pulled) identity (= operation "create")))
+             _ (require! (not (and (= operation "create") (:compute-require-existing-state opts)
+                                   before (empty? (:resources before)) (seq (:outputs before))))
+                         "required state absent")
              _ (require! (or before (and (= operation "create") (not (:compute-require-existing-state opts)))) "compute state is required")
 ]
          (cond
@@ -365,7 +380,7 @@
              (command (cond-> ["plan" "-input=false" "-no-color" (str "-out=" plan-path)] (= operation "delete") (conj "-destroy")))
              (guarded-plan! (command ["show" "-json" plan-path]) operation)
              (command ["apply" "-input=false" "-no-color" plan-path])
-             (let [after (valid-state! (command ["state" "pull"]) identity)]
+             (let [after (valid-state! (command ["state" "pull"]) identity false)]
                (if (= operation "delete")
                  (do (require! (empty? (:resources after)) "compute deletion is incomplete")
                      {:status "destroyed" :directory (:directory plan)})

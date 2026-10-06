@@ -268,3 +268,92 @@
         (is (= "state_inconsistent" (get-in result [:error :code])))
         (is (= "possible" (get-in result [:error :infrastructure_changes]))))
       (finally (remove-tree dir)))))
+
+(defn retry-state [plan]
+  (let [owner (get-in plan [:documents "compute.tf.json" :output :compute_identity :value])]
+    {:version 4 :serial 1 :lineage "failed-first-apply" :resources []
+     :outputs {:compute_identity {:value owner :sensitive false
+                                  :type ["object" (into {} (map (fn [k] [k "string"]) (keys owner)))]}}}))
+
+(deftest failed-first-apply-retries-without-resetting-state
+  (doseq [registration? [false true] metadata? [false true]]
+    (let [dir (temp-dir) [opts original] (inputs dir "digitalocean")
+          request (if registration? {:name "access" :workdir dir :state_filename "registration.tfstate" :ssh_resource identity} original)
+          planner (if registration? node/build-registration! node/build-node!)
+          lifecycle (if registration? node/compute-registration! node/compute-node!)
+          plan (planner opts request) pending (cond-> (retry-state plan) (not metadata?) (update-in [:outputs :compute_identity] dissoc :sensitive :type))
+          path (str (:directory plan) "/" (:state_filename request))
+          calls (atom []) applies (atom 0) current (atom nil)
+          complete (-> pending (assoc :serial 2 :resources [{:type (if registration? "digitalocean_ssh_key" "digitalocean_droplet")}])
+                       (assoc-in [:outputs :params] {:value (if registration?
+                         {:provider "digitalocean" :node_id "registration-access" :id "12345"}
+                         {:provider "digitalocean" :node_id "app-0" :name "node" :ip "192.0.2.1" :user "root" :sudoer "root"})}))
+          runner (fn [args & _]
+                   (swap! calls conj args)
+                   (case (second args)
+                     "state" {:exit 0 :err "" :out (if @current (slurp path) "")}
+                     "show" {:exit 0 :err "" :out (json/generate-string {:format_version "1.2" :planned_values {} :resource_changes [{:change {:actions ["create"]}}]})}
+                     "apply" (let [first? (= 1 (swap! applies inc))]
+                               (when-not first? (is (= pending (json/parse-string (slurp path) true))))
+                               (reset! current (if first? pending complete))
+                               (spit path (json/generate-string @current))
+                               {:exit (if first? 1 0) :err (if first? "provider authentication failed" "") :out ""})
+                     {:exit 0 :err "" :out "{}"}))]
+      (try
+        (let [first-result (lifecycle opts request "create" {"COLORS_PAR_DO_TOKEN" "fixture"} {:runner runner})]
+          (is (= "error" (:status first-result)))
+          (is (= "possible" (get-in first-result [:error :infrastructure_changes])))
+          (is (= pending (json/parse-string (slurp path) true))))
+        (reset! calls [])
+        (is (= "ready" (:status (lifecycle opts request "create" {"COLORS_PAR_DO_TOKEN" "fixture"} {:runner runner}))))
+        (is (= ["init" "state" "plan" "show" "apply" "state"] (mapv second @calls)))
+        (is (= complete (json/parse-string (slurp path) true)))
+        (is (= 2 @applies))
+        (finally (remove-tree dir))))))
+
+(deftest retry-state-rejects-other-identities-outputs-and-operations
+  (doseq [registration? [false true]
+          mode [:wrong-identity :missing-field :extra-field :extra-output :null-output :sensitive :wrong-type :extra-wrapper-field :malformed :required :inspect :delete :resolve-connection]]
+    (let [dir (temp-dir) [base original] (inputs dir "digitalocean") opts (cond-> (assoc base :compute-prevent-destroy false) (= mode :required) (assoc :compute-require-existing-state true))
+          request (if registration? {:name "access" :workdir dir :state_filename "registration.tfstate" :ssh_resource identity} original)
+          planner (if registration? node/build-registration! node/build-node!)
+          lifecycle (if registration? node/compute-registration! node/compute-node!)
+          plan (planner opts request) pending (retry-state plan)
+          state (case mode
+                  :wrong-identity (assoc-in pending [:outputs :compute_identity :value :profile] "other")
+                  :missing-field (update-in pending [:outputs :compute_identity :value] dissoc :provider)
+                  :extra-field (assoc-in pending [:outputs :compute_identity :value :unexpected] "other")
+                  :extra-output (assoc-in pending [:outputs :unexpected] {:value true})
+                  :null-output (assoc-in pending [:outputs :compute_identity] nil)
+                  :sensitive (assoc-in pending [:outputs :compute_identity :sensitive] true)
+                  :wrong-type (assoc-in pending [:outputs :compute_identity :type] "string")
+                  :extra-wrapper-field (assoc-in pending [:outputs :compute_identity :unexpected] true)
+                  :malformed (assoc pending :lineage "")
+                  pending)
+          text (json/generate-string state) path (str (:directory plan) "/" (:state_filename request)) calls (atom [])
+          operation (if (contains? #{:inspect :delete :resolve-connection} mode) (name mode) "create")]
+      (try
+        (spit path text)
+        (let [result (lifecycle opts request operation {"COLORS_PAR_DO_TOKEN" "fixture"}
+                      {:runner (fn [args & _] (swap! calls conj args) {:exit 0 :err "" :out (if (= "state" (second args)) text "{}")})})]
+          (is (= "error" (:status result)) (str registration? " " mode))
+          (when (= mode :required) (is (= "state_absent" (get-in result [:error :code]))))
+          (when-not (or (contains? #{:malformed :required} mode) (and registration? (= mode :resolve-connection)))
+            (is (= "state_inconsistent" (get-in result [:error :code])) (str registration? " " mode)))
+          (is (= "none" (get-in result [:error :infrastructure_changes])))
+          (is (not-any? #(contains? #{"plan" "apply" "destroy"} (second %)) @calls))
+          (is (= text (slurp path))))
+        (finally (remove-tree dir))))))
+
+(deftest successful-apply-must-not-leave-only-retry-identity
+  (let [dir (temp-dir) {:keys [opts request plan runner env]} (harness dir) applied? (atom false)]
+    (try
+      (let [result (node/compute-node! opts request "create" env
+                    {:runner (fn [args cwd child timeout]
+                               (when (= "apply" (second args)) (reset! applied? true))
+                               (if (and @applied? (= "state" (second args)))
+                                 {:exit 0 :err "" :out (json/generate-string (retry-state plan))}
+                                 (runner args cwd child timeout)))})]
+        (is (= "state_inconsistent" (get-in result [:error :code])))
+        (is (= "possible" (get-in result [:error :infrastructure_changes]))))
+      (finally (remove-tree dir)))))

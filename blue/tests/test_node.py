@@ -304,14 +304,118 @@ async def test_inconsistent_state_actionable_and_does_not_mutate(tmp_path, regis
 
 
 @pytest.mark.asyncio
-async def test_inconsistent_state_after_apply_retains_possible_changes(tmp_path):
+@pytest.mark.parametrize('identity_only', [False, True])
+async def test_inconsistent_state_after_apply_retains_possible_changes(tmp_path, identity_only):
     opts, req = inputs(tmp_path)
     runner = LocalRunner(opts, req)
     async def inconsistent(args, cwd, env, timeout):
         result = await runner(args, cwd, env, timeout)
         if args[1] == 'state':
-            return ProcessResult(0, json.dumps({**runner.state(), 'resources': []}))
+            state = {**runner.state(), 'resources': []}
+            if identity_only:
+                state['outputs'] = {'compute_identity': state['outputs']['compute_identity']}
+            return ProcessResult(0, json.dumps(state))
         return result
     result = await execute(opts, req, inconsistent)
     assert result['error']['code'] == 'state_inconsistent'
     assert result['error']['infrastructure_changes'] == 'possible'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('registration', [False, True])
+@pytest.mark.parametrize('metadata', [False, True])
+async def test_failed_first_apply_retries_identity_only_state_without_reset(tmp_path, registration, metadata):
+    opts, req = inputs(tmp_path)
+    if registration:
+        req = {'name': 'access', 'workdir': str(tmp_path), 'state_filename': 'registration.tfstate', 'ssh_resource': IDENTITY}
+    planner = registration_plan if registration else node_plan
+    lifecycle = compute_registration if registration else compute_node
+    plan = planner(opts, req)
+    state_path = Path(plan['directory']) / req['state_filename']
+    identity_output = plan['documents']['compute.tf.json']['output']['compute_identity']
+    if metadata:
+        identity_output.update(sensitive=False, type=['object', {key: 'string' for key in identity_output['value']}])
+    failed_state = {'version': 4, 'serial': 7, 'lineage': 'retained-first-apply', 'resources': [],
+                    'outputs': {'compute_identity': identity_output}}
+    failed_text = json.dumps(failed_state)
+    params = {'provider': 'digitalocean', 'node_id': 'registration-access', 'id': '12345'} if registration else {
+        'provider': 'digitalocean', 'node_id': req['node_id'], 'name': 'node', 'ip': '192.0.2.1', 'user': 'root', 'sudoer': 'root'}
+    successful_state = {**failed_state, 'serial': 8, 'resources': [{'type': 'digitalocean_ssh_key' if registration else 'digitalocean_droplet'}],
+                        'outputs': {'compute_identity': identity_output, 'params': {'value': params}}}
+    applies, calls = 0, []
+
+    async def runner(args, cwd, env, timeout):
+        nonlocal applies
+        calls.append(args)
+        if state_path.exists() and applies == 1:
+            assert state_path.read_text() == failed_text
+        if args[1] == 'show':
+            return ProcessResult(0, json.dumps({'format_version': '1.2', 'planned_values': {}, 'resource_changes': [{'change': {'actions': ['create']}}]}))
+        if args[1] == 'apply':
+            applies += 1
+            if applies == 1:
+                state_path.write_text(failed_text)
+                return ProcessResult(1, '', 'provider temporarily unavailable')
+            state_path.write_text(json.dumps(successful_state))
+        if args[1] == 'state':
+            return ProcessResult(0, state_path.read_text())
+        return ProcessResult(0, '{}')
+
+    environment = {'COLORS_PAR_DO_TOKEN': 'fixture'}
+    first = await lifecycle(opts, req, 'create', environment, {'runner': runner})
+    assert first['error']['stage'] == 'apply'
+    assert first['error']['infrastructure_changes'] == 'possible'
+    assert state_path.read_text() == failed_text
+    retry = await lifecycle(opts, req, 'create', environment, {'runner': runner})
+    assert retry['status'] == 'ready'
+    assert applies == 2
+    assert json.loads(state_path.read_text())['lineage'] == failed_state['lineage']
+    assert not any(c[1] in ('destroy', 'import') or c[1:3] in (['state', 'rm'], ['state', 'push']) for c in calls)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('mode', ['wrong-profile', 'wrong-provider', 'wrong-node', 'wrong-file', 'wrong-reference',
+                                 'wrong-fingerprint', 'extra-output', 'malformed-wrapper', 'sensitive', 'bad-metadata', 'extra-metadata', 'require-existing',
+                                 'inspect', 'delete', 'resolve-connection', 'bad-version', 'bad-serial', 'bad-lineage'])
+async def test_identity_only_retry_rejects_unowned_or_malformed_state(tmp_path, mode):
+    opts, req = inputs(tmp_path)
+    opts['compute-prevent-destroy'] = False
+    plan = node_plan(opts, req)
+    identity_output = plan['documents']['compute.tf.json']['output']['compute_identity']
+    state = {'version': 4, 'serial': 3, 'lineage': 'keep-this-state', 'resources': [], 'outputs': {'compute_identity': identity_output}}
+    fields = {'wrong-profile': 'profile', 'wrong-provider': 'provider', 'wrong-node': 'node_id', 'wrong-file': 'state_filename',
+              'wrong-reference': 'ssh_resource_reference', 'wrong-fingerprint': 'ssh_fingerprint'}
+    if mode in fields:
+        identity_output['value'][fields[mode]] = 'other'
+    elif mode == 'extra-output':
+        state['outputs']['unexpected'] = {'value': 'do-not-expose'}
+    elif mode == 'malformed-wrapper':
+        state['outputs']['compute_identity'] = []
+    elif mode == 'sensitive':
+        identity_output['sensitive'] = True
+    elif mode == 'bad-metadata':
+        identity_output['type'] = 'string'
+    elif mode == 'extra-metadata':
+        identity_output['unexpected'] = False
+    elif mode == 'require-existing':
+        opts['compute-require-existing-state'] = True
+    elif mode == 'bad-version':
+        state['version'] = 3
+    elif mode == 'bad-serial':
+        state['serial'] = -1
+    elif mode == 'bad-lineage':
+        state['lineage'] = ''
+    state_path = Path(plan['directory']) / req['state_filename']
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    original = json.dumps(state)
+    state_path.write_text(original)
+    runner = LocalRunner(opts, req)
+    result = await execute(opts, req, runner, mode if mode in ('inspect', 'delete', 'resolve-connection') else 'create')
+    assert result['status'] == 'error'
+    if mode == 'require-existing':
+        assert result['error']['code'] == 'state_absent'
+    elif mode not in ('bad-version', 'bad-serial', 'bad-lineage'):
+        assert result['error']['code'] == 'state_inconsistent'
+    assert result['error']['infrastructure_changes'] == 'none'
+    assert not any(c[1] in ('plan', 'apply', 'destroy') for c in runner.calls)
+    assert state_path.read_text() == original

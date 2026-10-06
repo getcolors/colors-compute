@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {mkdtempSync,realpathSync,rmSync,existsSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,realpathSync,rmSync,existsSync,writeFileSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import fixtures from '../../test/fixtures/provider-requests.json';
@@ -58,3 +58,68 @@ test('inconsistent node and registration state explains recovery without mutatio
 });
 
 test('inconsistent state after apply retains possible changes',async()=>{const dir=root();try{const h=harness(dir);let applied=false;const result:any=await compute_node(h.opts,h.request,'create',h.env,{runner:async(args:string[],options:any)=>{if(args[1]==='apply')applied=true;const r=await h.runner(args,options);if(applied&&args[1]==='state')return {...r,out:JSON.stringify({...JSON.parse(r.out),resources:[]})};return r;}});expect(result.error.code).toBe('state_inconsistent');expect(result.error.infrastructure_changes).toBe('possible');}finally{rmSync(dir,{recursive:true,force:true});}});
+
+test('failed first apply retries its identity-only state without resetting lineage',async()=>{
+ for(const backend of ['local','r2'])for(const registration of [false,true]){
+  const dir=root();try{
+   const h=harness(dir),opts={...h.opts,'provider-backend':backend,'r2-bucket':'fixture','r2-endpoint':'https://fixture.r2.cloudflarestorage.com'};
+   const request=registration?{name:'access',workdir:dir,state_filename:'registration.tfstate',ssh_resource:identity}:h.request;
+   const plan=registration?registration_plan(opts,request):node_plan(opts,request),compute=registration?compute_registration:compute_node;
+   const initial={version:4,serial:7,lineage:'failed-first-apply',resources:[],outputs:{compute_identity:plan.documents['compute.tf.json'].output.compute_identity}};
+   if(backend==='r2')Object.assign(initial.outputs.compute_identity,{sensitive:false,type:['object',Object.fromEntries(Object.keys(initial.outputs.compute_identity.value).map(k=>[k,'string']))]});
+   let state:any,attempt=0;const calls:string[][]=[],path=join(plan.directory,request.state_filename);
+   const runner=async(args:string[])=>{
+    calls.push(args);
+    if(args[0]==='aws')return state?{exit:0,out:'{}',err:''}:{exit:1,out:'',err:'An error occurred (NoSuchKey) when calling the GetObject operation: missing'};
+    if(args[1]==='state')return {exit:0,out:JSON.stringify(state),err:''};
+    if(args[1]==='show')return {exit:0,out:JSON.stringify({format_version:'1.2',planned_values:{},resource_changes:[{change:{actions:['create']}}]}),err:''};
+    if(args[1]==='apply'){
+     attempt++;
+     if(attempt===1){state=structuredClone(initial);writeFileSync(path,JSON.stringify(state));return {exit:1,out:'',err:'temporary provider failure'};}
+     expect(state).toEqual(initial);expect(JSON.parse(readFileSync(path,'utf8'))).toEqual(initial);
+     state={...state,serial:8,resources:[{type:registration?'digitalocean_ssh_key':'digitalocean_droplet'}],outputs:{...state.outputs,params:{value:registration?{provider:'digitalocean',node_id:'registration-access',id:'12345'}:{provider:'digitalocean',node_id:h.request.node_id,name:'node',ip:'192.0.2.1',user:'root',sudoer:'root'}}}};
+     writeFileSync(path,JSON.stringify(state));
+    }
+    return {exit:0,out:'{}',err:''};
+   };
+   const env={...h.env,COLORS_PAR_R2_ACCESS_KEY_ID:'fixture-access',COLORS_PAR_R2_SECRET_ACCESS_KEY:'fixture-secret'};
+   const first:any=await compute(opts,request,'create',env,{runner});expect(first.status).toBe('error');expect(first.error.stage).toBe('apply');expect(first.error.infrastructure_changes).toBe('possible');
+   expect((await compute(opts,request,'create',env,{runner})).status).toBe('ready');expect(attempt).toBe(2);expect(state.lineage).toBe(initial.lineage);expect(state.serial).toBe(8);
+   expect(calls.filter(c=>c[1]==='state').every(c=>c[2]==='pull')).toBe(true);expect(calls.some(c=>c.includes('-force')||c.includes('-migrate-state'))).toBe(false);
+  }finally{rmSync(dir,{recursive:true,force:true});}
+ }
+});
+
+test('identity-only retry remains narrow and never bypasses existing-state or operation guards',async()=>{
+ for(const mode of ['mismatch','extra-identity','missing-identity','extra-output','malformed-identity','sensitive','bad-type','extra-wrapper','empty-lineage','invalid-serial','required','inspect','delete','resolve-connection']){
+  const dir=root();try{
+   const h=harness(dir),plan=build_node(h.opts,h.request),state:any={version:4,serial:1,lineage:'retry-guard',resources:[],outputs:{compute_identity:structuredClone(plan.documents['compute.tf.json'].output.compute_identity)}};
+   if(mode==='mismatch')state.outputs.compute_identity.value.profile='other';
+   if(mode==='extra-identity')state.outputs.compute_identity.value.extra='unexpected';
+   if(mode==='missing-identity')delete state.outputs.compute_identity.value.node_id;
+   if(mode==='extra-output')state.outputs.params={value:{provider:'digitalocean'}};
+   if(mode==='malformed-identity')state.outputs.compute_identity.value='PRIVATE_STATE';
+   if(mode==='sensitive')state.outputs.compute_identity.sensitive=true;
+   if(mode==='bad-type')state.outputs.compute_identity.type=['object',{}];
+   if(mode==='extra-wrapper')state.outputs.compute_identity.unknown=true;
+   if(mode==='empty-lineage')state.lineage='';
+   if(mode==='invalid-serial')state.serial=-1;
+   const path=join(plan.directory,h.request.state_filename),original=JSON.stringify(state);writeFileSync(path,original);const calls:string[][]=[];
+   const result:any=await compute_node({...h.opts,'compute-prevent-destroy':false,...(mode==='required'?{'compute-require-existing-state':true}:{})},h.request,['inspect','delete','resolve-connection'].includes(mode)?mode:'create',h.env,{runner:async(args:string[])=>{calls.push(args);return {exit:0,out:args[1]==='state'?original:'{}',err:''};}});
+   expect(result.status).toBe('error');expect(result.error.code).toBe(mode==='required'?'state_absent':['empty-lineage','invalid-serial'].includes(mode)?'state_unreadable':'state_inconsistent');expect(result.error.infrastructure_changes).toBe('none');expect(calls.some(c=>['plan','apply','destroy'].includes(c[1]))).toBe(false);expect(readFileSync(path,'utf8')).toBe(original);expect(JSON.stringify(result)).not.toContain('PRIVATE_STATE');
+  }finally{rmSync(dir,{recursive:true,force:true});}
+ }
+});
+
+test('successful apply must not report identity-only state as ready',async()=>{
+ const dir=root();try{
+  const h=harness(dir);let applied=false;
+  const result:any=await compute_node(h.opts,h.request,'create',h.env,{runner:async(args:string[],options:any)=>{
+   if(args[1]==='apply')applied=true;
+   const response=await h.runner(args,options);
+   if(applied&&args[1]==='state')return {...response,out:JSON.stringify({version:4,serial:1,lineage:'incomplete-apply',resources:[],outputs:{compute_identity:h.plan.documents['compute.tf.json'].output.compute_identity}})};
+   return response;
+  }});
+  expect(result.error.code).toBe('state_inconsistent');expect(result.error.infrastructure_changes).toBe('possible');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

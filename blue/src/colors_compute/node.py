@@ -420,15 +420,25 @@ async def compute_node(opts, request, operation='create', environment=None, depe
             prior = _params(state_text) if present else {}
             state = json.loads(state_text) if present else {'resources': [], 'outputs': {}}
             existing = state['resources']
-            if not existing and state['outputs']:
-                raise NodeError('state_inconsistent')
-            identity = state['outputs'].get('compute_identity', {}).get('value')
             expected_identity = plan['documents']['compute.tf.json']['output']['compute_identity']['value']
+            identity_output = state['outputs'].get('compute_identity')
+            identity = identity_output.get('value') if isinstance(identity_output, dict) else None
+            # A failed first apply can persist its static identity before any
+            # provider resource exists. Retry only the exact owned create.
+            identity_only_retry = (operation == 'create'
+                                   and set(state['outputs']) == {'compute_identity'}
+                                   and isinstance(identity_output, dict)
+                                   and set(identity_output) <= {'value', 'type', 'sensitive'}
+                                   and ('type' not in identity_output or identity_output['type'] == ['object', {key: 'string' for key in expected_identity}])
+                                   and identity_output.get('sensitive', False) is False
+                                   and identity == expected_identity)
+            if not existing and state['outputs'] and not identity_only_retry:
+                raise NodeError('state_inconsistent')
             if existing and (identity != expected_identity or prior.get('provider') != opts['provider-compute']):
                 raise ValueError('provider or unit change requires explicit state recovery')
             if not present and operation != 'create':
                 raise ValueError('state missing; explicit recovery required')
-            if not present and opts.get('compute-require-existing-state', False):
+            if (not present or not existing and identity_only_retry) and opts.get('compute-require-existing-state', False):
                 raise ValueError('existing state required')
         finally:
             observed_path.unlink(missing_ok=True)

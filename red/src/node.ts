@@ -78,6 +78,14 @@ function connectionAttachment(resources:Map[],provider:string,params:Map){
  if(provider==='google'){demand(machine.network_interface?.[0]?.access_config?.[0]?.nat_ip===params.ip,'public address is not attached to machine');return;}
  const nic=resource('azurerm_network_interface'),ip=resource('azurerm_public_ip');demand(typeof nic.id==='string'&&nic.id.trim()&&typeof ip.id==='string'&&ip.id.trim()&&typeof machine.id==='string'&&machine.id.trim()&&Array.isArray(machine.network_interface_ids)&&machine.network_interface_ids.includes(nic.id)&&nic.virtual_machine_id===machine.id&&Array.isArray(nic.ip_configuration)&&nic.ip_configuration.some((c:Map)=>c.public_ip_address_id===ip.id)&&ip.ip_address===params.ip,'public address is not attached to machine');
 }
+function retryIdentityOutput(outputs:Map,identity:Map){
+ if(Object.keys(outputs).length!==1||!object(outputs.compute_identity))return false;
+ const entry=outputs.compute_identity,value=entry.value;
+ if(!Object.keys(entry).every(k=>['value','type','sensitive'].includes(k))||(Object.hasOwn(entry,'sensitive')&&entry.sensitive!==false))return false;
+ if(!object(value)||Object.keys(value).length!==Object.keys(identity).length||!Object.entries(identity).every(([k,v])=>value[k]===v))return false;
+ if(Object.hasOwn(entry,'type')){const type=entry.type;if(!Array.isArray(type)||type.length!==2||type[0]!=='object'||!object(type[1])||Object.keys(type[1]).length!==Object.keys(identity).length||!Object.keys(identity).every(k=>type[1][k]==='string'))return false;}
+ return true;
+}
 export async function resolve_connection(opts:Map,request:Map,environment:Env=process.env,deps:Map={}){return compute_node(opts,request,'resolve-connection',environment,deps);}
 export async function compute_node(opts:Map,request:Map,operation='create',environment:Env=process.env,deps:Map={}){
  let credentialPath:string|undefined;let stage='validate',infrastructure_changes='none';let cancelled=false;try{
@@ -87,7 +95,11 @@ export async function compute_node(opts:Map,request:Map,operation='create',envir
  // Presence was independently established. An empty-lineage synthetic snapshot
  // here is inconsistent with that observation and must fail strict validation.
  if(before.trim())current=parseStateEnvelope(before).document;
- if(current&&current.resources.length===0&&Object.keys(current.outputs).length>0)throw new StateInconsistent();if(operation==='inspect'&&present&&current&&current.resources.length===0&&Object.keys(current.outputs).length===0)return {status:'destroyed',directory:plan.directory};const populated=current&&current.resources.length>0;const identity=plan.documents['compute.tf.json'].output.compute_identity.value;if(populated){demand(Object.entries(identity).every(([k,v])=>current!.outputs.compute_identity?.value?.[k]===v),'state identity mismatch; explicit recovery required');}demand(!populated||current!.outputs.params?.value?.provider===opts['provider-compute'],'state provider mismatch');demand(operation!=='create'||opts['compute-require-existing-state']!==true||populated,'required state absent');
+ const identity=plan.documents['compute.tf.json'].output.compute_identity.value;
+ // A failed first apply can persist its static identity before any resources.
+ // Only create may retry that exact identity; the snapshot is never reset.
+ const identityOnly=operation==='create'&&current&&retryIdentityOutput(current.outputs,identity);
+ if(current&&current.resources.length===0&&Object.keys(current.outputs).length>0&&!identityOnly)throw new StateInconsistent();if(operation==='inspect'&&present&&current&&current.resources.length===0&&Object.keys(current.outputs).length===0)return {status:'destroyed',directory:plan.directory};const populated=current&&current.resources.length>0;if(populated){demand(Object.entries(identity).every(([k,v])=>current!.outputs.compute_identity?.value?.[k]===v),'state identity mismatch; explicit recovery required');}demand(!populated||current!.outputs.params?.value?.provider===opts['provider-compute'],'state provider mismatch');demand(operation!=='create'||opts['compute-require-existing-state']!==true||populated,'required state absent');
  if(operation==='inspect'){demand(populated,'state absent');return {status:'ready',directory:plan.directory,params:normalize(current!.outputs.params.value,environment)};}
  if(operation==='resolve-connection'){
  demand(populated,'node state absent');const machine=machineIdentity(current!.resources,opts['provider-compute']);const path=join(plan.directory,'connection.tfplan');

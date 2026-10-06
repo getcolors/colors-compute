@@ -99,8 +99,15 @@ Create validates state identity before planning. `compute-require-existing-state
 refuses absent ownership. Read failures are never interpreted as absence.
 Create refuses delete/replacement actions; delete requires explicit
 `compute-prevent-destroy: false` and refuses create/update actions. Delete cannot
-proceed against independently missing state. Empty state with leftover outputs
-requires recovery; a strictly empty readable state can be inspected as destroyed.
+proceed against independently missing state. An initial create may retry a failed
+first apply whose valid state contains no resources and only a non-sensitive
+`compute_identity` output exactly matching the requested identity. This narrow
+case requires `compute-require-existing-state` to be false or unset and reuses
+the existing state and lineage; it never resets state, bypasses plan
+guards, or retries an apply automatically. Other resource-free states with
+leftover outputs require recovery. Inspect, connection resolution, delete, and
+post-apply validation do not accept the create-retry exception. A strictly empty
+readable state can be inspected as destroyed.
 Cancellation propagates and owned command processes are cleaned up by the runner.
 
 Delete nodes first, then their separately owned registrations, then explicitly

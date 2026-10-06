@@ -85,8 +85,13 @@ The library neither launches login nor retries the operation.
 
 ## Inconsistent state
 
-A valid, readable state envelope with no resources but remaining outputs returns
-`state_inconsistent`, rather than `state_unreadable`. Its authored message explains
+An initial create can accept a valid resource-free state containing only the
+non-sensitive `compute_identity` output exactly matching its requested identity,
+as left by a failed first apply. This permits an explicit create retry without
+rewriting state or replacing SSH authority. All other valid, readable states
+with no resources but remaining outputs return `state_inconsistent`, rather than
+`state_unreadable`; the exception does not apply to other operations or the
+post-apply result. Its authored message explains
 that retrying unchanged will fail and asks the operator to back up the affected
 state and verify actual provider resources before recovery. It warns against
 blindly deleting state or replacing the SSH identity. Callers should identify

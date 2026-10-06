@@ -11,7 +11,7 @@ from urllib.parse import quote, quote_plus
 MESSAGES = {
     'command_failed': 'Required command failed.',
     'missing_credentials': 'Required credentials are not set.',
-    'state_inconsistent': 'Compute state is inconsistent: it contains no resources but still has outputs. Back up the affected state and verify the provider resources before recovering it. Retrying unchanged will fail again. Do not delete state or replace the SSH identity blindly.',
+    'state_inconsistent': 'Compute state is inconsistent: a resource-free state may only contain the exact requested compute identity for a create retry. Back up the affected state and verify the provider resources before recovering it. Retrying unchanged will fail again. Do not delete state or replace the SSH identity blindly.',
     'state_unreadable': 'Compute state could not be read.',
     'state_absent': 'Required compute state is absent.',
     'identity_mismatch': 'Compute state identity does not match the requested node.',
