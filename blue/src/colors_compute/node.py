@@ -90,6 +90,19 @@ def _registration_identity(provider, request, identity):
     return value
 
 
+def _google_local_disks(opts, root):
+    machine = opts.get('google-machine-type')
+    match = re.fullmatch(r'c4a-(?:standard|highmem)-(4|8|16|32|48|64|72)-lssd', machine) if isinstance(machine, str) else None
+    if 'google-local-ssd-count' in opts or (opts.get('provider-compute') == 'google' and match):
+        count = opts.get('google-local-ssd-count')
+        expected = {'4': 1, '8': 2, '16': 4, '32': 6, '48': 10, '64': 14, '72': 16}.get(match[1]) if match else None
+        if opts.get('provider-compute') != 'google' or not match or type(count) is not int or count != expected:
+            raise ValueError('google-local-ssd-count must match the fixed disk count of a C4A -lssd machine')
+        root['resource']['google_compute_instance']['node']['scratch_disk'] = [
+            {'interface': 'NVME', 'size': 375} for _ in range(count)]
+    return root
+
+
 def node_plan(opts, request):
     """Render one node without credentials, filesystem changes, or topology expansion."""
     opts, request = deepcopy(opts), deepcopy(request)
@@ -171,7 +184,7 @@ def node_plan(opts, request):
         _merge(merged, {key: value for key, value in document.items() if key != 'output'})
     for document in node_docs.values():
         _merge(merged, document)
-    merged = _replace(merged, replacements)
+    merged = _google_local_disks(opts, _replace(merged, replacements))
     if registration:
         merged.get('resource', {}).pop(_REGISTRATIONS[provider], None)
     merged.setdefault('output', {})['compute_identity'] = {'value': {'profile': profile, 'node_id': node, 'state_filename': filename, 'provider': provider, 'ssh_resource_reference': identity['reference'], 'ssh_fingerprint': identity['fingerprint']}}

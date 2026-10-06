@@ -47,6 +47,17 @@ directory and normalized `params`; these contain machine outputs and no
 `ssh_identity_file`. Agent access is a separate scope capability. Delete returns
 `status: destroyed`. Errors follow [structured diagnostics](errors.md).
 
+## Google C4A Local SSDs
+
+For a C4A `standard` or `highmem` `-lssd` machine, explicitly set
+`google-local-ssd-count` to the fixed count for its shape: 4 vCPUs → 1,
+8 → 2, 16 → 4, 32 → 6, 48 → 10, 64 → 14, 72 → 16.
+The node declares that many 375 GiB NVMe `scratch_disk` blocks, avoiding
+unmanaged implicit disks and replacement drift. A missing or mismatched count
+is refused; this option is currently limited to these C4A shapes. Formatting,
+mounts and recovery of ephemeral data remain the application's responsibility.
+No commitment or reservation is purchased by node creation.
+
 ## Provider registration API
 
 `registration_plan`, `build_registration`, and `compute_registration` use the
