@@ -37,6 +37,8 @@ python3 scripts/provider_resources.py
 python3 scripts/provider_recipes.py
 python3 scripts/connection_plan.py
 python3 scripts/ssh_resources.py
+python3 scripts/test_ssh_absence.py
+python3 scripts/absence_parity.py
 uv run --project blue python scripts/parity.py
 uv run --project blue python scripts/ssh_parity.py
 uv run --project blue python scripts/ssh_lifecycle.py

@@ -63,4 +63,4 @@ export {endpoint_agent} from './endpoint.ts';
 export {controller_artifact} from './controller.ts';
 export {node_layout,node_plan,build_node,compute_node,resolve_connection,registration_plan,build_registration,compute_registration} from './node.ts';
 
-export {ssh_plan,ssh_resource,ssh_export,start_agent} from "./ssh.ts";
+export {ssh_plan,ssh_resource,ssh_verify_absent,ssh_export,start_agent} from "./ssh.ts";

@@ -6,9 +6,9 @@ from .provider_request import provider_request
 from .endpoint import endpoint_agent
 from .controller import controller_artifact
 
-__all__ = ["ssh_plan", "ssh_resource", "ssh_export", "start_agent", "registration_plan", "build_registration", "compute_registration", "node_plan", "build_node", "compute_node", "resolve_connection", "credential_requirements",
+__all__ = ["ssh_plan", "ssh_resource", "ssh_verify_absent", "ssh_export", "start_agent", "registration_plan", "build_registration", "compute_registration", "node_plan", "build_node", "compute_node", "resolve_connection", "credential_requirements",
            "compute_credential_errors", "validate", "registry", "backend_plan",
            "provider_plan", "render_template", "provider_request", "endpoint_agent",
            "controller_artifact"]
 
-from .ssh import ssh_plan, ssh_resource, ssh_export, start_agent
+from .ssh import ssh_plan, ssh_resource, ssh_verify_absent, ssh_export, start_agent

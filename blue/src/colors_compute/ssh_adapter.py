@@ -271,7 +271,9 @@ def storage_environment(plan):
         'AWS_RESPONSE_CHECKSUM_VALIDATION': 'when_required'}
     for name in ('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN', 'AWS_PROFILE',
                  'AWS_DEFAULT_PROFILE', 'AWS_CONFIG_FILE', 'AWS_SHARED_CREDENTIALS_FILE', 'AWS_CA_BUNDLE',
-                 'GOOGLE_APPLICATION_CREDENTIALS', 'CLOUDSDK_CONFIG'):
+                 'GOOGLE_APPLICATION_CREDENTIALS', 'CLOUDSDK_CONFIG', 'AWS_ROLE_ARN',
+                 'AWS_WEB_IDENTITY_TOKEN_FILE', 'AWS_ROLE_SESSION_NAME', 'AWS_CONTAINER_CREDENTIALS_RELATIVE_URI',
+                 'AWS_CONTAINER_CREDENTIALS_FULL_URI', 'AWS_CONTAINER_AUTHORIZATION_TOKEN', 'AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE'):
         if name in os.environ:
             env[name] = os.environ[name]
     prefix = plan['storage'].get('credential_prefix')
@@ -687,6 +689,370 @@ def agent_session(entries, lifetime=900):
                 agent.wait()
 
 
+# Consumer verification intentionally does not inspect or create SSH authority.
+def absence_json(raw):
+    def reject(_):
+        raise ResourceError('invalid absence verification JSON')
+    def pairs(entries):
+        result = {}
+        for key, value in entries:
+            require(key not in result, 'duplicate absence verification JSON field')
+            result[key] = value
+        return result
+    return json.loads(raw, parse_constant=reject, object_pairs_hook=pairs)
+
+
+def absence_empty_state(raw):
+    if raw is None:
+        return
+    state = absence_json(raw)
+    require(isinstance(state, dict) and type(state.get('version')) is int and state['version'] == 4
+            and type(state.get('serial')) is int and 0 <= state['serial'] <= 9007199254740991
+            and isinstance(state.get('lineage'), str) and bool(state['lineage'].strip())
+            and state.get('resources') == [] and state.get('outputs') == {},
+            'consumer state is present or invalid; recover the existing SSH identity')
+
+
+def absence_state(opts, workdir, node, filename):
+    # Inspect persisted local state even for remote backends, so a stale local
+    # consumer cannot be silently ignored when remote authority has disappeared.
+    directory = Path(workdir) / opts['profile'] / node
+    local = directory / filename
+    for parent in (directory, *directory.parents):
+        require(not parent.is_symlink(), 'unsafe consumer state directory')
+    # Read directly: Path.exists() can hide an inaccessible directory as absence.
+    absence_empty_state(read_private(local))
+    kind = opts['provider-backend']
+    if kind == 'local':
+        return
+    key = '/'.join(p for p in (opts.get('s3-prefix', ''), opts['profile'], filename) if p)
+    storage = {'kind': kind, 'bucket': opts[kind + '-bucket']}
+    if kind != 'gcs':
+        storage['region'] = 'auto' if kind == 'r2' else opts[kind + '-region']
+    if kind in ('r2', 'oci'):
+        storage['credential_prefix'] = kind.upper()
+        storage['endpoint'] = opts['r2-endpoint'] if kind == 'r2' else 'https://' + opts['oci-namespace'] + '.compat.objectstorage.' + opts['oci-region'] + '.oraclecloud.com'
+    env = storage_environment({'storage': storage})
+    with tempfile.TemporaryDirectory(prefix='colors-absence-') as tmp:
+        target = Path(tmp) / 'state'
+        if kind == 'gcs':
+            # The GCS OpenTofu backend appends the workspace name to its prefix.
+            url = 'gs://' + storage['bucket'] + '/' + key + '/default.tfstate'
+            _, token_raw, _ = run(['gcloud', 'auth', 'application-default', 'print-access-token'], env)
+            token = token_raw.decode().strip()
+            require(bool(token) and not any(c.isspace() for c in token), 'invalid GCS ADC token')
+            token_path = Path(tmp) / 'access-token'
+            token_path.write_text(token)
+            token_path.chmod(0o600)
+            gcloud = ['gcloud', '--access-token-file=' + str(token_path)]
+            code, out, err = run(gcloud + ['storage', 'objects', 'describe', url, '--format=json'], env, allowed=tuple(range(256)))
+            if code:
+                require(b'No URLs matched' in err or b'HTTPError 404' in err, 'consumer state lookup failed')
+                run(gcloud + ['storage', 'buckets', 'describe', 'gs://' + storage['bucket'], '--format=json'], env)
+                return
+            generation = absence_json(out)['generation']
+            require(str(generation).isdigit(), 'invalid consumer state generation')
+            run(gcloud + ['storage', 'cp', url + '#' + str(generation), str(target)], env)
+        else:
+            args = ['aws', 's3api', 'get-object', '--bucket', storage['bucket'], '--key', key,
+                    '--region', storage['region'], '--no-cli-pager', '--output', 'json']
+            if 'endpoint' in storage:
+                args += ['--endpoint-url', storage['endpoint']]
+            code, out, err = run(args + [str(target)], env, allowed=tuple(range(256)))
+            if code:
+                require(bool(re.search(rb'An error occurred \(NoSuchKey\) when calling the GetObject operation', err)), 'consumer state lookup failed')
+                return
+        require(target.is_file() and target.stat().st_size <= 16 * 1024 * 1024, 'invalid consumer state object')
+        absence_empty_state(target.read_bytes())
+
+
+def absence_http(url, token):
+    import urllib.request
+    # Do not follow redirects with provider credentials.
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *args, **kwargs):
+            return None
+    request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/json'})
+    try:
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
+            raw = response.read(16 * 1024 * 1024 + 1)
+        require(len(raw) <= 16 * 1024 * 1024, 'provider inventory oversized')
+        value = absence_json(raw)
+        require(isinstance(value, dict), 'invalid provider inventory')
+        return value
+    except ResourceError:
+        raise
+    except Exception:
+        raise ResourceError('provider inventory lookup failed') from None
+
+
+def absence_names(items, field, expected):
+    require(isinstance(items, list), 'invalid provider inventory')
+    for item in items:
+        require(isinstance(item, dict) and isinstance(item.get(field), str) and bool(item[field]), 'invalid provider resource')
+        require(item[field] not in expected, 'SSH consumer exists at provider; recover the existing SSH identity')
+
+
+def absence_inventory(provider, path, field, names, token):
+    from urllib.parse import urlsplit, parse_qs, urlencode
+    base = {'digitalocean': 'https://api.digitalocean.com/v2/', 'hcloud': 'https://api.hetzner.cloud/v1/', 'vultr': 'https://api.vultr.com/v2/'}[provider] + path
+    url = base + '?per_page=100'
+    seen, count, total = set(), 0, None
+    for _ in range(10000):
+        require(url not in seen, 'repeated provider inventory page')
+        seen.add(url)
+        data = absence_http(url, token)
+        items = data.get(field)
+        absence_names(items, 'label' if provider == 'vultr' and field == 'instances' else 'name', names)
+        count += len(items)
+        meta = data.get('meta')
+        require(isinstance(meta, dict), 'missing provider pagination metadata')
+        if provider == 'hcloud':
+            pagination = meta.get('pagination')
+            require(isinstance(pagination, dict) and {'next_page','page','total_entries'} <= set(pagination), 'invalid provider pagination')
+            next_page = pagination['next_page']
+            current_page = int(parse_qs(urlsplit(url).query).get('page', ['1'])[0])
+            require(pagination.get('page') == current_page, 'inconsistent provider pagination')
+            declared = pagination.get('total_entries')
+            require(declared is None or type(declared) is int and declared >= 0, 'invalid provider total')
+            require(next_page is None or type(next_page) is int and next_page == current_page + 1, 'invalid provider pagination')
+            next_url = None if next_page is None else base + '?' + urlencode({'per_page':100,'page':next_page})
+        else:
+            if provider == 'digitalocean':
+                require(isinstance(data.get('links'), dict), 'missing provider pagination links')
+            links = data.get('links', {}).get('pages', {}) if provider == 'digitalocean' else meta.get('links')
+            require(isinstance(links, dict), 'missing provider pagination links')
+            next_url = links.get('next')
+            require(next_url is None or isinstance(next_url, str), 'invalid provider pagination')
+            declared = meta.get('total')
+            require(type(declared) is int and declared >= 0, 'invalid provider total')
+        if total is None:
+            total = declared
+        require(declared == total, 'provider inventory changed during verification')
+        if not next_url:
+            require(total is None or count == total, 'incomplete provider inventory')
+            return
+        require(isinstance(next_url, str) and bool(items), 'invalid provider pagination')
+        parsed, original = urlsplit(next_url), urlsplit(base)
+        require(parsed.scheme == 'https' and parsed.netloc == original.netloc and parsed.path == original.path
+                and not parsed.fragment and not parsed.username, 'unsafe provider pagination URL')
+        query = parse_qs(parsed.query)
+        require(set(query) <= {'page','per_page','cursor'} and all(len(v) == 1 for v in query.values()), 'unexpected provider pagination query')
+        url = next_url
+    raise ResourceError('provider inventory pagination limit exceeded')
+
+
+def absence_yandex_token(value):
+    # The provider accepts IAM tokens directly and exchanges Passport OAuth tokens.
+    if value.startswith('t1.'):
+        return value
+    import urllib.request
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *args, **kwargs):
+            return None
+    request = urllib.request.Request('https://iam.api.cloud.yandex.net/iam/v1/tokens',
+        data=canonical({'yandexPassportOauthToken': value}).encode(),
+        headers={'Content-Type': 'application/json'}, method='POST')
+    try:
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=30) as response:
+            raw = response.read(1024 * 1024 + 1)
+        require(len(raw) <= 1024 * 1024, 'invalid Yandex credential response')
+        data = absence_json(raw)
+        require(isinstance(data, dict) and isinstance(data.get('iamToken'), str)
+                and bool(data['iamToken']) and not any(c.isspace() for c in data['iamToken']),
+                'invalid Yandex credential response')
+        return data['iamToken']
+    except ResourceError:
+        raise
+    except Exception:
+        raise ResourceError('Yandex credential lookup failed') from None
+
+
+def absence_other_provider(opts, nodes, registrations):
+    from urllib.parse import urlencode
+    provider = opts['provider-compute']
+    env = clean_environment()
+    def setting(name):
+        value = opts.get(name)
+        require(isinstance(value, str) and bool(value.strip()) and not value.startswith('-')
+                and not any(ord(c) < 32 for c in value), 'missing provider verification scope')
+        return value
+    require(not registrations, 'unexpected provider registration descriptors')
+    if provider == 'azure':
+        if 'AZURE_CONFIG_DIR' in os.environ:
+            env['AZURE_CONFIG_DIR'] = os.environ['AZURE_CONFIG_DIR']
+        # Match the provider's default Azure CLI session and explicit subscription.
+        _, output, _ = run(['az','vm','list','--subscription',setting('azure-subscription-id'),
+            '--output','json','--only-show-errors'], env)
+        data = absence_json(output)
+        require(isinstance(data, list), 'invalid Azure inventory')
+        for item in data:
+            require(isinstance(item, dict) and isinstance(item.get('id'), str)
+                    and isinstance(item.get('name'), str), 'invalid Azure instance')
+        absence_names(data, 'name', nodes)
+    elif provider == 'oci':
+        # Match the provider's configured profile, API-key auth and default config path.
+        home = env.get('HOME')
+        require(isinstance(home, str) and home.startswith('/'), 'missing OCI configuration home')
+        _, output, _ = run(['oci','compute','instance','list','--compartment-id',setting('oci-compartment-id'),
+            '--profile',setting('oci-config-file-profile'),'--config-file',str(Path(home)/'.oci/config'),
+            '--auth','api_key','--all','--output','json'], env)
+        data = absence_json(output)
+        require(isinstance(data, dict) and isinstance(data.get('data'), list)
+                and not data.get('opc-next-page'), 'invalid OCI inventory')
+        for item in data['data']:
+            require(isinstance(item, dict) and isinstance(item.get('id'), str)
+                    and isinstance(item.get('display-name'), str)
+                    and isinstance(item.get('lifecycle-state'), str), 'invalid OCI instance')
+        # Terminated records are retained temporarily by OCI; refuse them conservatively.
+        absence_names(data['data'], 'display-name', nodes)
+    elif provider == 'yandex':
+        credential = os.environ.get('COLORS_PAR_YANDEX_TOKEN')
+        require(isinstance(credential, str) and bool(credential.strip()) and credential != 'REPLACE_ME',
+                'missing provider verification credentials')
+        token = absence_yandex_token(credential)
+        page, seen, ids = None, set(), set()
+        for _ in range(10000):
+            query = {'folderId':setting('yandex-folder-id'),'pageSize':1000}
+            if page:
+                query['pageToken'] = page
+            data = absence_http('https://compute.api.cloud.yandex.net/compute/v1/instances?' + urlencode(query), token)
+            require(isinstance(data, dict) and not data.get('error'), 'invalid Yandex inventory')
+            items = data.get('instances', [])
+            require(isinstance(items, list), 'invalid Yandex inventory')
+            for item in items:
+                require(isinstance(item, dict) and isinstance(item.get('id'), str)
+                        and bool(item['id']) and item['id'] not in ids, 'invalid Yandex instance')
+                ids.add(item['id'])
+            absence_names(items, 'name', nodes)
+            page = data.get('nextPageToken')
+            require(page is None or isinstance(page, str), 'invalid Yandex pagination')
+            if not page:
+                return
+            require(page not in seen and bool(items), 'invalid Yandex pagination')
+            seen.add(page)
+        raise ResourceError('provider inventory pagination limit exceeded')
+    else:
+        raise ResourceError('unsupported provider verification')
+
+
+def absence_provider(opts, nodes, registrations):
+    from urllib.parse import quote, urlencode
+    provider = opts['provider-compute']
+    env = storage_environment({'storage': {}})
+    def setting(name):
+        value = opts.get(name)
+        require(isinstance(value, str) and bool(value.strip()) and not value.startswith('-'), 'missing provider verification scope')
+        return value
+    if provider in ('digitalocean', 'hcloud', 'vultr'):
+        binding, machine_path, machine_field, key_path, key_field = {
+            'digitalocean': ('DO_TOKEN','droplets','droplets','account/keys','ssh_keys'),
+            'hcloud': ('HCLOUD_TOKEN','servers','servers','ssh_keys','ssh_keys'),
+            'vultr': ('VULTR_API_KEY','instances','instances','ssh-keys','ssh_keys')}[provider]
+        token = os.environ.get('COLORS_PAR_' + binding)
+        require(isinstance(token, str) and bool(token.strip()) and token != 'REPLACE_ME', 'missing provider verification credentials')
+        absence_inventory(provider, machine_path, machine_field, nodes, token)
+        absence_inventory(provider, key_path, key_field, registrations, token)
+    elif provider == 'google':
+        # Terraform's Google provider uses ADC, not the active gcloud account.
+        _, output, _ = run(['gcloud','auth','application-default','print-access-token'], env)
+        token = output.decode().strip()
+        require(bool(token) and not any(c.isspace() for c in token), 'invalid Google ADC token')
+        base = 'https://compute.googleapis.com/compute/v1/projects/' + quote(setting('google-project'), safe='') + '/aggregated/instances'
+        page, seen = None, set()
+        for _ in range(10000):
+            query = {'maxResults':500,'returnPartialSuccess':'false'}
+            if page:
+                query['pageToken'] = page
+            data = absence_http(base + '?' + urlencode(query), token)
+            require(data.get('kind') == 'compute#instanceAggregatedList' and not data.get('unreachables') and not data.get('error'), 'incomplete Google inventory')
+            warning = data.get('warning')
+            if warning is not None:
+                require(isinstance(warning, dict) and warning.get('code') == 'NO_RESULTS_ON_PAGE'
+                        and ('items' not in data or data['items'] == {}), 'incomplete Google inventory')
+            scopes = data.get('items', {} if warning is not None else None)
+            require(isinstance(scopes, dict), 'invalid Google inventory')
+            for scope in scopes.values():
+                require(isinstance(scope, dict) and not scope.get('error'), 'invalid Google inventory scope')
+                if 'warning' in scope:
+                    require(isinstance(scope['warning'], dict) and scope['warning'].get('code') == 'NO_RESULTS_ON_PAGE' and not scope.get('instances'), 'incomplete Google inventory scope')
+                else:
+                    absence_names(scope.get('instances'), 'name', nodes)
+            next_page = data.get('nextPageToken')
+            if next_page is None:
+                return
+            require(isinstance(next_page, str) and bool(next_page) and next_page not in seen, 'invalid Google pagination')
+            seen.add(next_page)
+            page = next_page
+        raise ResourceError('Google inventory pagination limit exceeded')
+    elif provider == 'aws':
+        region = setting('aws-region')
+        # AWS CLI auto-pagination returns the full inventory; a residual token
+        # means the inventory is incomplete and must not authorize creation.
+        def aws(operation):
+            _, out, _ = run(['aws','ec2',operation,'--region',region,'--output','json','--no-cli-pager'], env)
+            data = absence_json(out)
+            require(isinstance(data, dict) and not data.get('NextToken'), 'incomplete AWS inventory')
+            return data
+        data = aws('describe-instances')
+        require(isinstance(data.get('Reservations'), list), 'invalid AWS inventory')
+        for reservation in data['Reservations']:
+            require(isinstance(reservation, dict) and isinstance(reservation.get('Instances'), list), 'invalid AWS reservation')
+            for instance in reservation['Instances']:
+                require(isinstance(instance, dict) and isinstance(instance.get('InstanceId'), str), 'invalid AWS instance')
+                tags = instance.get('Tags', [])
+                require(isinstance(tags, list) and all(isinstance(t, dict) and isinstance(t.get('Key'), str) and isinstance(t.get('Value'), str) for t in tags), 'invalid AWS tags')
+                require(not any(t['Key'] == 'Name' and t['Value'] in nodes for t in tags), 'SSH consumer exists at provider; recover the existing SSH identity')
+                require(instance.get('KeyName') not in registrations, 'SSH key registration still has a consumer')
+        absence_names(aws('describe-key-pairs').get('KeyPairs'), 'KeyName', registrations)
+    elif provider in ('azure', 'oci', 'yandex'):
+        absence_other_provider(opts, nodes, registrations)
+    else:
+        raise ResourceError('provider absence verification is not supported for this provider')
+
+
+def verify_absent(opts, request):
+    require(not os.environ.get('COLORS_ABSENCE_AUTH_UNSUPPORTED'), 'unsupported provider authentication override; cannot verify the deployment account')
+    require(isinstance(opts, dict) and isinstance(request, dict) and set(request) == {'workdir','consumers','registrations'}, 'invalid consumer verification request')
+    safe = lambda value: isinstance(value, str) and bool(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,62}', value))
+    require(safe(opts.get('profile')), 'invalid verification profile')
+    workdir = request['workdir']
+    require(isinstance(workdir, str) and workdir.startswith('/') and str(Path(workdir)) == workdir and '..' not in Path(workdir).parts and '\\' not in workdir and '\x00' not in workdir, 'invalid verification workdir')
+    require(opts.get('provider-backend') in ('local','s3','r2','oci','gcs'), 'invalid verification backend')
+    backend = opts['provider-backend']
+    if backend != 'local':
+        require(isinstance(opts.get(backend + '-bucket'), str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{1,221}', opts[backend + '-bucket']), 'invalid verification bucket')
+    if backend in ('s3','oci'):
+        require(isinstance(opts.get(backend + '-region'), str) and re.fullmatch(r'[A-Za-z0-9_-]+', opts[backend + '-region']), 'invalid verification region')
+    if backend == 'oci':
+        require(isinstance(opts.get('oci-namespace'), str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*', opts['oci-namespace']), 'invalid verification namespace')
+    if backend == 'r2':
+        require(isinstance(opts.get('r2-endpoint'), str) and re.fullmatch(r'https://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?/?', opts['r2-endpoint']), 'invalid verification endpoint')
+    prefix = opts.get('s3-prefix', '')
+    require(isinstance(prefix, str) and (not prefix or all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', part) for part in prefix.split('/'))), 'invalid verification state prefix')
+    require(isinstance(request['consumers'], list) and bool(request['consumers']) and isinstance(request['registrations'], list), 'explicit SSH consumers are required')
+    registered = opts.get('provider-compute') in ('aws','digitalocean','hcloud','vultr')
+    require(bool(request['registrations']) == registered, 'explicit provider SSH registrations are required')
+    nodes, keys, filenames, identities, entries = set(), set(), set(), set(), []
+    for kind, field, destination in (('consumers','node_id',nodes), ('registrations','name',keys)):
+        for entry in request[kind]:
+            require(isinstance(entry, dict) and set(entry) == {field,'state_filename'} and safe(entry[field]), 'invalid SSH consumer descriptor')
+            filename = entry['state_filename']
+            node = ('registration-' if kind == 'registrations' else '') + entry[field]
+            name = opts['profile'] + '-' + node
+            require(safe(node) and safe(name) and isinstance(filename, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*\.tfstate', filename), 'invalid SSH consumer identity')
+            require(filename not in filenames and node not in identities, 'duplicate SSH consumer identity')
+            filenames.add(filename)
+            identities.add(node)
+            destination.add(name)
+            entries.append((node, filename))
+    # Read all state before any provider query. Never mutate provider or state.
+    for node, filename in entries:
+        absence_state(opts, workdir, node, filename)
+    absence_provider(opts, nodes, keys)
+    return {'status':'verified', 'verified_absent':True}
+
+
 def main():
     if os.environ.get('COLORS_SSH_ASKPASS') == '1':
         counter = Path(os.environ['COLORS_SSH_ASKPASS_COUNTER'])
@@ -717,6 +1083,8 @@ def main():
                             break
                     else:
                         renew()
+        elif message['operation'] == 'verify_absent':
+            print(canonical(verify_absent(message['opts'], message['request'])), flush=True)
         elif message['operation'] == 'export':
             print(canonical(export_resource(message['plan'], message['request'], message['destination'], message['export_operation'])), flush=True)
         else:

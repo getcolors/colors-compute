@@ -52,6 +52,9 @@ jobs:
       - run: python3 scripts/compute_options.py --tofu "$(command -v tofu)"
       - run: python3 scripts/yandex_static_ip.py
       - run: python3 scripts/connection_plan.py
+      - run: python3 scripts/ssh_resources.py
+      - run: python3 scripts/test_ssh_absence.py
+      - run: python3 scripts/absence_parity.py
       - run: uv run --project blue python scripts/parity.py
       - run: uv run --directory blue pytest -q
       - run: bb test

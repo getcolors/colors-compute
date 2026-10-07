@@ -185,3 +185,60 @@ checks. The authority is reread and reserved by conditional write; the attestati
 does not bypass a concurrent authority write. Local-backed resources retain their
 local record, lock, and cache recovery guards. No automatic key replacement,
 state adoption, or provider cleanup is introduced.
+
+### Read-only consumer absence verification
+
+`ssh_verify_absent(opts, request, environment)` (Green:
+`compute-ssh/ssh-verify-absent!`) checks consumer state and provider inventory
+without requiring an SSH identity. The environment argument is optional. Request:
+
+```json
+{"workdir":"/absolute/sdk/workdir",
+ "consumers":[{"node_id":"app","state_filename":"node.tfstate"}],
+ "registrations":[{"name":"access","state_filename":"registration.tfstate"}]}
+```
+
+Supply **every** consumer of the missing identity, including consumers in other
+packages if they share it. Use `registrations: []` for providers without separate
+registrations; AWS, DigitalOcean, Hetzner and Vultr require explicit registration
+descriptors. An empty consumer list, duplicate identity/state filename, malformed
+state, populated outputs/resources, inaccessible state or incomplete provider
+inventory refuses verification. Only missing state or a strictly empty version-4
+state is accepted. Both persisted local state and remote backend state are read.
+S3/R2/OCI use the normal `<prefix>/<profile>/<state_filename>` object; GCS reads
+`<prefix>/<profile>/<state_filename>/default.tfstate`. No state is written and no
+provider mutation occurs.
+
+The result is `{"status":"verified","verified_absent":true}` on success;
+failures return the usual SSH runtime error result. Pass `verified_absent: true`
+to creation only after checking both success fields. Verification is a
+point-in-time observation, not a distributed lock: workflows must serialize
+identity creation with consumer provisioning and must not reuse an old result.
+Existing SSH identities should be inspected/reused without this verification.
+
+Provider checks use the exact current node and registration naming contract:
+`<profile>-<node_id>` and `<profile>-registration-<name>`. Inventories cover all
+Google project zones, the selected AWS region, all machines and keys in the
+DigitalOcean/Hetzner/Vultr account or project, the Azure subscription, the OCI
+compartment in its configured profile region, and the Yandex folder. Provider
+pagination is exhausted and checked; provider errors never establish absence.
+AWS additionally checks instance key references. Terminated matching instances
+are conservatively treated as consumers until the provider removes their record.
+
+This cannot discover consumers renamed outside the library or omitted by the
+caller, or deployments moved to another account/project/region. Keep the original
+provider/backend scope and full consumer inventory when recovering lost authority.
+Google uses application-default credentials, AWS the normal supported SDK/CLI
+credential chain, and token-based providers their `COLORS_PAR_*` bindings. Azure
+uses its CLI session; OCI uses the explicit profile in `~/.oci/config`. Unsupported
+authentication overrides fail closed instead of checking another identity.
+
+Provider response contracts are based on the official
+[Google aggregated instance API](https://cloud.google.com/compute/docs/reference/rest/v1/instances/aggregatedList),
+[DigitalOcean API](https://docs.digitalocean.com/reference/api/),
+[Hetzner API](https://docs.hetzner.cloud/reference/cloud),
+[Vultr API](https://www.vultr.com/api/),
+[AWS instance API](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html),
+[Azure VM CLI](https://learn.microsoft.com/en-us/cli/azure/vm),
+[OCI instance CLI](https://docs.oracle.com/en-us/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/compute/instance/list.html),
+and [Yandex instance API](https://yandex.cloud/en/docs/compute/api-ref/Instance/list).

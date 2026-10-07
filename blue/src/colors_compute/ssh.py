@@ -147,6 +147,37 @@ async def ssh_resource(opts, request, operation='create', environment=None):
         await close()
 
 
+def _absence_auth_unsupported(opts, source):
+    provider = opts.get('provider-compute')
+    google = provider == 'google' or opts.get('provider-backend') == 'gcs'
+    return any(value and (
+        (google and (key.startswith('GOOGLE_') or key.startswith('CLOUDSDK_AUTH_')))
+        or (provider == 'azure' and (key.startswith('ARM_') or key.startswith('AZURE_') and key != 'AZURE_CONFIG_DIR'))
+        or (provider == 'oci' and key.startswith('OCI_'))
+        or key.startswith('AWS_ENDPOINT_URL')
+    ) for key, value in source.items())
+
+
+async def ssh_verify_absent(opts, request, environment=None):
+    """Read state and provider inventory before authorizing a fresh SSH identity."""
+    source = os.environ if environment is None else environment
+    option_names = {'provider-backend', 'oci-compartment-id', 'r2-bucket', 's3-bucket', 'aws-region', 'yandex-folder-id', 'azure-subscription-id', 'oci-config-file-profile', 's3-prefix', 'oci-namespace', 'google-region', 'oci-bucket', 's3-region', 'oci-region', 'azure-resource-group', 'profile', 'r2-endpoint', 'gcs-bucket', 'google-zone', 'google-project', 'provider-compute'}
+    extra_environment = {'COLORS_PAR_YANDEX_TOKEN', 'OCI_CLI_CONFIG_FILE', 'AWS_WEB_IDENTITY_TOKEN_FILE', 'AWS_ROLE_ARN', 'AWS_ROLE_SESSION_NAME', 'COLORS_PAR_DO_TOKEN', 'COLORS_PAR_HCLOUD_TOKEN', 'OCI_CLI_PROFILE', 'COLORS_PAR_VULTR_API_KEY'}
+    extra_environment.update(['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI', 'AWS_CONTAINER_CREDENTIALS_FULL_URI', 'AWS_CONTAINER_AUTHORIZATION_TOKEN', 'AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE', 'AZURE_CONFIG_DIR'])
+    child_environment = _environment(source, [])
+    child_environment.update({k: v for k, v in source.items()
+                              if k in extra_environment and isinstance(v, str)})
+    if _absence_auth_unsupported(opts, source):
+        child_environment['COLORS_ABSENCE_AUTH_UNSUPPORTED'] = '1'
+    process, close = await _start({'operation': 'verify_absent',
+        'opts': {k: v for k, v in opts.items() if k in option_names},
+        'request': request}, child_environment)
+    try:
+        return json.loads(await asyncio.wait_for(process.stdout.readline(), 180))
+    finally:
+        await close()
+
+
 async def start_agent(resources, environment, register, lifetime=900):
     entries = [{'plan': ssh_plan(entry['opts'], entry['request']), 'request': entry['request'], 'resource': entry['resource']} for entry in resources]
     process, close = await _start({'operation': 'agent', 'resources': entries, 'lifetime': lifetime},

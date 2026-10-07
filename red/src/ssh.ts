@@ -103,6 +103,25 @@ export async function ssh_resource(opts: Map, request: Map, operation = 'create'
   const handle = start({plan, request, operation}, environment(source, [request]));
   try {return await handle.ready;} finally {await handle.close();}
 }
+function absenceAuthUnsupported(opts: Map, source: Env) {
+  const provider = opts['provider-compute'];
+  const google = provider === 'google' || opts['provider-backend'] === 'gcs';
+  return Object.entries(source).some(([key,value]) => !!value && (
+    google && (key.startsWith('GOOGLE_') || key.startsWith('CLOUDSDK_AUTH_')) ||
+    provider === 'azure' && (key.startsWith('ARM_') || key.startsWith('AZURE_') && key !== 'AZURE_CONFIG_DIR') ||
+    provider === 'oci' && key.startsWith('OCI_') || key.startsWith('AWS_ENDPOINT_URL')));
+}
+export async function ssh_verify_absent(opts: Map, request: Map, source: Env = process.env) {
+  const optionNames = new Set(["profile", "provider-compute", "provider-backend", "s3-prefix", "s3-bucket", "s3-region", "r2-bucket", "r2-endpoint", "oci-bucket", "oci-region", "oci-namespace", "gcs-bucket", "google-project", "google-zone", "google-region", "aws-region", "azure-subscription-id", "azure-resource-group", "oci-compartment-id", "oci-config-file-profile", "yandex-folder-id"]);
+  const extraEnvironment = new Set(["COLORS_PAR_DO_TOKEN", "COLORS_PAR_HCLOUD_TOKEN", "COLORS_PAR_VULTR_API_KEY", "COLORS_PAR_YANDEX_TOKEN", "OCI_CLI_CONFIG_FILE", "OCI_CLI_PROFILE", "AWS_WEB_IDENTITY_TOKEN_FILE", "AWS_ROLE_ARN", "AWS_ROLE_SESSION_NAME"]);
+  for (const key of ["AWS_CONTAINER_CREDENTIALS_RELATIVE_URI", "AWS_CONTAINER_CREDENTIALS_FULL_URI", "AWS_CONTAINER_AUTHORIZATION_TOKEN", "AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE", "AZURE_CONFIG_DIR"]) extraEnvironment.add(key);
+  const childEnvironment = {...environment(source, []), ...Object.fromEntries(
+    Object.entries(source).filter(([key, value]) => extraEnvironment.has(key) && typeof value === 'string'))} as Record<string,string>;
+  if (absenceAuthUnsupported(opts, source)) childEnvironment.COLORS_ABSENCE_AUTH_UNSUPPORTED = '1';
+  const handle = start({operation:'verify_absent',
+    opts: Object.fromEntries(Object.entries(opts).filter(([key]) => optionNames.has(key))), request}, childEnvironment);
+  try {return await handle.ready;} finally {await handle.close();}
+}
 export async function start_agent(resources: Map[], source: Env, register: (phase: 'resource', cleanup: () => Promise<void>) => unknown, lifetime = 900) {
   const entries: Map[] = resources.map(e => ({plan: ssh_plan(e.opts, e.request), request: e.request, resource: e.resource}));
   const handle = start({operation:'agent', resources:entries, lifetime}, environment(source, entries.map(e => e.request)));

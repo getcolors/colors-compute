@@ -130,6 +130,28 @@
                             (environment environment-map [request]))]
          (try (ready! handle) (finally ((:close handle)))))))))
 
+(defn- absence-auth-unsupported? [opts source]
+  (let [provider (:provider-compute opts)
+        google? (or (= provider "google") (= (:provider-backend opts) "gcs"))]
+    (boolean (some (fn [[key value]]
+      (and (seq value)
+           (or (and google? (or (str/starts-with? key "GOOGLE_") (str/starts-with? key "CLOUDSDK_AUTH_")))
+               (and (= provider "azure") (or (str/starts-with? key "ARM_")
+                    (and (str/starts-with? key "AZURE_") (not= key "AZURE_CONFIG_DIR"))))
+               (and (= provider "oci") (str/starts-with? key "OCI_"))
+               (str/starts-with? key "AWS_ENDPOINT_URL")))) source))))
+
+(defn ssh-verify-absent!
+  "Read state and provider inventory before authorizing a fresh SSH identity."
+  ([opts request] (ssh-verify-absent! opts request (System/getenv)))
+  ([opts request environment-map]
+   (let [options (select-keys opts [:profile :provider-compute :provider-backend :s3-prefix :s3-bucket :s3-region :r2-bucket :r2-endpoint :oci-bucket :oci-region :oci-namespace :gcs-bucket :google-project :google-zone :google-region :aws-region :azure-subscription-id :azure-resource-group :oci-compartment-id :oci-config-file-profile :yandex-folder-id])
+         env (merge (environment environment-map [])
+                    (select-keys environment-map ["COLORS_PAR_DO_TOKEN" "COLORS_PAR_HCLOUD_TOKEN" "COLORS_PAR_VULTR_API_KEY" "COLORS_PAR_YANDEX_TOKEN" "OCI_CLI_CONFIG_FILE" "OCI_CLI_PROFILE" "AWS_WEB_IDENTITY_TOKEN_FILE" "AWS_ROLE_ARN" "AWS_ROLE_SESSION_NAME" "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI" "AWS_CONTAINER_CREDENTIALS_FULL_URI" "AWS_CONTAINER_AUTHORIZATION_TOKEN" "AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE" "AZURE_CONFIG_DIR"]))
+         env (cond-> env (absence-auth-unsupported? opts environment-map) (assoc "COLORS_ABSENCE_AUTH_UNSUPPORTED" "1"))
+         handle (start! {:operation "verify_absent" :opts options :request request} env)]
+     (try (ready! handle) (finally ((:close handle)))))))
+
 (defn start-agent!
   ([resources environment-map register!] (start-agent! resources environment-map register! 900))
   ([resources environment-map register! lifetime]
