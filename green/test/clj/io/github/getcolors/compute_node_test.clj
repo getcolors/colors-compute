@@ -357,3 +357,17 @@
         (is (= "state_inconsistent" (get-in result [:error :code])))
         (is (= "possible" (get-in result [:error :infrastructure_changes]))))
       (finally (remove-tree dir)))))
+
+(deftest output-secrets-distinguish-configuration-from-credentials
+  (doseq [{:keys [name environment allowed]}
+          (json/parse-string (slurp "../test/fixtures/node-output-environment.json") true)]
+    (testing name
+      (let [dir (temp-dir) {:keys [opts request runner env calls]} (harness dir)]
+        (try
+          (is (= "ready" (:status (node/compute-node! opts request "create" env {:runner runner}))))
+          (reset! calls [])
+          (let [source (merge env (into {} (map (fn [[k v]] [(clojure.core/name k) v]) environment)))
+                result (node/compute-node! opts request "inspect" source {:runner runner})]
+            (is (= allowed (= "ready" (:status result))))
+            (is (not-any? #(= "apply" (second %)) @calls)))
+          (finally (remove-tree dir)))))))

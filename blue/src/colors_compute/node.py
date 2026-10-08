@@ -518,7 +518,7 @@ async def compute_node(opts, request, operation='create', environment=None, depe
         if set(params) - allowed:
             raise ValueError('unexpected node outputs')
         encoded = json.dumps(params)
-        secrets = list(credentials.values()) + list(key_credentials.values()) + [value for key, value in source.items() if key.startswith('COLORS_PAR_') and isinstance(value, str) and value]
+        secrets = list(credentials.values()) + list(key_credentials.values()) + [value for key, value in source.items() if re.search(r'SECRET|TOKEN|PASSWORD|PASSPHRASE|CREDENTIAL|PRIVATE.?KEY|ACCESS.?KEY|API.?KEY|AUTHORIZATION', key, re.I) and isinstance(value, str) and value]
         local_private = state_outputs.get('ssh_private_key', {}).get('value')
         if isinstance(local_private, str) and local_private:
             secrets.append(local_private)

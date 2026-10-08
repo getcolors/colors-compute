@@ -1,0 +1,94 @@
+[
+  {
+    "name": "numeric application setting",
+    "environment": {
+      "COLORS_PAR_APP_DEALCONTEXT_DEMO_MAX_WORKSPACES": "1"
+    },
+    "allowed": true
+  },
+  {
+    "name": "public provider and username",
+    "environment": {
+      "COLORS_PAR_PROVIDER_COMPUTE": "digitalocean",
+      "COLORS_PAR_SSH_USER": "root"
+    },
+    "allowed": true
+  },
+  {
+    "name": "unrelated secret",
+    "environment": {
+      "COLORS_PAR_APP_PASSWORD": "not-in-output"
+    },
+    "allowed": true
+  },
+  {
+    "name": "short password",
+    "environment": {
+      "COLORS_PAR_APP_PASSWORD": "1"
+    },
+    "allowed": false
+  },
+  {
+    "name": "provider token",
+    "environment": {
+      "COLORS_PAR_DO_TOKEN": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "SSH passphrase",
+    "environment": {
+      "COLORS_PAR_ONCE_SSH_PASSPHRASE": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "ambient secret",
+    "environment": {
+      "AWS_SECRET_ACCESS_KEY": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "private key",
+    "environment": {
+      "COLORS_PAR_APP_PRIVATE_KEY": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "access key",
+    "environment": {
+      "COLORS_PAR_R2_ACCESS_KEY_ID": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "API key",
+    "environment": {
+      "COLORS_PAR_APP_API_KEY": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "authorization",
+    "environment": {
+      "COLORS_PAR_APP_AUTHORIZATION": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "credentials",
+    "environment": {
+      "COLORS_PAR_APP_CREDENTIAL": "root"
+    },
+    "allowed": false
+  },
+  {
+    "name": "case-insensitive secret name",
+    "environment": {
+      "app_password": "root"
+    },
+    "allowed": false
+  }
+]

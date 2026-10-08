@@ -123,3 +123,17 @@ test('successful apply must not report identity-only state as ready',async()=>{
   expect(result.error.code).toBe('state_inconsistent');expect(result.error.infrastructure_changes).toBe('possible');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+
+import outputEnvironmentCases from '../../test/fixtures/node-output-environment.json';
+for (const fixture of outputEnvironmentCases) test('output credentials: '+fixture.name, async()=>{
+ const dir=root();
+ try {
+  const h=harness(dir);
+  expect((await compute_node(h.opts,h.request,'create',h.env,{runner:h.runner})).status).toBe('ready');
+  h.calls.length=0;
+  const result=await compute_node(h.opts,h.request,'inspect',{...h.env,...fixture.environment},{runner:h.runner});
+  expect(result.status==='ready').toBe(fixture.allowed);
+  expect(h.calls.some(args=>args[1]==='apply')).toBe(false);
+ } finally {rmSync(dir,{recursive:true,force:true});}
+});

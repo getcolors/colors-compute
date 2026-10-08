@@ -114,6 +114,15 @@ Delete nodes first, then their separately owned registrations, then explicitly
 delete the durable SSH resource after all consumers are gone. Compute deletion
 needs no passphrase and never deletes durable SSH authority or starts an agent.
 
+## Credential checks on compute outputs
+
+Node outputs reject private-key material and values from credential-named environment
+bindings (secret, token, password, passphrase, credential, private/access/API key,
+and authorization; case-insensitive). `COLORS_PAR_` alone does not mark a value as
+secret: it also carries ordinary configuration such as workspace counts and provider
+names. Short credential values remain protected; there is no minimum-length bypass.
+Output field allowlists and state identity checks remain independent requirements.
+
 ## Command failure diagnostics
 
 Lifecycle errors retain their stage-specific `code`, authored `message`, safe

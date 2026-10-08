@@ -255,7 +255,7 @@
     (require! (and (not (str/includes? text "-----BEGIN "))
                    (not-any? #(str/includes? (str/lower-case text) %) ["\"private_key\"" "\"private_key_openssh\"" "\"secret_key\"" "\"access_key\""])) "secret compute output")
     (doseq [[variable secret] environment
-            :when (and (nonblank? secret) (or (str/starts-with? variable "COLORS_PAR_") (re-find #"SECRET|TOKEN|PASSWORD|ACCESS_KEY|API_KEY" variable)))]
+            :when (and (nonblank? secret) (re-find #"(?i)SECRET|TOKEN|PASSWORD|PASSPHRASE|CREDENTIAL|PRIVATE.?KEY|ACCESS.?KEY|API.?KEY|AUTHORIZATION" variable))]
       (let [encoded (json/generate-string secret)]
         (require! (not (or (str/includes? text secret) (str/includes? text (subs encoded 1 (dec (count encoded)))))) "credential compute output")))
     result))

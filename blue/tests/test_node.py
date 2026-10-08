@@ -419,3 +419,15 @@ async def test_identity_only_retry_rejects_unowned_or_malformed_state(tmp_path, 
     assert result['error']['infrastructure_changes'] == 'none'
     assert not any(c[1] in ('plan', 'apply', 'destroy') for c in runner.calls)
     assert state_path.read_text() == original
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('case', json.loads((FIXTURES / 'node-output-environment.json').read_text()), ids=lambda case: case['name'])
+async def test_output_secrets_distinguish_configuration_from_credentials(tmp_path, case):
+    opts, req = inputs(tmp_path)
+    build_node(opts, req)
+    runner = LocalRunner(opts, req, existing=True)
+    environment = {'COLORS_PAR_DO_TOKEN': 'fixture-secret', **case['environment']}
+    result = await compute_node(opts, req, 'inspect', environment, {'runner': runner})
+    assert (result['status'] == 'ready') == case['allowed']
+    assert not any(args[1] == 'apply' for args in runner.calls)
