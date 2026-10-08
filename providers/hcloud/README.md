@@ -96,12 +96,35 @@ preserve those identities explicitly, including `hcloud_server.node1` becoming
 attachment ownership change requires semantic review and a replacement-free
 plan. No state move or package migration is performed by these templates.
 
+## Provider API compatibility
+
+The exact provider pin is **1.58.0**, the first stable release that reads a
+server's top-level `location` instead of `datacenter.location`. Hetzner removed
+`datacenter` from server responses on 1 July 2026. With 1.54.0, a refresh can
+therefore record an empty location and propose replacing a correctly located
+server. Keep destroy protection enabled; do not ignore location drift or edit
+state to work around the obsolete API reader.
+
+The upstream [1.58.0 release notes](https://github.com/hetznercloud/terraform-provider-hcloud/releases/tag/v1.58.0)
+require this upgrade before the API removal. See the
+[API removal notice](https://docs.hetzner.cloud/changelog#2026-07-01-remove-datacenters-properties-for-primary-ips-and-servers)
+and [updated server state reader](https://github.com/hetznercloud/terraform-provider-hcloud/blob/v1.58.0/internal/server/resource.go).
+Existing installations must update their provider lock through OpenTofu init
+and verify a normal refreshed plan before applying. Template/schema tests alone
+do not establish a replacement-free plan for an existing server.
+
 ## Validation and handoff
 
 ```sh
 python3 colors-compute/providers/hcloud/check.py
 python3 colors-compute/providers/hcloud/check.py --tofu /absolute/path/to/tofu
 ```
+
+Verified 2026-10-08 with OpenTofu 1.12.6 and exact provider 1.58.0:
+all three examples passed formatting, initialization and schema validation;
+public-only node schema validation also passed. The provider signature verified
+with key 5219EACB3A77198B. These checks used temporary directories without cloud
+credentials; no live infrastructure was changed.
 
 Verified 2026-09-09 with OpenTofu 1.12.5 and exact pinned provider hcloud 1.54.0:
 `fmt -check`, `init -backend=false`, and `validate` passed for shared keygen,
